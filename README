@@ -13,24 +13,28 @@ will probably obtain a complete and error-free file. This is so because
 the probability of having damaged areas at the same places on different
 input files is very low.
 
-if you also use the bad blocks file feature of ddrescue, the data will
-be rescued very efficiently.
+If you use the bad blocks file feature of ddrescue, the data will be
+rescued very efficiently. Also you can interrupt the rescue at any time
+and resume it later.
 
 
 The algorithm of ddrescue is as follows:
 
-  1) Read the non-damaged part of the disk, skipping the damaged areas.
-or
-  1) Read a list of bad blocks (damaged areas) from a file.
+  1) Optionally read a starting point, a size and a list of bad blocks
+     (damaged areas) from a file, for resuming a previously interrupted
+     rescue.
 
-  2) Try to read the damaged areas, splitting them into smaller pieces
+  2) Read the non-damaged part of the disk, skipping the damaged areas,
+     until the requested size is reached, or until interrupted by the user.
+
+  3) Try to read the damaged areas, splitting them into smaller pieces
      and reading the non-damaged pieces, until the hardware block size
      is reached, or until interrupted by the user.
 
-  3) Try to read the damaged hardware blocks until the specified number
+  4) Try to read the damaged hardware blocks until the specified number
      of retries is reached, or until interrupted by the user.
 
-  4) Optionally write a list of bad blocks to a file.
+  5) Optionally write a list of bad blocks to a file for later use.
 
 
 Examples

@@ -1,3 +1,9 @@
+2004-10-30  Antonio Diaz  <ant_diaz@teleline.es>
+
+	* Version 0.7 released.
+	* ddrescue now can be interrupted at any time, and resume
+	  rescue at the same point later.
+
 2004-09-28  Antonio Diaz  <ant_diaz@teleline.es>
 
 	* Version 0.6 released.

@@ -8,7 +8,7 @@ mandir = $(datadir)/man
 exec_prefix = $(prefix)
 bindir = $(exec_prefix)/bin
 
-DISTNAME = ddrescue-0.6
+DISTNAME = ddrescue-0.7
 
 CXX = g++
 INSTALL = install

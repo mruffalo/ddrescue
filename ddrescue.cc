@@ -35,13 +35,22 @@
 #include <unistd.h>
 
 
-// Date of this version: 2004-09-28
+// Date of this version: 2004-10-30
 
-const char * const program_version = "0.6";
+const char * const program_version = "0.7";
 const char * const program_year    = "2004";
 
 bool volatile interrupted = false;		// user pressed Ctrl-C
 void sighandler( int ) throw() { interrupted = true; }
+
+struct Bigblock
+  {
+  off_t ipos, opos, size;
+  bool ignore;
+  Bigblock() : ipos( 0 ), opos( 0 ), size( 0 ), ignore( false ) {}
+  Bigblock( off_t i, off_t o, off_t s, bool ig = false )
+    : ipos( i ), opos( o ), size( s ), ignore( ig ) {}
+  };
 
 struct Block
   {
@@ -85,7 +94,7 @@ void show_help( const char * program_name, int cluster, int hardbs ) throw()
   std::printf( "  -V, --version                output version information and exit\n" );
   std::printf( "  -b, --block-size=<bytes>     hardware block size of input device [%d]\n", hardbs );
   std::printf( "  -c, --cluster-size=<blocks>  hardware blocks to copy at a time [%d]\n", cluster );
-  std::printf( "  -e, --max-errors=<n>         exit if more error areas found (-1=inf) [-1]\n" );
+  std::printf( "  -e, --max-errors=<n>         maximum number of error areas allowed\n" );
   std::printf( "  -i, --input-position=<pos>   start position in input file [0]\n" );
   std::printf( "  -o, --output-position=<pos>  start position in output file [ipos]\n" );
   std::printf( "  -q, --quiet                  quiet operation\n" );
@@ -100,25 +109,26 @@ void show_help( const char * program_name, int cluster, int hardbs ) throw()
   }
 
 
-const char *format_num( long long n, long long max = 999999 ) throw()
+const char * format_num( long long num, long long max = 999999 ) throw()
   {
   static const char * const units[8] =
     { "ki", "Mi", "Gi", "Ti", "Pi", "Ei", "Zi", "Yi" };
   static char buf[16];
   const char *su = "";
-  for( int i = 0; i < 8 && std::llabs( n ) > std::llabs( max ); ++i )
-    { n /= 1024; su = units[i]; }
-  std::snprintf( buf, sizeof( buf ), "%Ld %s", n, su );
+  for( int i = 0; i < 8 && std::llabs( num ) > std::llabs( max ); ++i )
+    { num /= 1024; su = units[i]; }
+  std::snprintf( buf, sizeof( buf ), "%lld %s", num, su );
   return buf;
   }
 
 
 void show_status( off_t ipos, off_t opos, off_t recsize, off_t errsize,
-                  size_t errors, bool force = false ) throw()
+                  size_t errors, const char * msg = 0, bool force = false ) throw()
   {
-  static const char* const up = "\x1b[A";
+  static const char * const up = "\x1b[A";
   static off_t a_rate = 0, c_rate = 0, last_size = 0;
   static time_t t1 = 0, t2 = 0;
+  static int oldlen = 0;
   if( t1 == 0 )
     { t1 = t2 = std::time( 0 ); std::printf( "\n\n\n" ); force = true; }
 
@@ -139,11 +149,17 @@ void show_status( off_t ipos, off_t opos, off_t recsize, off_t errsize,
                  format_num( ipos ), errors );
     std::printf( "  average rate: %9sB/s\n", format_num( a_rate, 99999 ) );
     std::printf( "   opos: %10sB\n", format_num( opos ) );
+    int len = 0;
+    if( msg ) { len = std::strlen( msg ); std::printf( msg ); }
+    for( int i = len; i < oldlen; ++i ) std::fputc( ' ', stdout );
+    if( len || oldlen ) std::fputc( '\r', stdout );
+    oldlen = len;
+    std::fflush( stdout );
     }
   }
 
 
-size_t readblock( int fd, char *buf, size_t size, off_t pos ) throw()
+size_t readblock( int fd, char * buf, size_t size, off_t pos ) throw()
   {
   int rest = size;
   lseek( fd, pos, SEEK_SET );
@@ -159,7 +175,7 @@ size_t readblock( int fd, char *buf, size_t size, off_t pos ) throw()
   }
 
 
-size_t writeblock( int fd, char *buf, size_t size, off_t pos ) throw()
+size_t writeblock( int fd, char * buf, size_t size, off_t pos ) throw()
   {
   int rest = size;
   lseek( fd, pos, SEEK_SET );
@@ -191,75 +207,68 @@ bool split_block( Block & block, std::queue< Block > & badclusters,
   }
 
 
-int copybb( std::queue< Block > & badclusters, std::queue< Block > & badblocks,
-            size_t hardbs, int ides, int odes, int max_retries,
-            int verbosity, off_t recsize, off_t errsize ) throw();
-int copyfile( std::queue< Block > & badclusters, std::queue< Block > & badblocks,
-              off_t ipos, off_t opos, off_t max_size, size_t cluster,
+int copyfile( Bigblock & bigblock, std::queue< Block > & badclusters,
+              std::queue< Block > & badblocks, off_t errsize, size_t cluster,
               size_t hardbs, int ides, int odes, int max_errors,
               int max_retries, int verbosity ) throw()
   {
-  const off_t end = ipos + max_size;
-  off_t recsize = 0, errsize = 0;
+  off_t recsize = 0;
   const size_t softbs = cluster * hardbs;
   char buf[softbs];
 
-  // 1) Read the non-damaged part of the disk, skipping the damaged areas.
-  while( !max_size || ipos < end )
-    {
-    size_t size = softbs;
-    if( max_size && ipos + (off_t)size > end ) size = end - ipos;
-
-    size_t rd;
-    if( size > hardbs )
-      {
-      rd = readblock( ides, buf, hardbs, ipos );
-      if( rd == hardbs )
-        rd += readblock( ides, buf + rd, size - rd, ipos + rd );
-      }
-    else rd = readblock( ides, buf, size, ipos );
-    recsize += rd;
-
-    if( rd > 0 && writeblock( odes, buf, rd, opos ) != rd )
-      { show_error( "write error", true ); return 1; }
-    if( rd < size )
-      {
-      if( rd == 0 && !errno ) break;		// EOF
-      else					// Read error
-        {
-        badclusters.push( Block( ipos + rd, opos + rd, size - rd ) );
-        errsize += ( size - rd );
-        if( max_errors >= 0 && (int)badclusters.size() > max_errors )
-          { show_error( "too many errors in input file" ); return 2; }
-        }
-      }
-    ipos += size; opos += size;
-    if( verbosity >= 0 )
-      show_status( ipos, opos, recsize, errsize, badclusters.size() );
-    }
+  interrupted = false;
+  signal( SIGINT, sighandler );
   if( verbosity >= 0 )
-    show_status( ipos, opos, recsize, errsize, badclusters.size(), true );
+    {
+    std::printf( "Press Ctrl-C to interrupt\n" );
+    show_status( bigblock.ipos, bigblock.opos, recsize, errsize,
+                 badclusters.size(), 0, true );
+    }
 
-  if( badclusters.size() == 0 ) return 0;
-  return copybb( badclusters, badblocks, hardbs, ides, odes, max_retries,
-                 verbosity, recsize, errsize );
-  }
+  // 1) Read the non-damaged part of the disk, skipping the damaged areas.
+  if( !bigblock.ignore )
+    while( !interrupted && bigblock.size != 0 )
+      {
+      size_t size = softbs;
+      if( bigblock.size >= 0 && bigblock.size < (off_t)size )
+        size = bigblock.size;
 
+      size_t rd;
+      if( size > hardbs )
+        {
+        rd = readblock( ides, buf, hardbs, bigblock.ipos );
+        if( rd == hardbs )
+          rd += readblock( ides, buf + rd, size - rd, bigblock.ipos + rd );
+        }
+      else rd = readblock( ides, buf, size, bigblock.ipos );
+      recsize += rd;
 
-int copybb( std::queue< Block > & badclusters, std::queue< Block > & badblocks,
-            size_t hardbs, int ides, int odes, int max_retries,
-            int verbosity, off_t recsize, off_t errsize ) throw()
-  {
-  const char * const ccmsg = "Press Ctrl-C to interrupt";
-  Block block;
-  char buf[hardbs];
-  bool split = false;
+      if( rd > 0 && writeblock( odes, buf, rd, bigblock.opos ) != rd )
+        { show_error( "write error", true ); return 1; }
+      if( rd < size )
+        {
+        if( rd == 0 && !errno ) break;		// EOF
+        else					// Read error
+          {
+          badclusters.push( Block( bigblock.ipos + rd, bigblock.opos + rd, size - rd ) );
+          errsize += ( size - rd );
+          if( max_errors >= 0 && (int)badclusters.size() > max_errors )
+            { show_error( "too many errors in input file" ); return 2; }
+          }
+        }
+      bigblock.ipos += size; bigblock.opos += size;
+      if( bigblock.size > 0 ) bigblock.size -= size;
+      if( verbosity >= 0 )
+        show_status( bigblock.ipos, bigblock.opos, recsize, errsize,
+                     badclusters.size(), "Copying data..." );
+      }
+
 
   // 2) Try to read the damaged areas, splitting them into smaller pieces
   //    and reading the non-damaged pieces, until the hardware block size
   //    is reached, or until interrupted by the user.
-  interrupted = false;
-  signal( SIGINT, sighandler );
+  Block block( bigblock.ipos, bigblock.opos, 0 );	// Default values
+  bool split = false;
   while( !interrupted && badclusters.size() )
     {
     if( split_block( block, badclusters, hardbs ) ) split = true;
@@ -277,20 +286,27 @@ int copybb( std::queue< Block > & badclusters, std::queue< Block > & badblocks,
       }
     else errsize -= ( block.size - rd );
     if( verbosity >= 0 )
-      {
       show_status( block.ipos, block.opos, recsize, errsize,
-                   badclusters.size() + badblocks.size() );
-      std::printf( "\rSplitting error areas. %s\r", ccmsg );
-      std::fflush( stdout );
-      }
+                   badclusters.size() + badblocks.size(),
+                   "Splitting error areas..." );
     }
+
 
   // 3) Try to read the damaged hardware blocks until the specified number
   //    of retries is reached, or until interrupted by the user.
-  int retries = 0, counter = badblocks.size();
+  int retry = 0, counter = 0;
   if( !split && max_retries == 0 ) max_retries = 1;
-  while( !interrupted && badblocks.size() && retries != max_retries )
+  while( !interrupted && badblocks.size() )
     {
+    char msgbuf[80];
+    if( --counter <= 0 )
+      {
+      ++retry; counter = badblocks.size();
+      if( max_retries >= 0 && retry > max_retries ) break;
+      int i = std::snprintf( msgbuf, sizeof( msgbuf ), "Copying bad blocks..." );
+      if( max_retries != 1 && i < (int)sizeof( msgbuf ) )
+        std::snprintf( msgbuf + i, sizeof( msgbuf ) - i, " Retry %d", retry );
+      }
     block = badblocks.front(); badblocks.pop();
     size_t rd = readblock( ides, buf, block.size, block.ipos );
     recsize += rd;
@@ -302,30 +318,22 @@ int copybb( std::queue< Block > & badclusters, std::queue< Block > & badblocks,
       badblocks.push( Block( block.ipos+rd, block.opos+rd, block.size-rd ) );
     else errsize -= ( block.size - rd );
     if( verbosity >= 0 )
-      {
-      show_status( block.ipos, block.opos, recsize, errsize, badblocks.size() );
-      if( !split && max_retries == 1 )
-        std::printf( "\rCopying bad blocks. %s    \r", ccmsg );
-      else std::printf( "\rRetry %d  %s              \r", retries + 1, ccmsg );
-      std::fflush( stdout );
-      }
-    if( max_retries > 0 && --counter <= 0 )
-      { ++retries; counter = badblocks.size(); }
+      show_status( block.ipos, block.opos, recsize, errsize,
+                   badblocks.size(), msgbuf );
     }
 
   if( verbosity >= 0 )
     {
     show_status( block.ipos, block.opos, recsize, errsize,
-                 badclusters.size() + badblocks.size(), true );
-    std::printf( "\r\n" );
-    if( interrupted ) std::printf( "Interrupted by user\n" );
-    std::fflush( stdout );
+                 badclusters.size() + badblocks.size(),
+                 interrupted ? "Interrupted by user" : 0, true );
+    std::fputc( '\n', stdout );
     }
   return 0;
   }
 
 
-long long getnum( const char* const ptr, size_t bs,
+long long getnum( const char * ptr, size_t bs,
                   long long min = LONG_LONG_MIN + 1,
                   long long max = LONG_LONG_MAX ) throw()
   {
@@ -376,41 +384,58 @@ bool check_identical( const char * name1, const char * name2 ) throw()
   }
 
 
-bool read_badblocks_file( const char *bbname, std::queue< Block > & badclusters,
+bool read_badblocks_file( const char * bbname, Bigblock & bigblock,
+                          std::queue< Block > & badclusters,
                           off_t & errsize, int max_errors ) throw()
   {
   if( !bbname ) return false;
   FILE *f = std::fopen( bbname, "r" );
   if( !f ) return false;
+
+  {
+  long long ipos, opos, size;
+  int n = std::fscanf( f, "%lli %lli %lli\n", &ipos, &opos, &size );
+  if( n < 0 ) return false;	// EOF
+  if( n != 3 || ipos < 0 || opos < 0 || size < -1 )
+    {
+    char buf[80];
+    std::snprintf( buf, sizeof( buf ), "error in first line of file %s\n", bbname );
+    show_error( buf ); std::exit(1);
+    }
+  bigblock.ipos = ipos; bigblock.opos = opos; bigblock.size = size;
+  }
+
   errsize = 0;
   while( max_errors < 0 || (int)badclusters.size() <= max_errors )
     {
     long long ipos, opos;
     int size;
-    int n = std::fscanf( f, "%Li %Li %i\n", &ipos, &opos, &size );
+    int n = std::fscanf( f, "%lli %lli %i\n", &ipos, &opos, &size );
     if( n < 0 ) break;	// EOF
     if( n != 3 || ipos < 0 || opos < 0 || size <= 0 )
       {
       char buf[80];
       std::snprintf( buf, sizeof( buf ), "error in file %s, line %d\n",
-                     bbname, badclusters.size() + 1 );
+                     bbname, badclusters.size() + 2 );
       show_error( buf ); std::exit(1);
       }
     badclusters.push( Block( ipos, opos, size ) );
     errsize += size;
     }
+
   std::fclose( f );
   if( max_errors >= 0 && (int)badclusters.size() > max_errors )
     { show_error( "too many blocks in badblocks file" ); std::exit(1); }
-  return ( badclusters.size() > 0 );
+  return true;
   }
 
 
-int write_badblocks_file( const char *bbname, std::queue< Block > & badclusters,
+int write_badblocks_file( const char * bbname, const Bigblock & bigblock,
+                          std::queue< Block > & badclusters,
                           std::queue< Block > & badblocks ) throw()
   {
   if( !bbname ) return 0;
-  if( badclusters.size() + badblocks.size() == 0 )
+  if( !bigblock.size && !badclusters.size() && !badblocks.size() )
     {
     if( std::remove( bbname ) != 0 && errno != ENOENT )
       {
@@ -420,6 +445,7 @@ int write_badblocks_file( const char *bbname, std::queue< Block > & badclusters,
       }
     return 0;
     }
+
   FILE *f = std::fopen( bbname, "w" );
   if( !f )
     {
@@ -427,18 +453,27 @@ int write_badblocks_file( const char *bbname, std::queue< Block > & badclusters,
     std::snprintf( buf, sizeof( buf ), "error opening file %s for writing", bbname );
     show_error( buf, true ); return 1;
     }
+
+  {
+  long long ipos = bigblock.ipos, opos = bigblock.opos, size = bigblock.size;
+  if( size == 0 ) { ipos = 0; opos = 0; }
+  std::fprintf( f, "0x%llX  0x%llX  %lld\n", ipos, opos, size );
+  }
+
   while( badclusters.size() )
     {
     Block block = badclusters.front(); badclusters.pop();
     long long ipos = block.ipos, opos = block.opos;
-    std::fprintf( f, "0x%LX  0x%LX  %u\n", ipos, opos, block.size );
+    std::fprintf( f, "0x%llX  0x%llX  %u\n", ipos, opos, block.size );
     }
+
   while( badblocks.size() )
     {
     Block block = badblocks.front(); badblocks.pop();
     long long ipos = block.ipos, opos = block.opos;
-    std::fprintf( f, "0x%LX  0x%LX  %u\n", ipos, opos, block.size );
+    std::fprintf( f, "0x%llX  0x%llX  %u\n", ipos, opos, block.size );
     }
+
   if( std::fclose( f ) )
     {
     char buf[80];
@@ -449,7 +484,34 @@ int write_badblocks_file( const char *bbname, std::queue< Block > & badclusters,
   }
 
 
-int main( int argc, char* argv[] ) throw()
+void set_bigblock( Bigblock & bigblock, off_t ipos, off_t opos, off_t max_size,
+                   off_t isize, bool bbmode ) throw()
+  {
+  if( !bbmode )		// No Bigblock read from badblocks_file
+    {
+    if( ipos >= 0 ) bigblock.ipos = ipos; else bigblock.ipos = 0;
+    if( opos >= 0 ) bigblock.opos = opos; else bigblock.opos = bigblock.ipos;
+    bigblock.size = max_size;
+    }
+  else if( ipos >= 0 || opos >= 0 || max_size > 0 )
+    {
+    show_error( "ipos, opos and max_size are incompatible with badblocks_file input" );
+    std::exit(1);
+    }
+  else if( max_size == 0 ) bigblock.ignore = true;
+
+  if( isize > 0 && !bigblock.ignore )
+    {
+    if( bigblock.ipos >= isize )
+      { show_error( "input file is not so big" ); std::exit(1); }
+    if( bigblock.size < 0 ) bigblock.size = isize;
+    if( bigblock.ipos + bigblock.size > isize )
+      bigblock.size = isize - bigblock.ipos;
+    }
+  }
+
+
+int main( int argc, char * argv[] ) throw()
   {
   off_t ipos = -1, opos = -1, max_size = -1;
   size_t cluster = 128, hardbs = 512;
@@ -481,7 +543,7 @@ int main( int argc, char* argv[] ) throw()
       {
       case 'b': hardbs = getnum( optarg, 1, 1, INT_MAX ); break;
       case 'c': cluster = getnum( optarg, 1, 1, INT_MAX ); break;
-      case 'e': max_errors = getnum( optarg, hardbs, -1, INT_MAX ); break;
+      case 'e': max_errors = getnum( optarg, hardbs, 0, INT_MAX ); break;
       case 'h': show_help( argv[0], cluster, hardbs ); return 0;
       case 'i': ipos = getnum( optarg, hardbs, 0 ); break;
       case 'o': opos = getnum( optarg, hardbs, 0 ); break;
@@ -517,47 +579,38 @@ int main( int argc, char* argv[] ) throw()
   if( lseek( odes, 0, SEEK_SET ) )
     { show_error( "output file is not seekable" ); return 1; }
 
-  if( ipos < 0 ) ipos = 0;
-  else if( isize > 0 && isize <= ipos )
-    { show_error( "input file is not so big" ); return 1; }
-  if( opos < 0 ) opos = ipos;
-  if( max_size <= 0 ) max_size = isize;
-  if( isize > ipos && isize < ipos + max_size ) max_size = isize - ipos;
+  Bigblock bigblock;
+  std::queue< Block > badclusters, badblocks;
+  off_t errsize = 0;
+  bool bbmode = read_badblocks_file( bbname, bigblock, badclusters, errsize, max_errors );
+  set_bigblock( bigblock, ipos, opos, max_size, isize, bbmode );
+
   if( cluster < 1 ) cluster = 1;
   if( hardbs < 1 ) hardbs = 1;
 
-  std::queue< Block > badclusters, badblocks;
-  off_t errsize = 0;
-  bool bbmode = read_badblocks_file( bbname, badclusters, errsize, max_errors );
-
   if( verbosity > 0 )
     {
-    if( bbmode )
-      std::printf( "\nabout to copy %d bad blocks from %s to %s\n",
-                   badclusters.size(), iname, oname );
-    else
+    if( bigblock.size != 0 && !bigblock.ignore )
       {
       std::printf( "\nabout to copy %sBytes from %s to %s\n",
-                   max_size ? format_num( max_size ) : "an infinitude of ",
+                   (bigblock.size >= 0) ? format_num( bigblock.size ) : "an infinitude of ",
                    iname, oname );
-      std::printf( "starting positions: infile = %sB,", format_num( ipos ) );
-      std::printf( "  outfile = %sB\n", format_num( opos ) );
+      std::printf( "starting positions: infile = %sB,", format_num( bigblock.ipos ) );
+      std::printf( "  outfile = %sB\n", format_num( bigblock.opos ) );
       std::printf( "copy block size: %d hard blocks\n", cluster );
       }
+    if( badclusters.size() )
+      std::printf( "\nabout to copy %d bad blocks from %s to %s\n\n",
+                   badclusters.size(), iname, oname );
     std::printf( "hard block size: %d bytes\n", hardbs );
     if( max_errors >= 0 ) std::printf( "Max_errors: %d    ", max_errors );
     if( max_retries >= 0 ) std::printf( "Max_retries: %d    ", max_retries );
     std::printf( "Truncate: %s\n\n", o_trunc ? "yes" : "no" );
     }
-  if( verbosity >= 0 )
-    { show_status( ipos, opos, 0, 0, 0, true ); std::fflush( stdout ); }
 
-  int retval;
-  if( !bbmode ) retval = copyfile( badclusters, badblocks, ipos, opos,
-                                   max_size, cluster, hardbs, ides, odes,
-                                   max_errors, max_retries, verbosity );
-  else retval = copybb( badclusters, badblocks, hardbs, ides, odes,
-                        max_retries, verbosity, 0, errsize );
-  if( !retval ) retval = write_badblocks_file( bbname, badclusters, badblocks );
+  int retval = copyfile( bigblock, badclusters, badblocks, errsize, cluster,
+                         hardbs, ides, odes, max_errors, max_retries, verbosity );
+  if( !retval )
+    retval = write_badblocks_file( bbname, bigblock, badclusters, badblocks );
   return retval;
   }
