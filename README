@@ -1,25 +1,27 @@
 Description
 
-ddrescue copies data from one file or block device (hard disk, cdrom,
-etc) to another, trying hard to rescue data in case of read errors.
+GNU ddrescue is a data recovery tool. It copies data from one file or
+block device (hard disc, cdrom, etc) to another, trying hard to rescue
+data in case of read errors.
 
-ddrescue does not truncate the output file if not asked to. So,
-everytime you run it on the same output file, it tries to fill in the
-gaps.
+ddrescue does not truncate the output file if not asked to. So, every
+time you run it on the same output file, it tries to fill in the gaps.
 
 The basic operation of ddrescue is fully automatic. That is, you don't
 have to wait for an error, stop the program, read the log, run it in
 reverse mode, etc.
 
-Automatic merging of backups: If you have two or more copies of a
-damaged file, cdrom, etc, and run ddrescue on all of them, one at a
-time, with the same output file, you will probably obtain a complete
-and error-free file. This is so because the probability of having
-damaged areas at the same places on different input files is very low.
+If you use the logfile feature of ddrescue, the data is rescued very
+efficiently (only the needed blocks are read). Also you can interrupt
+the rescue at any time and resume it later at the same point.
 
-If you use the bad blocks file feature of ddrescue, the data will be
-rescued very efficiently. Also you can interrupt the rescue at any time
-and resume it later at the same point.
+Automatic merging of backups: If you have two or more damaged copies of
+a file, cdrom, etc, and run ddrescue on all of them, one at a time,
+with the same output file, you will probably obtain a complete and
+error-free file. This is so because the probability of having damaged
+areas at the same places on different input files is very low. Using
+the logfile, only the needed blocks are read from the second and
+successive copies.
 
 
 The algorithm of ddrescue is as follows:
@@ -28,7 +30,7 @@ The algorithm of ddrescue is as follows:
      (damaged areas) from a file, for resuming a previously interrupted
      rescue.
 
-  2) Read the non-damaged part of the disk, skipping the damaged areas,
+  2) Read the non-damaged part of the file, skipping the damaged areas,
      until the requested size is reached, or until interrupted by the user.
 
   3) Try to read the damaged areas, splitting them into smaller pieces

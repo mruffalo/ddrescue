@@ -1,3 +1,15 @@
+2005-01-04  Antonio Diaz  <ant_diaz@teleline.es>
+
+	* Version 0.9 released.
+	* ddrescue is now part of the GNU project.
+	* Added configure script and info file.
+	* Two small bugs corrected.
+	* Added new option "binary-prefixes" to show binary multipliers
+	  in numbers (SI prefixes are used by default).
+	* Numbers are accepted with decimal (SI) or binary multipliers.
+	* `badblocks file' renamed to `logfile'.
+	* Logfile is now also saved if max_errors are exceeded.
+
 2004-12-14  Antonio Diaz  <ant_diaz@teleline.es>
 
 	* Version 0.8 released.

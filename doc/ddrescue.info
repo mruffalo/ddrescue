@@ -1,0 +1,236 @@
+This is ddrescue.info, produced by makeinfo version 4.2 from
+ddrescue.texinfo.
+
+INFO-DIR-SECTION GNU Packages
+START-INFO-DIR-ENTRY
+* ddrescue: (ddrescue).          Data recovery tool.
+END-INFO-DIR-ENTRY
+
+
+File: ddrescue.info,  Node: Top,  Next: Algorithm,  Up: (dir)
+
+
+
+   This manual is for GNU ddrescue (version 0.9, 28 Dec 2004).
+
+
+   GNU ddrescue is a data recovery tool. It copies data from one file or
+block device (hard disc, cdrom, etc) to another, trying hard to rescue
+data in case of read errors.
+
+   ddrescue does not truncate the output file if not asked to. So, every
+time you run it on the same output file, it tries to fill in the gaps.
+
+   The basic operation of ddrescue is fully automatic. That is, you
+don't have to wait for an error, stop the program, read the log, run it
+in reverse mode, etc.
+
+   If you use the logfile feature of ddrescue, the data is rescued very
+efficiently (only the needed blocks are read). Also you can interrupt
+the rescue at any time and resume it later at the same point.
+
+   Automatic merging of backups: If you have two or more damaged copies
+of a file, cdrom, etc, and run ddrescue on all of them, one at a time,
+with the same output file, you will probably obtain a complete and
+error-free file. This is so because the probability of having damaged
+areas at the same places on different input files is very low. Using
+the logfile, only the needed blocks are read from the second and
+successive copies.
+
+* Menu:
+
+* Algorithm::		How ddrescue recovers the data
+* Invoking ddrescue::	Command line interface
+* Logfile Structure::	Detailed format of the logfile
+* Problems::		Reporting bugs
+* Concept Index::	Index of concepts
+
+
+   Copyright (C) 2004 Antonio Diaz Diaz.
+
+   Permission is granted to copy, distribute and/or modify this document
+under the terms of the GNU Free Documentation License, Version 1.2 or
+any later version published by the Free Software Foundation.
+
+
+File: ddrescue.info,  Node: Algorithm,  Next: Invoking ddrescue,  Prev: Top,  Up: Top
+
+Algorithm
+*********
+
+   The algorithm of ddrescue is as follows:
+
+   1) Optionally read a starting point, a size and a list of bad blocks
+(damaged areas) from the logfile, for resuming a previously interrupted
+rescue.
+
+   2) Read the non-damaged part of the input file, skipping the damaged
+areas, until the requested size is reached, or until interrupted by the
+user.
+
+   3) Try to read the damaged areas, splitting them into smaller pieces
+and reading the non-damaged pieces, until the hardware block size is
+reached, or until interrupted by the user.
+
+   4) Try to read the damaged hardware blocks until the specified number
+of retries is reached, or until interrupted by the user.
+
+   5) Optionally write a starting point, a size and a list of bad blocks
+to the logfile for later use.
+
+
+File: ddrescue.info,  Node: Invoking ddrescue,  Next: Logfile Structure,  Prev: Algorithm,  Up: Top
+
+Invoking ddrescue
+*****************
+
+   The format for running ddrescue is:
+
+     ddrescue [OPTIONS] INFILE OUTFILE [LOGFILE]
+
+   ddrescue supports the following options:
+
+`--help'
+`-h'
+     Print an informative help message describing the options and exit.
+
+`--version'
+`-V'
+     Print the version number of ddrescue on the standard output and
+     exit.
+
+`--binary-prefixes'
+`-B'
+     Show units with binary prefixes (powers of 1024).
+     SI prefixes (powers of 1000) are used by default. (See table
+     below).
+
+`--block-size=BYTES'
+`-b BYTES'
+     Hardware block size of input device in bytes (usually 512 for hard
+     discs and floppies, and 2048 for cdroms). Defaults to 512.
+
+`--cluster-size=BLOCKS'
+`-c BLOCKS'
+     Number of hardware blocks to copy at a time. Defaults to
+     64KiB / hardware_block_size.
+
+`--max-errors=N'
+`-e N'
+     Maximum number of error areas allowed before giving up. Defaults to
+     infinity.
+
+`--input-position=POS'
+`-i POS'
+     Starting position in input file. Defaults to 0.
+
+`--no-split'
+`-n'
+     Do not try to split error areas. Allows a fast recovery of the
+     non-damaged part of the file.
+
+`--output-position=POS'
+`-o POS'
+     Starting position in output file. Defaults to `--input-position'.
+
+`--quiet'
+`-q'
+     Quiet operation.
+
+`--max-retries=N'
+`-r N'
+     Exit after given number of retries. -1 means infinity. Defaults to
+     0.
+
+`--max-size=BYTES'
+`-s BYTES'
+     Maximum size of data to be copied, in bytes.
+
+`--truncate'
+`-t'
+     Truncate output file.
+
+`--verbose'
+`-v'
+     Verbose mode.
+
+
+   Numbers given in options (positions, sizes) may be followed by a
+multiplier and an optional `B' for "byte".
+
+   Table of SI and binary prefixes (unit multipliers):
+
+Prefix   Value                     |   Prefix   Value
+                                   |   b        hardware blocks
+k        kilobyte  (10^3 = 1000)   |   Ki       kibibyte (2^10 = 1024)
+M        megabyte  (10^6)          |   Mi       mebibyte (2^20)
+G        gigabyte  (10^9)          |   Gi       gibibyte (2^30)
+T        terabyte  (10^12)         |   Ti       tebibyte (2^40)
+P        petabyte  (10^15)         |   Pi       pebibyte (2^50)
+E        exabyte   (10^18)         |   Ei       exbibyte (2^60)
+Z        zettabyte (10^21)         |   Zi       zebibyte (2^70)
+Y        yottabyte (10^24)         |   Yi       yobibyte (2^80)
+
+
+File: ddrescue.info,  Node: Logfile Structure,  Next: Problems,  Prev: Invoking ddrescue,  Up: Top
+
+Logfile Structure
+*****************
+
+   The logfile is a text file easy to read and edit. Every line
+contains 3 non-negative integers. The first of them is a position in
+the input file, the second is a position in the output file, and the
+third is the size (in bytes) of the data to be copied. It looks like
+this:
+
+0x0        0x0        0
+0x166000   0x166000   4096
+0x266E00   0x266E00   512
+...        ...        ...
+
+   The first line is special. It describes the part of the file not
+tried yet, and its size may be zero. All the other lines describe
+damaged areas or blocks, and their sizes can't be zero.
+
+   If you edit the file, you may use decimal, hexadecimal or octal
+values, using the same syntax that integer constants in C.
+
+
+File: ddrescue.info,  Node: Problems,  Next: Concept Index,  Prev: Logfile Structure,  Up: Top
+
+Reporting Bugs
+**************
+
+   If you find a bug in GNU ddrescue, please send electronic mail to
+<bug-ddrescue@gnu.org>. Include the version number, which you can find
+by running `ddrescue --version'.
+
+
+File: ddrescue.info,  Node: Concept Index,  Prev: Problems,  Up: Top
+
+Concept Index
+*************
+
+* Menu:
+
+* algorithm:                             Algorithm.
+* bugs:                                  Problems.
+* getting help:                          Problems.
+* invoking:                              Invoking ddrescue.
+* logfile structure:                     Logfile Structure.
+* options:                               Invoking ddrescue.
+* problems:                              Problems.
+* usage:                                 Invoking ddrescue.
+* version:                               Invoking ddrescue.
+
+
+
+Tag Table:
+Node: Top204
+Node: Algorithm1924
+Node: Invoking ddrescue2803
+Node: Logfile Structure5266
+Node: Problems6105
+Node: Concept Index6408
+
+End Tag Table

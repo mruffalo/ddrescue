@@ -1,0 +1,116 @@
+#!/bin/sh
+# configure script for GNU ddrescue - Data recovery tool
+# Copyright (C) 2004 Antonio Diaz Diaz.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+
+progname=$0
+srctrigger=ddrescue.cc
+
+# clear some things potentially inherited from environment.
+srcdir=
+prefix=/usr/local
+datadir='$(prefix)/share'
+infodir='$(datadir)/info'
+mandir='$(datadir)/man'
+
+# Loop over all args
+while [ x$1 != x ] ; do
+
+	# Get the first arg, and shuffle
+	option=$1
+	shift
+
+	# Split out the argument for options that take them
+	case ${option} in
+	--*=*) optarg=`echo ${option} | sed -e 's,^[^=]*=,,'` ;;
+	esac
+
+	# Process the options
+	case ${option} in
+	--help | --he*)
+		exec 1>&2
+		echo "Usage: configure [options]"
+		echo
+		echo "Options: [defaults in brackets]"
+		echo "  --help                  print this message"
+		echo "  --srcdir=<directory>    find the sources in <directory> [. or ..]"
+		echo "  --prefix=<directory>    install into <directory> [${prefix}]"
+		echo "  --datadir=<directory>   base directory for doc and data [${datadir}]"
+		echo "  --infodir=<directory>   info files directory [${infodir}]"
+		echo "  --mandir=<directory>    man pages directory [${mandir}]"
+		echo
+		exit 0 ;;
+	--srcdir* | --sr*)
+		srcdir=`echo ${optarg} | sed -e 's,/$,,'` ;;
+	--prefix* | --pr*)
+		prefix=`echo ${optarg} | sed -e 's,/$,,'` ;;
+	--datadir* | --da*)
+		datadir=`echo ${optarg} | sed -e 's,/$,,'` ;;
+	--infodir* | --in*)
+		infodir=`echo ${optarg} | sed -e 's,/$,,'` ;;
+	--mandir* | --ma*)
+		mandir=`echo ${optarg} | sed -e 's,/$,,'` ;;
+	*)
+		echo "configure: Unrecognized option: \"${option}\"; use --help for usage." 1>&2
+		exit 1 ;;
+	esac
+done
+
+# Find the source files, if location was not specified.
+srcdirtext=
+if [ x${srcdir} = x ]; then
+	srcdirtext="or . or .." ; srcdir=.
+	if [ ! -r ${srcdir}/${srctrigger} ] ; then srcdir=.. ; fi
+	if [ ! -r ${srcdir}/${srctrigger} ] ; then
+		## the sed command below emulates the dirname command
+		srcdir=`cd \`echo ${progname} | sed -e 's,[^/]*$,,;s,/$,,;s,^$,.,'\`; pwd`
+	fi
+fi
+
+if [ ! -r ${srcdir}/${srctrigger} ] ; then
+	exec 1>&2
+	echo
+	echo "configure: Can't find sources in ${srcdir} ${srcdirtext}"
+	echo "configure: (At least ${srctrigger} is missing)."
+	exit 1
+fi
+
+# Set srcdir to . if that's what it is.
+if [ `pwd` = `cd ${srcdir} ; pwd` ] ; then srcdir=. ; fi
+
+# write Makefile.
+rm -f Makefile
+cat > Makefile << EOF
+# Makefile for GNU ddrescue - Data recovery tool
+# Copyright (C) 2004 Antonio Diaz Diaz.
+# This file was generated automatically by configure. Do not edit.
+
+VPATH = ${srcdir}
+prefix = ${prefix}
+datadir = ${datadir}
+infodir = ${infodir}
+mandir = ${mandir}
+EOF
+
+cat ${srcdir}/Makefile.in >> Makefile
+
+echo
+echo "VPATH = ${srcdir}"
+echo "prefix = ${prefix}"
+echo "datadir = ${datadir}"
+echo "infodir = ${infodir}"
+echo "mandir = ${mandir}"
+echo "OK. Now you can run make."
