@@ -8,7 +8,7 @@ mandir = $(datadir)/man
 exec_prefix = $(prefix)
 bindir = $(exec_prefix)/bin
 
-DISTNAME = ddrescue-0.7
+DISTNAME = ddrescue-0.8
 
 CXX = g++
 INSTALL = install
@@ -46,7 +46,7 @@ install : all install-man
 install-info :
 	if test ! -d $(DESTDIR)$(infodir) ; then $(INSTALL) -d $(DESTDIR)$(infodir) ; fi
 	$(INSTALL_DATA) ./ddrescue.info $(DESTDIR)$(infodir)/ddrescue.info
-	install-info $(DESTDIR)$(infodir)/ddrescue.info $(DESTDIR)$(infodir)/dir
+	-install-info $(DESTDIR)$(infodir)/ddrescue.info $(DESTDIR)$(infodir)/dir
 
 install-man :
 	if test ! -d $(DESTDIR)$(mandir)/man1 ; then $(INSTALL) -d $(DESTDIR)$(mandir)/man1 ; fi
@@ -59,7 +59,7 @@ uninstall : uninstall-man
 	-rm -f $(DESTDIR)$(bindir)/ddrescue
 
 uninstall-info :
-	install-info --remove $(DESTDIR)$(infodir)/ddrescue.info $(DESTDIR)$(infodir)/dir
+	-install-info --remove $(DESTDIR)$(infodir)/ddrescue.info $(DESTDIR)$(infodir)/dir
 	-rm -f $(DESTDIR)$(infodir)/ddrescue.info
 
 uninstall-man :

@@ -7,15 +7,19 @@ ddrescue does not truncate the output file if not asked to. So,
 everytime you run it on the same output file, it tries to fill in the
 gaps.
 
-If you have two or more copies of a damaged file, cdrom, etc, and run
-ddrescue on all of them, one at a time, with the same output file, you
-will probably obtain a complete and error-free file. This is so because
-the probability of having damaged areas at the same places on different
-input files is very low.
+The basic operation of ddrescue is fully automatic. That is, you don't
+have to wait for an error, stop the program, read the log, run it in
+reverse mode, etc.
+
+Automatic merging of backups: If you have two or more copies of a
+damaged file, cdrom, etc, and run ddrescue on all of them, one at a
+time, with the same output file, you will probably obtain a complete
+and error-free file. This is so because the probability of having
+damaged areas at the same places on different input files is very low.
 
 If you use the bad blocks file feature of ddrescue, the data will be
 rescued very efficiently. Also you can interrupt the rescue at any time
-and resume it later.
+and resume it later at the same point.
 
 
 The algorithm of ddrescue is as follows:
@@ -34,10 +38,14 @@ The algorithm of ddrescue is as follows:
   4) Try to read the damaged hardware blocks until the specified number
      of retries is reached, or until interrupted by the user.
 
-  5) Optionally write a list of bad blocks to a file for later use.
+  5) Optionally write a starting point, a size and a list of bad blocks
+     to a file for later use.
 
 
 Examples
+
+  Fast rescue of non-damaged part of file
+    ddrescue --no-split infile outfile
 
   Infinite retrying
     ddrescue --max-retries=-1 infile outfile
