@@ -1,0 +1,34 @@
+2004-09-28  Antonio Diaz  <ant_diaz@teleline.es>
+
+	* Version 0.6 released.
+	* Skips faster over damaged areas (tries 1 block first).
+	* Error messages have been improved.
+
+2004-09-15  Antonio Diaz  <ant_diaz@teleline.es>
+
+	* Version 0.5 released.
+	* Badblocks file is now also saved if ddrescue is interrupted
+	  while splitting damaged areas.
+	* Added man page.
+
+2004-09-03  Antonio Diaz  <ant_diaz@teleline.es>
+
+	* Version 0.4 released.
+	* The project name has been changed to 'ddrescue' to meet
+	  command name standards.
+	* Added long option names.
+
+2004-08-18  Antonio Diaz  <ant_diaz@teleline.es>
+
+	* Version 0.3 released.
+	* Added badblocks file, making the rescue much more efficient.
+
+2004-08-14  Antonio Diaz  <ant_diaz@teleline.es>
+
+	* Version 0.2 released.
+	* Fixed bug that sometimes ignored the last sectors of a damaged area.
+	* The algorithm is now faster in presence of errors.
+
+2004-08-12  Antonio Diaz  <ant_diaz@teleline.es>
+
+	* Version 0.1 released.

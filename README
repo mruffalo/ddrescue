@@ -1,0 +1,54 @@
+Description
+
+ddrescue copies data from one file or block device (hard disk, cdrom,
+etc) to another, trying hard to rescue data in case of read errors.
+
+ddrescue does not truncate the output file if not asked to. So,
+everytime you run it on the same output file, it tries to fill in the
+gaps.
+
+If you have two or more copies of a damaged file, cdrom, etc, and run
+ddrescue on all of them, one at a time, with the same output file, you
+will probably obtain a complete and error-free file. This is so because
+the probability of having damaged areas at the same places on different
+input files is very low.
+
+if you also use the bad blocks file feature of ddrescue, the data will
+be rescued very efficiently.
+
+
+The algorithm of ddrescue is as follows:
+
+  1) Read the non-damaged part of the disk, skipping the damaged areas.
+or
+  1) Read a list of bad blocks (damaged areas) from a file.
+
+  2) Try to read the damaged areas, splitting them into smaller pieces
+     and reading the non-damaged pieces, until the hardware block size
+     is reached, or until interrupted by the user.
+
+  3) Try to read the damaged hardware blocks until the specified number
+     of retries is reached, or until interrupted by the user.
+
+  4) Optionally write a list of bad blocks to a file.
+
+
+Examples
+
+  Infinite retrying
+    ddrescue --max-retries=-1 infile outfile
+
+  Reading from CD-ROM with physical sector size of 2048 bytes
+    ddrescue --block-size=2048 /dev/cdrom outfile
+
+  Efficient rescue from several identical (but independent) sources
+    ddrescue infile1 outfile bbfile
+    ddrescue infile2 outfile bbfile
+    ddrescue infile3 outfile bbfile
+    ...
+    (repeat until all blocks are copied to outfile (ddrescue deletes bbfile))
+
+  Complex rescue
+    ddrescue infile outfile bbfile
+    (edit bbfile and move the desired entries to bbfile2)
+    ddrescue --max-retries=-1 infile outfile bbfile2

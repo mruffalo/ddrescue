@@ -1,0 +1,23 @@
+Requirements
+------------
+You will need a C++ compiler.
+I use gcc 3.4.2, but the code should compile with any standards compliant
+compiler.
+Gcc is available at http://gcc.gnu.org.
+
+
+Procedure
+---------
+1. Unpack the archive if you have not done so already:
+
+	bunzip2 -c ddrescue[version].tar.bz2 | tar -xf -
+
+This creates the directory ./ddrescue[version] containing the source from
+the main archive.
+
+2. Change to ddrescue directory and run make.
+
+	cd ddrescue[version]
+	make
+
+3. Type `make install' to install the program and the man page.
