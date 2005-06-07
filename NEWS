@@ -1,16 +1,14 @@
-Changes in version 0.9:
+Changes in version 1.0:
 
-	* ddrescue is now part of the GNU project.
+* A new logfile format makes multi-part rescue possible.
 
-	* Added configure script and info file.
+* The logfile is saved to disc every 30 seconds. So in case of
+  a crash you can resume the rescue with little recopying.
 
-	* Two small bugs corrected.
+* The logfile is now also saved in case of write error on the outfile.
 
-	* Added new option "binary-prefixes" to show binary multipliers
-	  in numbers (SI prefixes are used by default).
+* A race condition that could result in data not written to outfile but
+  annotated in logfile if computer crashes at the wrong moment has been
+  fixed.
 
-	* Numbers are accepted with decimal (SI) or binary multipliers.
-
-	* `badblocks file' renamed to `logfile'.
-
-	* Logfile is now also saved if max_errors are exceeded.
+* The GPL has been updated to version 2.3.

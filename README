@@ -23,46 +23,9 @@ areas at the same places on different input files is very low. Using
 the logfile, only the needed blocks are read from the second and
 successive copies.
 
+The logfile is periodically saved to disc. So in case of a crash you can
+resume the rescue with little recopying.
 
-The algorithm of ddrescue is as follows:
-
-  1) Optionally read a starting point, a size and a list of bad blocks
-     (damaged areas) from a file, for resuming a previously interrupted
-     rescue.
-
-  2) Read the non-damaged part of the file, skipping the damaged areas,
-     until the requested size is reached, or until interrupted by the user.
-
-  3) Try to read the damaged areas, splitting them into smaller pieces
-     and reading the non-damaged pieces, until the hardware block size
-     is reached, or until interrupted by the user.
-
-  4) Try to read the damaged hardware blocks until the specified number
-     of retries is reached, or until interrupted by the user.
-
-  5) Optionally write a starting point, a size and a list of bad blocks
-     to a file for later use.
-
-
-Examples
-
-  Fast rescue of non-damaged part of file
-    ddrescue --no-split infile outfile
-
-  Infinite retrying
-    ddrescue --max-retries=-1 infile outfile
-
-  Reading from CD-ROM with physical sector size of 2048 bytes
-    ddrescue --block-size=2048 /dev/cdrom outfile
-
-  Efficient rescue from several identical (but independent) sources
-    ddrescue infile1 outfile bbfile
-    ddrescue infile2 outfile bbfile
-    ddrescue infile3 outfile bbfile
-    ...
-    (repeat until all blocks are copied to outfile (ddrescue deletes bbfile))
-
-  Complex rescue
-    ddrescue infile outfile bbfile
-    (edit bbfile and move the desired entries to bbfile2)
-    ddrescue --max-retries=-1 infile outfile bbfile2
+Also, the same logfile can be used for multiple commands that copy
+different areas of the file, and for multiple recovery attempts over
+different subsets.

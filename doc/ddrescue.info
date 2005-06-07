@@ -11,7 +11,7 @@ File: ddrescue.info,  Node: Top,  Next: Algorithm,  Up: (dir)
 
 
 
-   This manual is for GNU ddrescue (version 0.9, 28 Dec 2004).
+   This manual is for GNU ddrescue (version 1.0, 7 June 2005).
 
 
    GNU ddrescue is a data recovery tool. It copies data from one file or
@@ -46,7 +46,7 @@ successive copies.
 * Concept Index::	Index of concepts
 
 
-   Copyright (C) 2004 Antonio Diaz Diaz.
+   Copyright (C) 2004, 2005 Antonio Diaz Diaz.
 
    Permission is granted to copy, distribute and/or modify this document
 under the terms of the GNU Free Documentation License, Version 1.2 or
@@ -60,11 +60,10 @@ Algorithm
 
    The algorithm of ddrescue is as follows:
 
-   1) Optionally read a starting point, a size and a list of bad blocks
-(damaged areas) from the logfile, for resuming a previously interrupted
-rescue.
+   1) Optionally read a logfile describing the status of a multi-part or
+previously interrupted rescue.
 
-   2) Read the non-damaged part of the input file, skipping the damaged
+   2) Read the non-damaged parts of the input file, skipping the damaged
 areas, until the requested size is reached, or until interrupted by the
 user.
 
@@ -75,8 +74,26 @@ reached, or until interrupted by the user.
    4) Try to read the damaged hardware blocks until the specified number
 of retries is reached, or until interrupted by the user.
 
-   5) Optionally write a starting point, a size and a list of bad blocks
-to the logfile for later use.
+   5) Optionally write a logfile for later use.
+
+
+   The logfile is periodically saved to disc. So in case of a crash you
+can resume the rescue with little recopying.
+
+   Also, the same logfile can be used for multiple commands that copy
+different areas of the file, and for multiple recovery attempts over
+different subsets. See this example:
+
+Rescue the most important part of the disc first.
+     ddrescue -i0 -s50M /dev/hdc hdimage logfile
+     ddrescue -i0 -s1M -r3 /dev/hdc hdimage logfile
+
+Then rescue some key disc areas.
+     ddrescue -i30G -s10G /dev/hdc hdimage logfile
+     ddrescue -i230G -s5G /dev/hdc hdimage logfile
+
+Now rescue the rest (does not recopy what is already done).
+     ddrescue -r3 /dev/hdc hdimage logfile
 
 
 File: ddrescue.info,  Node: Invoking ddrescue,  Next: Logfile Structure,  Prev: Algorithm,  Up: Top
@@ -113,12 +130,13 @@ Invoking ddrescue
 `--cluster-size=BLOCKS'
 `-c BLOCKS'
      Number of hardware blocks to copy at a time. Defaults to
-     64KiB / hardware_block_size.
+     64KiB / hardware_block_size. Try smaller values for slow drives (18
+     is a good value for floppies).
 
 `--max-errors=N'
 `-e N'
-     Maximum number of error areas allowed before giving up. Defaults to
-     infinity.
+     Maximum number of error areas allowed before giving up. Defaults
+     to infinity.
 
 `--input-position=POS'
 `-i POS'
@@ -140,7 +158,8 @@ Invoking ddrescue
 `--max-retries=N'
 `-r N'
      Exit after given number of retries. -1 means infinity. Defaults to
-     0.
+     0.  To retry error areas detected on a previous run, you must
+     specify a non-zero number of retries.
 
 `--max-size=BYTES'
 `-s BYTES'
@@ -171,6 +190,12 @@ E        exabyte   (10^18)         |   Ei       exbibyte (2^60)
 Z        zettabyte (10^21)         |   Zi       zebibyte (2^70)
 Y        yottabyte (10^24)         |   Yi       yobibyte (2^80)
 
+
+   NOTE: Don't believe everything Usamericans tell you. A billion is a
+million millions (million^2), a trillion is a million million millions
+(million^3), and so on. Please, respect the meaning of prefixes to make
+communication among all people possible. Thanks.
+
 
 File: ddrescue.info,  Node: Logfile Structure,  Next: Problems,  Prev: Invoking ddrescue,  Up: Top
 
@@ -178,19 +203,31 @@ Logfile Structure
 *****************
 
    The logfile is a text file easy to read and edit. Every line
-contains 3 non-negative integers. The first of them is a position in
-the input file, the second is a position in the output file, and the
-third is the size (in bytes) of the data to be copied. It looks like
-this:
+describes a block of data, and contains 2 non-negative integers and a
+status character. The first integer is a position in the input file, the
+second is the size (in bytes) of the data to be copied. The status
+character is one of these:
 
-0x0        0x0        0
-0x166000   0x166000   4096
-0x266E00   0x266E00   512
-...        ...        ...
+Character   Meaning
+'?'         non-tried
+'/'         bad area non-split
+'-'         bad hardware block(s)
+'+'         done
 
-   The first line is special. It describes the part of the file not
-tried yet, and its size may be zero. All the other lines describe
-damaged areas or blocks, and their sizes can't be zero.
+And here is an example logfile:
+
+# Rescue Logfile. Created by GNU ddrescue version 1.0
+#      pos         size   status
+0x00000000   0x00117000   +
+0x00117000   0x00000200   -
+0x00117200   0x00001000   +
+0x00118200   0x00007E00   /
+0x00120000   0x00048000   ?
+
+   Any line beginning with `#' is a comment line. The blocks must be
+contiguous and non-overlapping. The size field of the last line is
+special. If it is -1 means that the size of the file is undefined and
+end of file has not been reached yet.
 
    If you edit the file, you may use decimal, hexadecimal or octal
 values, using the same syntax that integer constants in C.
@@ -227,10 +264,10 @@ Concept Index
 
 Tag Table:
 Node: Top204
-Node: Algorithm1924
-Node: Invoking ddrescue2803
-Node: Logfile Structure5266
-Node: Problems6105
-Node: Concept Index6408
+Node: Algorithm1930
+Node: Invoking ddrescue3395
+Node: Logfile Structure6300
+Node: Problems7499
+Node: Concept Index7802
 
 End Tag Table

@@ -1,3 +1,14 @@
+2005-06-07  Antonio Diaz  <ant_diaz@teleline.es>
+
+	* Version 1.0 released.
+	* A new logfile format makes multi-part rescue possible.
+	* Logfile is saved every 30 seconds.
+	* Logfile is now also saved in case of write error on outfile.
+	* Fixed a race condition that could result in data not written
+	  to outfile but annotated in logfile if computer crashes at
+	  the wrong moment.
+	* GPL has been updated to version 2.3.
+
 2005-01-04  Antonio Diaz  <ant_diaz@teleline.es>
 
 	* Version 0.9 released.
