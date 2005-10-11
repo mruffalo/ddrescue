@@ -1,14 +1,8 @@
-Changes in version 1.0:
+Changes in version 1.1:
 
-* A new logfile format makes multi-part rescue possible.
+Ddrescue now aligns its I/O buffer to the sector size so that it can be
+used to read from raw devices.
 
-* The logfile is saved to disc every 30 seconds. So in case of
-  a crash you can resume the rescue with little recopying.
+A small tutorial has been added to the info file.
 
-* The logfile is now also saved in case of write error on the outfile.
-
-* A race condition that could result in data not written to outfile but
-  annotated in logfile if computer crashes at the wrong moment has been
-  fixed.
-
-* The GPL has been updated to version 2.3.
+Two missing headers have been included.

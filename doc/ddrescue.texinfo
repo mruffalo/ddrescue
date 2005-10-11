@@ -1,0 +1,370 @@
+\input texinfo @c -*-texinfo-*-
+@c %**start of header
+@setfilename ddrescue.info
+@settitle GNU ddrescue
+@c %**end of header
+
+@set UPDATED 10 October 2005
+@set VERSION 1.1
+
+@ifinfo
+@dircategory GNU Packages
+@direntry
+* ddrescue: (ddrescue).        Data recovery tool.
+@end direntry
+@end ifinfo
+
+
+@titlepage
+@title GNU ddrescue
+@subtitle Data recovery tool
+@subtitle for ddrescue version @value{VERSION}, @value{UPDATED}
+@author by Antonio Diaz Diaz
+
+@page
+@vskip 0pt plus 1filll
+@end titlepage
+
+@node Top
+@top
+
+@ifinfo
+This manual is for GNU ddrescue (version @value{VERSION}, @value{UPDATED}).
+
+@sp 1
+GNU ddrescue is a data recovery tool. It copies data from one file or
+block device (hard disc, cdrom, etc) to another, trying hard to rescue
+data in case of read errors.
+
+Ddrescue does not truncate the output file if not asked to. So, every
+time you run it on the same output file, it tries to fill in the gaps.
+
+The basic operation of ddrescue is fully automatic. That is, you don't
+have to wait for an error, stop the program, read the log, run it in
+reverse mode, etc.
+
+If you use the logfile feature of ddrescue, the data is rescued very
+efficiently (only the needed blocks are read). Also you can interrupt
+the rescue at any time and resume it later at the same point.
+
+Automatic merging of backups: If you have two or more damaged copies of
+a file, cdrom, etc, and run ddrescue on all of them, one at a time,
+with the same output file, you will probably obtain a complete and
+error-free file. This is so because the probability of having damaged
+areas at the same places on different input files is very low. Using
+the logfile, only the needed blocks are read from the second and
+successive copies.
+
+@end ifinfo
+
+@menu
+* Algorithm::		How ddrescue recovers the data
+* Invoking ddrescue::	Command line interface
+* Logfile Structure::	Detailed format of the logfile
+* Examples::		A small tutorial with examples
+* Raw Devices::		Raw devices bypass the kernel cache
+* Problems::		Reporting bugs
+* Concept Index::	Index of concepts
+@end menu
+
+@sp 1
+Copyright @copyright{} 2004, 2005 Antonio Diaz Diaz.
+
+Permission is granted to copy, distribute and/or modify this document
+under the terms of the GNU Free Documentation License, Version 1.2 or
+any later version published by the Free Software Foundation; with no
+Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts.
+
+
+@node Algorithm
+@chapter Algorithm
+@cindex algorithm
+
+The algorithm of ddrescue is as follows:
+
+1) Optionally read a logfile describing the status of a multi-part or
+previously interrupted rescue.
+
+2) Read the non-damaged parts of the input file, skipping the damaged
+areas, until the requested size is reached, or until interrupted by the
+user.
+
+3) Try to read the damaged areas, splitting them into smaller pieces
+and reading the non-damaged pieces, until the hardware block size is
+reached, or until interrupted by the user.
+
+4) Try to read the damaged hardware blocks until the specified number
+of retries is reached, or until interrupted by the user.
+
+5) Optionally write a logfile for later use.
+
+@sp 1
+The logfile is periodically saved to disc. So in case of a crash you can
+resume the rescue with little recopying.
+
+Also, the same logfile can be used for multiple commands that copy
+different areas of the file, and for multiple recovery attempts over
+different subsets. See this example:
+
+@noindent
+Rescue the most important part of the disc first.
+@example
+ddrescue -i0 -s50M /dev/hdc hdimage logfile
+ddrescue -i0 -s1M -r3 /dev/hdc hdimage logfile
+@end example
+@noindent
+Then rescue some key disc areas.
+@example
+ddrescue -i30G -s10G /dev/hdc hdimage logfile
+ddrescue -i230G -s5G /dev/hdc hdimage logfile
+@end example
+@noindent
+Now rescue the rest (does not recopy what is already done).
+@example
+ddrescue -r3 /dev/hdc hdimage logfile
+@end example
+
+
+@node Invoking ddrescue
+@chapter Invoking ddrescue
+@cindex invoking
+@cindex options
+@cindex usage
+@cindex version
+
+The format for running ddrescue is:
+
+@example
+ddrescue [@var{options}] @var{infile} @var{outfile} [@var{logfile}]
+@end example
+
+ddrescue supports the following options:
+
+@table @samp
+@item --help
+@itemx -h
+Print an informative help message describing the options and exit.
+
+@item --version
+@itemx -V
+Print the version number of ddrescue on the standard output and exit.
+
+@item --binary-prefixes
+@itemx -B
+Show units with binary prefixes (powers of 1024).@*
+SI prefixes (powers of 1000) are used by default. (See table below).
+
+@item --block-size=@var{bytes}
+@itemx -b @var{bytes}
+Hardware block size of input device in bytes (usually 512 for hard discs
+and floppies, and 2048 for cdroms). Defaults to 512.
+
+@item --cluster-size=@var{blocks}
+@itemx -c @var{blocks}
+Number of hardware blocks to copy at a time. Defaults to
+@w{64KiB / hardware_block_size}. Try smaller values for slow drives (18
+is a good value for floppies).
+
+@item --max-errors=@var{n}
+@itemx -e @var{n}
+Maximum number of error areas allowed before giving up. Defaults to infinity.
+
+@item --input-position=@var{pos}
+@itemx -i @var{pos}
+Starting position in input file. Defaults to 0.
+
+@item --no-split
+@itemx -n
+Do not try to split error areas. Allows a fast recovery of the non-damaged
+part of the file.
+
+@item --output-position=@var{pos}
+@itemx -o @var{pos}
+Starting position in output file. Defaults to @samp{--input-position}.
+
+@item --quiet
+@itemx -q
+Quiet operation.
+
+@item --max-retries=@var{n}
+@itemx -r @var{n}
+Exit after given number of retries. -1 means infinity. Defaults to 0.
+To retry error areas detected on a previous run, you must specify a
+non-zero number of retries.
+
+@item --max-size=@var{bytes}
+@itemx -s @var{bytes}
+Maximum size of data to be copied, in bytes.
+
+@item --truncate
+@itemx -t
+Truncate output file.
+
+@item --verbose
+@itemx -v
+Verbose mode.
+
+@end table
+
+@sp 1
+Numbers given in options (positions, sizes) may be followed by a
+multiplier and an optional @samp{B} for "byte".
+
+Table of SI and binary prefixes (unit multipliers):
+
+@multitable {Prefix} {kilobyte  (10^3 = 1000)} {|} {Prefix} {kibibyte (2^10 = 1024)}
+@item Prefix @tab Value               @tab | @tab Prefix @tab Value
+@item   @tab                          @tab | @tab b  @tab hardware blocks
+@item k @tab kilobyte  (10^3 = 1000)  @tab | @tab Ki @tab kibibyte (2^10 = 1024)
+@item M @tab megabyte  (10^6)         @tab | @tab Mi @tab mebibyte (2^20)
+@item G @tab gigabyte  (10^9)         @tab | @tab Gi @tab gibibyte (2^30)
+@item T @tab terabyte  (10^12)        @tab | @tab Ti @tab tebibyte (2^40)
+@item P @tab petabyte  (10^15)        @tab | @tab Pi @tab pebibyte (2^50)
+@item E @tab exabyte   (10^18)        @tab | @tab Ei @tab exbibyte (2^60)
+@item Z @tab zettabyte (10^21)        @tab | @tab Zi @tab zebibyte (2^70)
+@item Y @tab yottabyte (10^24)        @tab | @tab Yi @tab yobibyte (2^80)
+@end multitable
+
+@sp 1
+NOTE: Don't believe everything Usamericans tell you. A billion is a
+million millions (million^2), a trillion is a million million millions
+(million^3), and so on. Please, respect the meaning of prefixes to make
+communication among all people possible. Thanks.
+
+
+@node Logfile Structure
+@chapter Logfile Structure
+@cindex logfile structure
+
+The logfile is a text file easy to read and edit. Every line describes
+a block of data, and contains 2 non-negative integers and a status
+character. The first integer is a position in the input file, the
+second is the size (in bytes) of the data to be copied. The status
+character is one of these:
+
+@multitable {Character} {bad hardware block(s)}
+@item Character @tab Meaning
+@item '?'       @tab non-tried
+@item '/'       @tab bad area non-split
+@item '-'       @tab bad hardware block(s)
+@item '+'       @tab done
+@end multitable
+
+@noindent
+And here is an example logfile:
+
+@noindent
+# Rescue Logfile. Created by GNU ddrescue version 1.0@*
+#      pos         size   status@*
+@multitable {0x00000000} {0x00000000} {status}
+@item 0x00000000 @tab 0x00117000 @tab +
+@item 0x00117000 @tab 0x00000200 @tab -
+@item 0x00117200 @tab 0x00001000 @tab +
+@item 0x00118200 @tab 0x00007E00 @tab /
+@item 0x00120000 @tab 0x00048000 @tab ?
+@end multitable
+
+Any line beginning with @samp{#} is a comment line. The blocks must be
+contiguous and non-overlapping. The size field of the last line is
+special. If it is -1 means that the size of the file is undefined and
+end of file has not been reached yet.
+
+If you edit the file, you may use decimal, hexadecimal or octal values,
+using the same syntax that integer constants in C.
+
+
+@node Examples
+@chapter A small tutorial with examples
+@cindex examples
+
+A failing drive tends to develop more and more errors as time passes.
+Because of this, you should rescue the data from a drive as soon as you
+notice the first error.
+
+IMPORTANT! Never try to rescue a r/w mounted partition. The resulting
+copy may be useless.
+
+You should make a copy of the failing drive with ddrescue, and then try
+to repair the copy. If your data is really important, use the first copy
+as a master for a second copy, and try to repair the second copy. If
+something goes wrong, you have the master intact to try again.
+
+IMPORTANT! Never try to repair a file system on a drive with I/O errors;
+you will probably lose even more data.
+
+After the copy is repaired, with e2fsck or some other tool appropiate
+for the type of partition, you should mount it somewhere and try to
+recover the files in it.
+
+If the drive is so damaged that the rescued partition can't be repaired
+or mounted, you will have to browse the rescued data with an hex editor
+and extract the desired parts by hand.
+
+@noindent
+Example 1: Rescue an ext2 partition in /dev/hda2 to /dev/hdb2
+@example
+ddrescue -r3 /dev/hda2 /dev/hdb2 logfile
+e2fsck -v -f /dev/hdb2
+mount -t ext2 -o ro /dev/hdb2 /mnt
+@end example
+
+@noindent
+Example 2: Rescue a CD-ROM in /dev/cdrom
+@example
+ddrescue -b 2048 /dev/cdrom cdimage logfile
+write cdimage to a blank CD-ROM
+@end example
+
+
+@node Raw Devices
+@chapter Raw Devices
+@cindex raw devices
+
+NOTE! Read your system documentation to find how to bind a raw device to
+a regular block device.
+
+If you notice that the sizes and offsets in the log file are ALWAYS
+multiples of the hard sector size, maybe your kernel is caching the disc
+accesses and grouping them. In this case you may want to use a raw
+device to bypass the kernel cache and rescue more of your data.
+
+Ddrescue aligns its I/O buffer to the sector size so that it can be used
+to read from raw devices. For efficiency reasons, also aligns it to the
+memory page size if page size is a multiple of sector size. Ddrescue
+can't determine the size of a raw device, so a explicit
+@samp{--max-size} option is needed.
+
+Reading from a raw device seems to be slower than reading from the
+associated regular block device. So you should begin the rescue with the
+regular block device, and use the raw device only to recover the good
+sectors inside the error areas.
+
+@example
+raw /dev/raw/raw1 /dev/hdb
+ddrescue -n /dev/hdb /dev/hdc logfile
+ddrescue -r3 -s <size_of_hdb> /dev/raw/raw1 /dev/hdc logfile
+raw /dev/raw/raw1 0 0
+e2fsck -v -f /dev/hdc
+mount -t ext2 -o ro /dev/hdc /mnt
+@end example
+
+
+@node Problems
+@chapter Reporting Bugs
+@cindex bugs
+@cindex getting help
+@cindex problems
+
+If you find a bug in GNU ddrescue, please send electronic mail to
+@email{bug-ddrescue@@gnu.org}. Include the version number, which you can
+find by running @w{@samp{ddrescue --version}}.
+
+
+@node Concept Index
+@unnumbered Concept Index
+
+@printindex cp
+
+@shortcontents
+@contents
+@bye

@@ -4,7 +4,7 @@ GNU ddrescue is a data recovery tool. It copies data from one file or
 block device (hard disc, cdrom, etc) to another, trying hard to rescue
 data in case of read errors.
 
-ddrescue does not truncate the output file if not asked to. So, every
+Ddrescue does not truncate the output file if not asked to. So, every
 time you run it on the same output file, it tries to fill in the gaps.
 
 The basic operation of ddrescue is fully automatic. That is, you don't
@@ -29,3 +29,8 @@ resume the rescue with little recopying.
 Also, the same logfile can be used for multiple commands that copy
 different areas of the file, and for multiple recovery attempts over
 different subsets.
+
+Ddrescue aligns its I/O buffer to the sector size so that it can be used
+to read from raw devices. For efficiency reasons, also aligns it to the
+memory page size if page size is a multiple of sector size. Read the
+info file to learn how to use raw devices with ddrescue.

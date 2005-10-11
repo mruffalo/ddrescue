@@ -31,18 +31,19 @@
 #include <queue>
 #include <fcntl.h>
 #include <getopt.h>
+#include <unistd.h>
 #include <sys/stat.h>
 #include "ddrescue.h"
 
 
 namespace {
 
-// Date of this version: 2005-06-07
+// Date of this version: 2005-10-10
 
 const char * invocation_name = 0;
 const char * const Program_name    = "GNU ddrescue";
 const char * const program_name    = "ddrescue";
-const char * const program_version = "1.0";
+const char * const program_version = "1.1";
 const char * const program_year    = "2005";
 
 

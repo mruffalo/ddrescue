@@ -71,20 +71,23 @@ class Logbook
   {
   long long _offset;			// rescue offset (opos - ipos);
   Block _domain;			// rescue domain
-  const char * filename;
-  const int _cluster, _hardbs, _max_errors, _max_retries, _verbosity;
+  char *iobuf_base, *iobuf;		// iobuf is aligned to page and hardbs
+  const char *filename;
+  const int _hardbs, _softbs, _max_errors, _max_retries, _verbosity;
+  long long recsize, errsize;		// total recovered and error sizes
+  int errors;				// errors found so far
+  int _ides, _odes;			// input and output file descriptors
   const bool _nosplit;
   std::vector< Sblock > sblock_vector;
 
   void set_rescue_domain( const long long ipos, const long long opos,
                           const long long max_size, const long long isize ) throw();
   bool read_logfile() throw();
-  int copy_non_tried( const int ides, const int odes, long long & recsize,
-                      long long & errsize, int & errors ) throw();
-  int split_errors( const int ides, const int odes, long long & recsize,
-                    long long & errsize, int & errors ) throw();
-  int copy_errors( const int ides, const int odes, long long & recsize,
-                   long long & errsize, int & errors ) throw();
+  int copy_non_tried_block( const Block & block, std::vector< Sblock > & result ) throw();
+  int copy_bad_block( const Block & block, std::vector< Sblock > & result ) throw();
+  int copy_non_tried() throw();
+  int split_errors() throw();
+  int copy_errors() throw();
 
 public:
   Logbook( const long long ipos, const long long opos,
@@ -92,6 +95,7 @@ public:
            const char * name, const int cluster, const int hardbs,
            const int max_errors, const int max_retries,
            const int verbosity, const bool nosplit ) throw();
+  ~Logbook() throw() { delete[] iobuf_base; }
 
   long long rescue_ipos() const throw() { return _domain.pos(); }
   long long rescue_opos() const throw() { return _domain.pos() + _offset; }
@@ -104,14 +108,6 @@ public:
 
 // Defined in ddrescue.cc
 //
-int copy_non_tried_block( const Block & block, std::vector< Sblock > & result,
-                          long long & recsize, long long & errsize,
-                          int & errors, const long long offset,
-                          const int ides, const int odes, const int hardbs ) throw();
-int copy_bad_block( const Block & block, std::vector< Sblock > & result,
-                    long long & recsize, long long & errsize,
-                    int & errors, const long long offset,
-                    const int ides, const int odes ) throw();
 const char * format_num( long long num, long long max = 999999,
                          const int set_prefix = 0 ) throw();
 void set_handler() throw();

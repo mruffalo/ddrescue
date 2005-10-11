@@ -3,7 +3,7 @@ ddrescue.texinfo.
 
 INFO-DIR-SECTION GNU Packages
 START-INFO-DIR-ENTRY
-* ddrescue: (ddrescue).          Data recovery tool.
+* ddrescue: (ddrescue).        Data recovery tool.
 END-INFO-DIR-ENTRY
 
 
@@ -11,14 +11,14 @@ File: ddrescue.info,  Node: Top,  Next: Algorithm,  Up: (dir)
 
 
 
-   This manual is for GNU ddrescue (version 1.0, 7 June 2005).
+   This manual is for GNU ddrescue (version 1.1, 10 October 2005).
 
 
    GNU ddrescue is a data recovery tool. It copies data from one file or
 block device (hard disc, cdrom, etc) to another, trying hard to rescue
 data in case of read errors.
 
-   ddrescue does not truncate the output file if not asked to. So, every
+   Ddrescue does not truncate the output file if not asked to. So, every
 time you run it on the same output file, it tries to fill in the gaps.
 
    The basic operation of ddrescue is fully automatic. That is, you
@@ -42,6 +42,8 @@ successive copies.
 * Algorithm::		How ddrescue recovers the data
 * Invoking ddrescue::	Command line interface
 * Logfile Structure::	Detailed format of the logfile
+* Examples::		A small tutorial with examples
+* Raw Devices::		Raw devices bypass the kernel cache
 * Problems::		Reporting bugs
 * Concept Index::	Index of concepts
 
@@ -50,7 +52,8 @@ successive copies.
 
    Permission is granted to copy, distribute and/or modify this document
 under the terms of the GNU Free Documentation License, Version 1.2 or
-any later version published by the Free Software Foundation.
+any later version published by the Free Software Foundation; with no
+Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts.
 
 
 File: ddrescue.info,  Node: Algorithm,  Next: Invoking ddrescue,  Prev: Top,  Up: Top
@@ -197,7 +200,7 @@ million millions (million^2), a trillion is a million million millions
 communication among all people possible. Thanks.
 
 
-File: ddrescue.info,  Node: Logfile Structure,  Next: Problems,  Prev: Invoking ddrescue,  Up: Top
+File: ddrescue.info,  Node: Logfile Structure,  Next: Examples,  Prev: Invoking ddrescue,  Up: Top
 
 Logfile Structure
 *****************
@@ -233,7 +236,77 @@ end of file has not been reached yet.
 values, using the same syntax that integer constants in C.
 
 
-File: ddrescue.info,  Node: Problems,  Next: Concept Index,  Prev: Logfile Structure,  Up: Top
+File: ddrescue.info,  Node: Examples,  Next: Raw Devices,  Prev: Logfile Structure,  Up: Top
+
+A small tutorial with examples
+******************************
+
+   A failing drive tends to develop more and more errors as time passes.
+Because of this, you should rescue the data from a drive as soon as you
+notice the first error.
+
+   IMPORTANT! Never try to rescue a r/w mounted partition. The resulting
+copy may be useless.
+
+   You should make a copy of the failing drive with ddrescue, and then
+try to repair the copy. If your data is really important, use the first
+copy as a master for a second copy, and try to repair the second copy.
+If something goes wrong, you have the master intact to try again.
+
+   IMPORTANT! Never try to repair a file system on a drive with I/O
+errors; you will probably lose even more data.
+
+   After the copy is repaired, with e2fsck or some other tool appropiate
+for the type of partition, you should mount it somewhere and try to
+recover the files in it.
+
+   If the drive is so damaged that the rescued partition can't be
+repaired or mounted, you will have to browse the rescued data with an
+hex editor and extract the desired parts by hand.
+
+Example 1: Rescue an ext2 partition in /dev/hda2 to /dev/hdb2
+     ddrescue -r3 /dev/hda2 /dev/hdb2 logfile
+     e2fsck -v -f /dev/hdb2
+     mount -t ext2 -o ro /dev/hdb2 /mnt
+
+Example 2: Rescue a CD-ROM in /dev/cdrom
+     ddrescue -b 2048 /dev/cdrom cdimage logfile
+     write cdimage to a blank CD-ROM
+
+
+File: ddrescue.info,  Node: Raw Devices,  Next: Problems,  Prev: Examples,  Up: Top
+
+Raw Devices
+***********
+
+   NOTE! Read your system documentation to find how to bind a raw
+device to a regular block device.
+
+   If you notice that the sizes and offsets in the log file are ALWAYS
+multiples of the hard sector size, maybe your kernel is caching the disc
+accesses and grouping them. In this case you may want to use a raw
+device to bypass the kernel cache and rescue more of your data.
+
+   Ddrescue aligns its I/O buffer to the sector size so that it can be
+used to read from raw devices. For efficiency reasons, also aligns it
+to the memory page size if page size is a multiple of sector size.
+Ddrescue can't determine the size of a raw device, so a explicit
+`--max-size' option is needed.
+
+   Reading from a raw device seems to be slower than reading from the
+associated regular block device. So you should begin the rescue with the
+regular block device, and use the raw device only to recover the good
+sectors inside the error areas.
+
+     raw /dev/raw/raw1 /dev/hdb
+     ddrescue -n /dev/hdb /dev/hdc logfile
+     ddrescue -r3 -s <size_of_hdb> /dev/raw/raw1 /dev/hdc logfile
+     raw /dev/raw/raw1 0 0
+     e2fsck -v -f /dev/hdc
+     mount -t ext2 -o ro /dev/hdc /mnt
+
+
+File: ddrescue.info,  Node: Problems,  Next: Concept Index,  Prev: Raw Devices,  Up: Top
 
 Reporting Bugs
 **************
@@ -252,22 +325,26 @@ Concept Index
 
 * algorithm:                             Algorithm.
 * bugs:                                  Problems.
+* examples:                              Examples.
 * getting help:                          Problems.
 * invoking:                              Invoking ddrescue.
 * logfile structure:                     Logfile Structure.
 * options:                               Invoking ddrescue.
 * problems:                              Problems.
+* raw devices:                           Raw Devices.
 * usage:                                 Invoking ddrescue.
 * version:                               Invoking ddrescue.
 
 
 
 Tag Table:
-Node: Top204
-Node: Algorithm1930
-Node: Invoking ddrescue3395
-Node: Logfile Structure6300
-Node: Problems7499
-Node: Concept Index7802
+Node: Top202
+Node: Algorithm2105
+Node: Invoking ddrescue3570
+Node: Logfile Structure6475
+Node: Examples7674
+Node: Raw Devices9154
+Node: Problems10429
+Node: Concept Index10726
 
 End Tag Table

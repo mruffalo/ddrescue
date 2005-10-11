@@ -1,7 +1,7 @@
 exec_prefix = $(prefix)
 bindir = $(exec_prefix)/bin
 
-DISTNAME = ddrescue-1.0
+DISTNAME = ddrescue-1.1
 
 CXX = g++
 INSTALL = install
@@ -83,6 +83,7 @@ dist :
 	  $(DISTNAME)/configure \
 	  $(DISTNAME)/doc/ddrescue.1 \
 	  $(DISTNAME)/doc/ddrescue.info \
+	  $(DISTNAME)/doc/ddrescue.texinfo \
 	  $(DISTNAME)/*.cc \
 	  $(DISTNAME)/*.h
 	rm -f $(DISTNAME)

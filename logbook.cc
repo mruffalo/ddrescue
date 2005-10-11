@@ -19,6 +19,7 @@
 #define _FILE_OFFSET_BITS 64
 
 #include <algorithm>
+#include <cctype>
 #include <cerrno>
 #include <climits>
 #include <cstdio>
@@ -272,11 +273,8 @@ bool Logbook::read_logfile() throw()
 
 // Read the non-damaged part of the domain, skipping over the damaged areas.
 //
-int Logbook::copy_non_tried( const int ides, const int odes,
-                             long long & recsize, long long & errsize,
-                             int & errors ) throw()
+int Logbook::copy_non_tried() throw()
   {
-  const int softbs = _cluster * _hardbs;
   unsigned int index = 0;
   bool first_post = true;
   split_domain_border_sblocks( sblock_vector, _domain );
@@ -291,7 +289,7 @@ int Logbook::copy_non_tried( const int ides, const int odes,
     while( !block_done )
       {
       Block & block = sblock_vector[index];
-      Block chip = block.split( block.pos() + softbs );
+      Block chip = block.split( block.pos() + _softbs );
       if( chip.size() == 0 )
         {
         chip = block; sblock_vector.erase( sblock_vector.begin() + index );
@@ -303,8 +301,7 @@ int Logbook::copy_non_tried( const int ides, const int odes,
                      "Copying data...", first_post ); first_post = false;
         }
       std::vector< Sblock > result;
-      int retval = copy_non_tried_block( chip, result, recsize, errsize,
-                                         errors, _offset, ides, odes, _hardbs );
+      int retval = copy_non_tried_block( chip, result );
       if( retval == -2 )	// EOF
         {
         sblock_vector.erase( sblock_vector.begin() + index, sblock_vector.end() );
@@ -320,7 +317,7 @@ int Logbook::copy_non_tried( const int ides, const int odes,
         }
       if( retval || ( _max_errors >= 0 && errors > _max_errors ) )
         return retval;
-      if( !update_logfile( sblock_vector, filename, odes ) ) return 1;
+      if( !update_logfile( sblock_vector, filename, _odes ) ) return 1;
       }
     }
   return 0;
@@ -329,9 +326,7 @@ int Logbook::copy_non_tried( const int ides, const int odes,
 
 // Try to read the damaged areas, splitting them into smaller pieces.
 //
-int Logbook::split_errors( const int ides, const int odes,
-                           long long & recsize, long long & errsize,
-                           int & errors ) throw()
+int Logbook::split_errors() throw()
   {
   unsigned int index = 0;
   bool first_post = true;
@@ -360,8 +355,7 @@ int Logbook::split_errors( const int ides, const int odes,
                      "Splitting error areas...", first_post ); first_post = false;
         }
       std::vector< Sblock > result;
-      int retval = copy_bad_block( chip, result, recsize, errsize, errors,
-                                   _offset, ides, odes );
+      int retval = copy_bad_block( chip, result );
       if( retval == -2 )	// EOF
         {
         sblock_vector.erase( sblock_vector.begin() + index, sblock_vector.end() );
@@ -377,16 +371,14 @@ int Logbook::split_errors( const int ides, const int odes,
         }
       if( retval || ( _max_errors >= 0 && errors > _max_errors ) )
         return retval;
-      if( !update_logfile( sblock_vector, filename, odes ) ) return 1;
+      if( !update_logfile( sblock_vector, filename, _odes ) ) return 1;
       }
     }
   return 0;
   }
 
 
-int Logbook::copy_errors( const int ides, const int odes,
-                          long long & recsize, long long & errsize,
-                          int & errors ) throw()
+int Logbook::copy_errors() throw()
   {
   if( _max_retries != 0 )
     {
@@ -422,8 +414,7 @@ int Logbook::copy_errors( const int ides, const int odes,
                          msgbuf, first_post ); first_post = false;
             }
           std::vector< Sblock > result;
-          int retval = copy_bad_block( chip, result, recsize, errsize, errors,
-                                       _offset, ides, odes );
+          int retval = copy_bad_block( chip, result );
           if( retval == -2 )	// EOF
             {
             sblock_vector.erase( sblock_vector.begin() + index, sblock_vector.end() );
@@ -438,7 +429,7 @@ int Logbook::copy_errors( const int ides, const int odes,
               index += result.size(); }
             }
           if( retval ) return retval;
-          if( !update_logfile( sblock_vector, filename, odes ) ) return 1;
+          if( !update_logfile( sblock_vector, filename, _odes ) ) return 1;
           }
         }
       if( !bad_block_found ) break;
@@ -453,10 +444,20 @@ Logbook::Logbook( const long long ipos, const long long opos,
                   const char * name, const int cluster, const int hardbs,
                   const int max_errors, const int max_retries,
                   const int verbosity, const bool nosplit ) throw()
-  : filename( name ), _cluster( cluster ), _hardbs( hardbs ),
+  : filename( name ), _hardbs( hardbs ), _softbs( cluster * hardbs ),
     _max_errors( max_errors ), _max_retries( max_retries ),
     _verbosity( verbosity ), _nosplit( nosplit )
   {
+  int alignment = sysconf( _SC_PAGESIZE );
+  if( alignment < _hardbs || alignment % _hardbs ) alignment = _hardbs;
+  if( alignment < 2 || alignment > 65536 ) alignment = 0;
+  iobuf = iobuf_base = new char[ _softbs + alignment ];
+  if( alignment > 1 )		// align iobuf for use with raw devices
+    {
+    const int disp = alignment - ( reinterpret_cast<long> (iobuf) % alignment );
+    if( disp > 0 && disp < alignment ) iobuf += disp;
+    }
+
   set_rescue_domain( ipos, opos, max_size, isize );
   if( filename ) read_logfile();
   complete_sblock_vector( sblock_vector, isize );
@@ -473,8 +474,9 @@ bool Logbook::blank() const throw()
 
 int Logbook::do_rescue( const int ides, const int odes ) throw()
   {
-  long long recsize = 0, errsize = 0;
-  int errors = 0;
+  recsize = 0; errsize = 0; errors = 0;
+  _ides = ides; _odes = odes;
+
   for( unsigned i = 0; i < sblock_vector.size(); ++i )
     {
     Sblock & sb = sblock_vector[i];
@@ -504,11 +506,11 @@ int Logbook::do_rescue( const int ides, const int odes ) throw()
     }
   int retval = 0;
   if( _max_errors < 0 || errors <= _max_errors )
-    retval = copy_non_tried( ides, odes, recsize, errsize, errors );
+    retval = copy_non_tried();
   if( retval == 0 && !_nosplit && ( _max_errors < 0 || errors <= _max_errors ) )
-    retval = split_errors( ides, odes, recsize, errsize, errors );
+    retval = split_errors();
   if( retval == 0 && ( _max_errors < 0 || errors <= _max_errors ) )
-    retval = copy_errors( ides, odes, recsize, errsize, errors );
+    retval = copy_errors();
   if( _verbosity >= 0 )
     {
     const char *msg = 0;
@@ -519,7 +521,7 @@ int Logbook::do_rescue( const int ides, const int odes ) throw()
     std::fputc( '\n', stdout );
     }
   compact_sblock_vector( sblock_vector );
-  if( !update_logfile( sblock_vector, filename, odes, true ) && retval == 0 )
+  if( !update_logfile( sblock_vector, filename, _odes, true ) && retval == 0 )
     retval = 1;
   return retval;
   }

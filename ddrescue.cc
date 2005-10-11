@@ -80,31 +80,27 @@ int writeblock( int fd, char * buf, int size, long long pos ) throw()
 
 // Return values: 1 write error, 0 OK, -1 interrupted, -2 EOF.
 //
-int copy_non_tried_block( const Block & block, std::vector< Sblock > & result,
-                          long long & recsize, long long & errsize,
-                          int & errors, const long long offset,
-                          const int ides, const int odes, const int hardbs ) throw()
+int Logbook::copy_non_tried_block( const Block & block,
+                                   std::vector< Sblock > & result ) throw()
   {
   result.clear();
   if( interrupted )
     { result.push_back( Sblock( block, Sblock::non_tried ) ); return -1; }
   if( block.size() <= 0 ) return 0;
   const int size = block.size();
-  char buf[size];
-
   int rd;
-  if( size > hardbs )
+  if( size > _hardbs )
     {
-    rd = readblock( ides, buf, hardbs, block.pos() );
-    if( rd == hardbs )
-      rd += readblock( ides, buf + rd, size - rd, block.pos() + rd );
+    rd = readblock( _ides, iobuf, _hardbs, block.pos() );
+    if( rd == _hardbs )
+      rd += readblock( _ides, iobuf + rd, size - rd, block.pos() + rd );
     }
-  else rd = readblock( ides, buf, size, block.pos() );
+  else rd = readblock( _ides, iobuf, size, block.pos() );
   const int errno1 = errno;
 
   if( rd > 0 )
     {
-    if( writeblock( odes, buf, rd, block.pos() + offset ) != rd )
+    if( writeblock( _odes, iobuf, rd, block.pos() + _offset ) != rd )
       {
       result.push_back( Sblock( block, Sblock::non_tried ) );
       show_error( "write error", errno ); return 1;
@@ -118,7 +114,7 @@ int copy_non_tried_block( const Block & block, std::vector< Sblock > & result,
     else			// Read error
       {
       Block b( block.pos() + rd, size - rd );
-      if( b.can_be_split( hardbs ) )
+      if( b.can_be_split( _hardbs ) )
         result.push_back( Sblock( b, Sblock::bad_cluster ) );
       else result.push_back( Sblock( b, Sblock::bad_block ) );
       ++errors; errsize += size - rd;
@@ -130,24 +126,21 @@ int copy_non_tried_block( const Block & block, std::vector< Sblock > & result,
 
 // Return values: 1 write error, 0 OK, -1 interrupted, -2 EOF.
 //
-int copy_bad_block( const Block & block, std::vector< Sblock > & result,
-                    long long & recsize, long long & errsize,
-                    int & errors, const long long offset,
-                    const int ides, const int odes ) throw()
+int Logbook::copy_bad_block( const Block & block,
+                             std::vector< Sblock > & result ) throw()
   {
   result.clear();
   if( interrupted )
     { result.push_back( Sblock( block, Sblock::bad_block ) ); return -1; }
   if( block.size() <= 0 ) return 0;
   const int size = block.size();
-  char buf[size];
 
-  const int rd = readblock( ides, buf, size, block.pos() );
+  const int rd = readblock( _ides, iobuf, size, block.pos() );
   const int errno1 = errno;
 
   if( rd > 0 )
     {
-    if( writeblock( odes, buf, rd, block.pos() + offset ) != rd )
+    if( writeblock( _odes, iobuf, rd, block.pos() + _offset ) != rd )
       {
       result.push_back( Sblock( block, Sblock::bad_block ) );
       show_error( "write error", errno ); return 1;
