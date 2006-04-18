@@ -4,8 +4,8 @@
 @settitle GNU ddrescue
 @c %**end of header
 
-@set UPDATED 10 October 2005
-@set VERSION 1.1
+@set UPDATED 3 April 2006
+@set VERSION 1.2
 
 @ifinfo
 @dircategory GNU Packages
@@ -68,7 +68,7 @@ successive copies.
 @end menu
 
 @sp 1
-Copyright @copyright{} 2004, 2005 Antonio Diaz Diaz.
+Copyright @copyright{} 2004, 2005, 2006 Antonio Diaz Diaz.
 
 Permission is granted to copy, distribute and/or modify this document
 under the terms of the GNU Free Documentation License, Version 1.2 or
@@ -149,15 +149,15 @@ Print an informative help message describing the options and exit.
 @itemx -V
 Print the version number of ddrescue on the standard output and exit.
 
-@item --binary-prefixes
-@itemx -B
-Show units with binary prefixes (powers of 1024).@*
-SI prefixes (powers of 1000) are used by default. (See table below).
-
 @item --block-size=@var{bytes}
 @itemx -b @var{bytes}
 Hardware block size of input device in bytes (usually 512 for hard discs
 and floppies, and 2048 for cdroms). Defaults to 512.
+
+@item --binary-prefixes
+@itemx -B
+Show units with binary prefixes (powers of 1024).@*
+SI prefixes (powers of 1000) are used by default. (See table below).
 
 @item --cluster-size=@var{blocks}
 @itemx -c @var{blocks}
@@ -165,13 +165,19 @@ Number of hardware blocks to copy at a time. Defaults to
 @w{64KiB / hardware_block_size}. Try smaller values for slow drives (18
 is a good value for floppies).
 
+@item --complete-only
+@itemx -C
+Limit rescue domain to the blocks of finite size read from logfile. Do
+not read new data beyond logfile limits. This is useful when reading
+from devices of undefined size, like raw devices.
+
 @item --max-errors=@var{n}
 @itemx -e @var{n}
 Maximum number of error areas allowed before giving up. Defaults to infinity.
 
 @item --input-position=@var{pos}
 @itemx -i @var{pos}
-Starting position in input file. Defaults to 0.
+Starting position in input file, in bytes. Defaults to 0.
 
 @item --no-split
 @itemx -n
@@ -180,7 +186,9 @@ part of the file.
 
 @item --output-position=@var{pos}
 @itemx -o @var{pos}
-Starting position in output file. Defaults to @samp{--input-position}.
+Starting position in output file, in bytes. Defaults to
+@samp{--input-position}. The bytes below @var{pos} aren't touched if
+they exist and truncation is not requested. Else they are set to 0.
 
 @item --quiet
 @itemx -q
@@ -194,7 +202,13 @@ non-zero number of retries.
 
 @item --max-size=@var{bytes}
 @itemx -s @var{bytes}
-Maximum size of data to be copied, in bytes.
+Maximum size of data to be copied, in bytes. Note that this parameter
+specifies the amount of data to be copied, not the size of the output
+file. So, for example, the following command creates an output file 300
+bytes long, but only writes data on the last 200 bytes:
+@example
+ddrescue -i 100 -s 200 infile outfile logfile
+@end example
 
 @item --truncate
 @itemx -t
@@ -332,7 +346,7 @@ Ddrescue aligns its I/O buffer to the sector size so that it can be used
 to read from raw devices. For efficiency reasons, also aligns it to the
 memory page size if page size is a multiple of sector size. Ddrescue
 can't determine the size of a raw device, so a explicit
-@samp{--max-size} option is needed.
+@samp{--max-size} or @samp{--complete-only} option is needed.
 
 Reading from a raw device seems to be slower than reading from the
 associated regular block device. So you should begin the rescue with the
@@ -342,7 +356,7 @@ sectors inside the error areas.
 @example
 raw /dev/raw/raw1 /dev/hdb
 ddrescue -n /dev/hdb /dev/hdc logfile
-ddrescue -r3 -s <size_of_hdb> /dev/raw/raw1 /dev/hdc logfile
+ddrescue -r3 -C /dev/raw/raw1 /dev/hdc logfile
 raw /dev/raw/raw1 0 0
 e2fsck -v -f /dev/hdc
 mount -t ext2 -o ro /dev/hdc /mnt

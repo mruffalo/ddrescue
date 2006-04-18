@@ -1,3 +1,11 @@
+2006-04-03  Antonio Diaz  <ant_diaz@teleline.es>
+
+	* Version 1.2 released.
+	* Added new option `--complete-only'.
+	* Added new argument parser that replaces `getopt_long'.
+	* Logfile save interval is now dependent on logfile size.
+	* Small changes to documentation.
+
 2005-10-10  Antonio Diaz  <ant_diaz@teleline.es>
 
 	* Version 1.1 released.
@@ -54,7 +62,7 @@
 2004-09-03  Antonio Diaz  <ant_diaz@teleline.es>
 
 	* Version 0.4 released.
-	* The project name has been changed to 'ddrescue' to meet
+	* The project name has been changed to `ddrescue' to meet
 	  command name standards.
 	* Added long option names.
 

@@ -1,5 +1,5 @@
 /*  GNU ddrescue - Data recovery tool
-    Copyright (C) 2004, 2005 Antonio Diaz Diaz.
+    Copyright (C) 2004, 2005, 2006 Antonio Diaz Diaz.
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -29,31 +29,25 @@
 #include <cstdio>
 #include <cstdlib>
 #include <queue>
+#include <string>
+#include <vector>
 #include <fcntl.h>
-#include <getopt.h>
 #include <unistd.h>
 #include <sys/stat.h>
+
+#include "arg_parser.h"
 #include "ddrescue.h"
 
 
 namespace {
 
-// Date of this version: 2005-10-10
+// Date of this version: 2006-04-03
 
 const char * invocation_name = 0;
 const char * const Program_name    = "GNU ddrescue";
 const char * const program_name    = "ddrescue";
-const char * const program_version = "1.1";
-const char * const program_year    = "2005";
-
-
-void show_version() throw()
-  {
-  std::printf( "%s version %s\n", Program_name, program_version );
-  std::printf( "Copyright (C) %s Antonio Diaz Diaz.\n", program_year );
-  std::printf( "This program is free software; you may redistribute it under the terms of\n" );
-  std::printf( "the GNU General Public License.  This program has absolutely no warranty.\n" );
-  }
+const char * const program_version = "1.2";
+const char * const program_year    = "2006";
 
 
 void show_help( const int cluster, const int hardbs ) throw()
@@ -65,9 +59,10 @@ void show_help( const int cluster, const int hardbs ) throw()
   std::printf( "Options:\n" );
   std::printf( "  -h, --help                   display this help and exit\n" );
   std::printf( "  -V, --version                output version information and exit\n" );
-  std::printf( "  -B, --binary-prefixes        show binary multipliers in numbers [default SI]\n" );
   std::printf( "  -b, --block-size=<bytes>     hardware block size of input device [%d]\n", hardbs );
+  std::printf( "  -B, --binary-prefixes        show binary multipliers in numbers [default SI]\n" );
   std::printf( "  -c, --cluster-size=<blocks>  hardware blocks to copy at a time [%d]\n", cluster );
+  std::printf( "  -C, --complete-only          do not read new data beyond logfile limits\n" );
   std::printf( "  -e, --max-errors=<n>         maximum number of error areas allowed\n" );
   std::printf( "  -i, --input-position=<pos>   starting position in input file [0]\n" );
   std::printf( "  -n, --no-split               do not try to split error areas\n" );
@@ -80,6 +75,15 @@ void show_help( const int cluster, const int hardbs ) throw()
   std::printf( "Numbers may be followed by a multiplier: b = blocks, k = kB = 10^3 = 1000,\n" );
   std::printf( "Ki = KiB = 2^10 = 1024, M = 10^6, Mi = 2^20, G = 10^9, Gi = 2^30, etc...\n" );
   std::printf( "\nReport bugs to bug-ddrescue@gnu.org\n");
+  }
+
+
+void show_version() throw()
+  {
+  std::printf( "%s version %s\n", Program_name, program_version );
+  std::printf( "Copyright (C) %s Antonio Diaz Diaz.\n", program_year );
+  std::printf( "This program is free software; you may redistribute it under the terms of\n" );
+  std::printf( "the GNU General Public License.  This program has absolutely no warranty.\n" );
   }
 
 
@@ -179,64 +183,72 @@ int main( int argc, char * argv[] ) throw()
   const int cluster_bytes = 65536, default_hardbs = 512;
   int cluster = 0, hardbs = 512;
   int max_errors = -1, max_retries = 0, o_trunc = 0, verbosity = 0;
-  bool nosplit = false;
+  bool complete_only = false, nosplit = false;
   invocation_name = argv[0];
 
-  while( true )
+  static const Arg_parser::Option options[] =
     {
-    static struct option const long_options[] =
-      {
-      {"binary_prefixes",       no_argument, 0, 'B'},
-      {"block-size",      required_argument, 0, 'b'},
-      {"cluster-size",    required_argument, 0, 'c'},
-      {"help",                  no_argument, 0, 'h'},
-      {"input-position",  required_argument, 0, 'i'},
-      {"max-errors",      required_argument, 0, 'e'},
-      {"max-retries",     required_argument, 0, 'r'},
-      {"max-size",        required_argument, 0, 's'},
-      {"no-split",              no_argument, 0, 'n'},
-      {"output-position", required_argument, 0, 'o'},
-      {"quiet",                 no_argument, 0, 'q'},
-      {"truncate",              no_argument, 0, 't'},
-      {"verbose",               no_argument, 0, 'v'},
-      {"version",               no_argument, 0, 'V'},
-      {0, 0, 0, 0}
-      };
+    { 'b', "block-size",      Arg_parser::yes },
+    { 'B', "binary_prefixes", Arg_parser::no  },
+    { 'c', "cluster-size",    Arg_parser::yes },
+    { 'C', "complete-only",   Arg_parser::no  },
+    { 'e', "max-errors",      Arg_parser::yes },
+    { 'h', "help",            Arg_parser::no  },
+    { 'i', "input-position",  Arg_parser::yes },
+    { 'n', "no-split",        Arg_parser::no  },
+    { 'o', "output-position", Arg_parser::yes },
+    { 'q', "quiet",           Arg_parser::no  },
+    { 'r', "max-retries",     Arg_parser::yes },
+    { 's', "max-size",        Arg_parser::yes },
+    { 't', "truncate",        Arg_parser::no  },
+    { 'v', "verbose",         Arg_parser::no  },
+    { 'V', "version",         Arg_parser::no  },
+    {  0 , 0,                 Arg_parser::no  } };
 
-    int c = getopt_long( argc, argv, "BVb:c:e:hi:no:qr:s:tv", long_options, 0 );
-    if( c == -1 ) break;		// all options processed
+  Arg_parser parser( argc, argv, options );
+  if( parser.error().size() )				// bad option
+    { show_error( parser.error().c_str(), 0, true ); return 1; }
 
-    switch( c )
+  int argind;
+  for( argind = 0; argind < parser.arguments(); ++argind )
+    {
+    const int code = parser.code( argind );
+    if( !code ) break;					// no more options
+    const char * arg = parser.argument( argind ).c_str();
+    switch( code )
       {
+      case 'b': hardbs = getnum( arg, 0, 1, INT_MAX ); break;
       case 'B': format_num( 0, 0, -1 ); break;		// set binary prefixes
-      case 'V': show_version(); return 0;
-      case 'b': hardbs = getnum( optarg, 0, 1, INT_MAX ); break;
-      case 'c': cluster = getnum( optarg, 1, 1, INT_MAX ); break;
-      case 'e': max_errors = getnum( optarg, 0, -1, INT_MAX ); break;
+      case 'c': cluster = getnum( arg, 1, 1, INT_MAX ); break;
+      case 'C': complete_only = true; break;
+      case 'e': max_errors = getnum( arg, 0, -1, INT_MAX ); break;
       case 'h': show_help( cluster_bytes / default_hardbs, default_hardbs ); return 0;
-      case 'i': ipos = getnum( optarg, hardbs, 0 ); break;
+      case 'i': ipos = getnum( arg, hardbs, 0 ); break;
       case 'n': nosplit = true; break;
-      case 'o': opos = getnum( optarg, hardbs, 0 ); break;
+      case 'o': opos = getnum( arg, hardbs, 0 ); break;
       case 'q': verbosity = -1; break;
-      case 'r': max_retries = getnum( optarg, 0, -1, INT_MAX ); break;
-      case 's': max_size = getnum( optarg, hardbs, -1 ); break;
+      case 'r': max_retries = getnum( arg, 0, -1, INT_MAX ); break;
+      case 's': max_size = getnum( arg, hardbs, -1 ); break;
       case 't': o_trunc = O_TRUNC; break;
       case 'v': verbosity = 1; break;
-      case '?': show_error( 0, 0, true ); return 1;		// bad option
-      default : show_error( argv[optind], 0, true ); return 1;
+      case 'V': show_version(); return 0;
+      default : internal_error( "uncaught option" );
       }
-    }
+    } // end process options
 
   if( hardbs < 1 ) hardbs = default_hardbs;
   if( cluster < 1 ) cluster = cluster_bytes / hardbs;
   if( cluster < 1 ) cluster = 1;
 
   const char *iname = 0, *oname = 0, *logname = 0;
-  if( optind < argc ) iname = argv[optind++];
-  if( optind < argc ) oname = argv[optind++];
-  if( optind < argc ) logname = argv[optind++];
-  if( optind < argc )
+  if( argind < parser.arguments() ) iname = parser.argument( argind++ ).c_str();
+  if( argind < parser.arguments() ) oname = parser.argument( argind++ ).c_str();
+  if( argind < parser.arguments() ) logname = parser.argument( argind++ ).c_str();
+  if( argind < parser.arguments() )
     { show_error( "too many files", 0, true ); return 1; }
+
+  // end scan arguments
+
   if( !iname || !oname )
     { show_error( "both input and output must be specified", 0, true );
     return 1; }
@@ -249,7 +261,9 @@ int main( int argc, char * argv[] ) throw()
   if( isize < 0 ) { show_error( "input file is not seekable" ); return 1; }
 
   Logbook logbook( ipos, opos, max_size, isize, logname, cluster, hardbs,
-                   max_errors, max_retries, verbosity, nosplit );
+                   max_errors, max_retries, verbosity, complete_only, nosplit );
+  if( logbook.rescue_size() == 0 )
+    { if( verbosity >= 0 ) { show_error( "Nothing to do" ); } return 0; }
   if( o_trunc && !logbook.blank() )
     {
     show_error( "outfile truncation and logfile input are incompatible", 0, true );
@@ -260,9 +274,6 @@ int main( int argc, char * argv[] ) throw()
   if( odes < 0 ) { show_error( "cannot open output file", errno ); return 1; }
   if( lseek( odes, 0, SEEK_SET ) )
     { show_error( "output file is not seekable" ); return 1; }
-
-  if( logbook.rescue_size() == 0 )
-    { if( verbosity >= 0 ) { show_error( "Nothing to do" ); } return 0; }
 
   if( verbosity >= 0 ) std::printf( "\n\n" );
   if( verbosity > 0 )
@@ -279,7 +290,9 @@ int main( int argc, char * argv[] ) throw()
     if( max_errors >= 0 ) std::printf( "Max_errors: %d    ", max_errors );
     if( max_retries >= 0 ) std::printf( "Max_retries: %d    ", max_retries );
     std::printf( "Split: %s    ", !nosplit ? "yes" : "no" );
-    std::printf( "Truncate: %s\n\n", o_trunc ? "yes" : "no" );
+    std::printf( "Truncate: %s\n", o_trunc ? "yes" : "no" );
+    if( complete_only ) std::printf( "Complete only\n" );
+    std::printf( "\n" );
     }
 
   return logbook.do_rescue( ides, odes );

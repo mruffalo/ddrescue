@@ -1,7 +1,7 @@
 exec_prefix = $(prefix)
 bindir = $(exec_prefix)/bin
 
-DISTNAME = ddrescue-1.1
+DISTNAME = ddrescue-1.2
 
 CXX = g++
 INSTALL = install
@@ -12,7 +12,7 @@ CPPFLAGS =
 CXXFLAGS = -Wall -W -O2
 LDFLAGS =
 
-objs = block.o ddrescue.o logbook.o main.o
+objs = arg_parser.o block.o ddrescue.o logbook.o main.o
 
 .PHONY : all doc install install-info install-man install-strip \
          uninstall uninstall-info uninstall-man \
@@ -29,7 +29,9 @@ ddrescuep : $(objs)
 %.o : %.cc
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c -o $@ $<
 
-$(objs) : ddrescue.h
+$(objs)      : ddrescue.h
+arg_parser.o : arg_parser.h
+main.o       : arg_parser.h
 
 
 doc : $(VPATH)/doc/ddrescue.info $(VPATH)/doc/ddrescue.1

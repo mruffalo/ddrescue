@@ -1,8 +1,9 @@
-Changes in version 1.1:
+Changes in version 1.2:
 
-Ddrescue now aligns its I/O buffer to the sector size so that it can be
-used to read from raw devices.
+A new option `--complete-only' that instructs ddrescue not to read new
+data beyond logfile limits, has been added.
 
-A small tutorial has been added to the info file.
+A new argument parser that replaces `getopt_long' has been added.
 
-Two missing headers have been included.
+The interval at which the logfile is saved to disk now depends on
+logfile size.

@@ -1,5 +1,5 @@
 /*  GNU ddrescue - Data recovery tool
-    Copyright (C) 2004, 2005 Antonio Diaz Diaz.
+    Copyright (C) 2004, 2005, 2006 Antonio Diaz Diaz.
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -26,6 +26,7 @@
 #include <cstdlib>
 #include <vector>
 #include <unistd.h>
+
 #include "ddrescue.h"
 
 
@@ -82,8 +83,8 @@ void compact_sblock_vector( std::vector< Sblock > & sblock_vector ) throw()
   }
 
 
-void complete_sblock_vector( std::vector< Sblock > & sblock_vector,
-                             const long long isize ) throw()
+void extend_sblock_vector( std::vector< Sblock > & sblock_vector,
+                           const long long isize ) throw()
   {
   if( sblock_vector.size() == 0 )
     {
@@ -170,6 +171,7 @@ void logfile_error( const char * filename, const int linenum ) throw()
   }
 
 
+// Writes periodically the logfile to disc.
 // Returns false only if update is attempted and fails.
 //
 bool update_logfile( const std::vector< Sblock > & sblock_vector,
@@ -179,9 +181,10 @@ bool update_logfile( const std::vector< Sblock > & sblock_vector,
   static time_t t1 = std::time( 0 );
 
   if( !filename ) return true;
+  const int interval = 30 + std::min( 270, (int)sblock_vector.size() / 40 );
   const time_t t2 = std::time( 0 );
-  if( force || t2 - t1 >= 30 ) t1 = t2;		// update every 30 seconds
-  else return true;
+  if( !force && t2 - t1 < interval ) return true;
+  t1 = t2;
   fsync( odes );
 
   FILE *f = std::fopen( filename, "w" );
@@ -442,8 +445,8 @@ int Logbook::copy_errors() throw()
 Logbook::Logbook( const long long ipos, const long long opos,
                   const long long max_size, const long long isize,
                   const char * name, const int cluster, const int hardbs,
-                  const int max_errors, const int max_retries,
-                  const int verbosity, const bool nosplit ) throw()
+                  const int max_errors, const int max_retries, const int verbosity,
+                  const bool complete_only, const bool nosplit ) throw()
   : filename( name ), _hardbs( hardbs ), _softbs( cluster * hardbs ),
     _max_errors( max_errors ), _max_retries( max_retries ),
     _verbosity( verbosity ), _nosplit( nosplit )
@@ -460,7 +463,19 @@ Logbook::Logbook( const long long ipos, const long long opos,
 
   set_rescue_domain( ipos, opos, max_size, isize );
   if( filename ) read_logfile();
-  complete_sblock_vector( sblock_vector, isize );
+  if( !complete_only ) extend_sblock_vector( sblock_vector, isize );
+  else		// limit _domain to blocks of finite size read from logfile
+    {
+    if( sblock_vector.size() && sblock_vector.back().size() < 0 )
+      sblock_vector.pop_back();
+    if( sblock_vector.size() )
+      {
+      Block b( sblock_vector.front().pos(),
+               sblock_vector.back().end() - sblock_vector.front().pos() );
+      _domain = b.overlap( _domain );
+      }
+    else _domain.size( 0 );
+    }
   compact_sblock_vector( sblock_vector );
   }
 

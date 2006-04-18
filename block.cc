@@ -1,5 +1,5 @@
 /*  GNU ddrescue - Data recovery tool
-    Copyright (C) 2004, 2005 Antonio Diaz Diaz.
+    Copyright (C) 2004, 2005, 2006 Antonio Diaz Diaz.
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -21,6 +21,7 @@
 #include <algorithm>
 #include <cstdio>
 #include <vector>
+
 #include "ddrescue.h"
 
 

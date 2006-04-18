@@ -1,5 +1,5 @@
 /*  GNU ddrescue - Data recovery tool
-    Copyright (C) 2004, 2005 Antonio Diaz Diaz.
+    Copyright (C) 2004, 2005, 2006 Antonio Diaz Diaz.
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -78,7 +78,7 @@ class Logbook
   int errors;				// errors found so far
   int _ides, _odes;			// input and output file descriptors
   const bool _nosplit;
-  std::vector< Sblock > sblock_vector;
+  std::vector< Sblock > sblock_vector;	// note: blocks are consecutive
 
   void set_rescue_domain( const long long ipos, const long long opos,
                           const long long max_size, const long long isize ) throw();
@@ -93,8 +93,8 @@ public:
   Logbook( const long long ipos, const long long opos,
            const long long max_size, const long long isize,
            const char * name, const int cluster, const int hardbs,
-           const int max_errors, const int max_retries,
-           const int verbosity, const bool nosplit ) throw();
+           const int max_errors, const int max_retries, const int verbosity,
+           const bool complete_only, const bool nosplit ) throw();
   ~Logbook() throw() { delete[] iobuf_base; }
 
   long long rescue_ipos() const throw() { return _domain.pos(); }

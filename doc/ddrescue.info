@@ -11,7 +11,7 @@ File: ddrescue.info,  Node: Top,  Next: Algorithm,  Up: (dir)
 
 
 
-   This manual is for GNU ddrescue (version 1.1, 10 October 2005).
+   This manual is for GNU ddrescue (version 1.2, 3 April 2006).
 
 
    GNU ddrescue is a data recovery tool. It copies data from one file or
@@ -48,7 +48,7 @@ successive copies.
 * Concept Index::	Index of concepts
 
 
-   Copyright (C) 2004, 2005 Antonio Diaz Diaz.
+   Copyright (C) 2004, 2005, 2006 Antonio Diaz Diaz.
 
    Permission is granted to copy, distribute and/or modify this document
 under the terms of the GNU Free Documentation License, Version 1.2 or
@@ -119,22 +119,29 @@ Invoking ddrescue
      Print the version number of ddrescue on the standard output and
      exit.
 
+`--block-size=BYTES'
+`-b BYTES'
+     Hardware block size of input device in bytes (usually 512 for hard
+     discs and floppies, and 2048 for cdroms). Defaults to 512.
+
 `--binary-prefixes'
 `-B'
      Show units with binary prefixes (powers of 1024).
      SI prefixes (powers of 1000) are used by default. (See table
      below).
 
-`--block-size=BYTES'
-`-b BYTES'
-     Hardware block size of input device in bytes (usually 512 for hard
-     discs and floppies, and 2048 for cdroms). Defaults to 512.
-
 `--cluster-size=BLOCKS'
 `-c BLOCKS'
      Number of hardware blocks to copy at a time. Defaults to
      64KiB / hardware_block_size. Try smaller values for slow drives (18
      is a good value for floppies).
+
+`--complete-only'
+`-C'
+     Limit rescue domain to the blocks of finite size read from
+     logfile. Do not read new data beyond logfile limits. This is
+     useful when reading from devices of undefined size, like raw
+     devices.
 
 `--max-errors=N'
 `-e N'
@@ -143,7 +150,7 @@ Invoking ddrescue
 
 `--input-position=POS'
 `-i POS'
-     Starting position in input file. Defaults to 0.
+     Starting position in input file, in bytes. Defaults to 0.
 
 `--no-split'
 `-n'
@@ -152,7 +159,9 @@ Invoking ddrescue
 
 `--output-position=POS'
 `-o POS'
-     Starting position in output file. Defaults to `--input-position'.
+     Starting position in output file, in bytes. Defaults to
+     `--input-position'. The bytes below POS aren't touched if they
+     exist and truncation is not requested. Else they are set to 0.
 
 `--quiet'
 `-q'
@@ -166,7 +175,12 @@ Invoking ddrescue
 
 `--max-size=BYTES'
 `-s BYTES'
-     Maximum size of data to be copied, in bytes.
+     Maximum size of data to be copied, in bytes. Note that this
+     parameter specifies the amount of data to be copied, not the size
+     of the output file. So, for example, the following command creates
+     an output file 300 bytes long, but only writes data on the last
+     200 bytes:
+          ddrescue -i 100 -s 200 infile outfile logfile
 
 `--truncate'
 `-t'
@@ -291,7 +305,7 @@ device to bypass the kernel cache and rescue more of your data.
 used to read from raw devices. For efficiency reasons, also aligns it
 to the memory page size if page size is a multiple of sector size.
 Ddrescue can't determine the size of a raw device, so a explicit
-`--max-size' option is needed.
+`--max-size' or `--complete-only' option is needed.
 
    Reading from a raw device seems to be slower than reading from the
 associated regular block device. So you should begin the rescue with the
@@ -300,7 +314,7 @@ sectors inside the error areas.
 
      raw /dev/raw/raw1 /dev/hdb
      ddrescue -n /dev/hdb /dev/hdc logfile
-     ddrescue -r3 -s <size_of_hdb> /dev/raw/raw1 /dev/hdc logfile
+     ddrescue -r3 -C /dev/raw/raw1 /dev/hdc logfile
      raw /dev/raw/raw1 0 0
      e2fsck -v -f /dev/hdc
      mount -t ext2 -o ro /dev/hdc /mnt
@@ -339,12 +353,12 @@ Concept Index
 
 Tag Table:
 Node: Top202
-Node: Algorithm2105
-Node: Invoking ddrescue3570
-Node: Logfile Structure6475
-Node: Examples7674
-Node: Raw Devices9154
-Node: Problems10429
-Node: Concept Index10726
+Node: Algorithm2108
+Node: Invoking ddrescue3573
+Node: Logfile Structure7147
+Node: Examples8346
+Node: Raw Devices9826
+Node: Problems11108
+Node: Concept Index11405
 
 End Tag Table
