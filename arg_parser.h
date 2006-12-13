@@ -23,7 +23,8 @@
 
     `options' is an array of `struct Option' terminated by an element
     containing a code which is zero. A null name means a short-only
-    option. A code value outside the char range means a long-only option.
+    option. A code value outside the unsigned char range means a
+    long-only option.
 
     Arg_parser normally makes it appear as if all the option arguments
     were specified before all the non-option arguments for the purposes

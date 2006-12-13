@@ -1,9 +1,5 @@
-Changes in version 1.2:
+Changes in version 1.3:
 
-A new option `--complete-only' that instructs ddrescue not to read new
-data beyond logfile limits, has been added.
-
-A new argument parser that replaces `getopt_long' has been added.
-
-The interval at which the logfile is saved to disk now depends on
-logfile size.
+This is a maintenance release. Only some changes to the "configure"
+script have been made and the target "sddrescue", that builds a
+statically linked ddrescue, has been added to the Makefile.

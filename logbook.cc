@@ -165,7 +165,7 @@ void split_domain_border_sblocks( std::vector< Sblock > & sblock_vector,
 void logfile_error( const char * filename, const int linenum ) throw()
   {
   char buf[80];
-  std::snprintf( buf, sizeof( buf ), "error in logfile %s, line %d\n",
+  snprintf( buf, sizeof( buf ), "error in logfile %s, line %d\n",
                  filename, linenum );
   show_error( buf );
   }
@@ -191,7 +191,7 @@ bool update_logfile( const std::vector< Sblock > & sblock_vector,
   if( !f )
     {
     char buf[80];
-    std::snprintf( buf, sizeof( buf ), "error opening logfile %s for writing", filename );
+    snprintf( buf, sizeof( buf ), "error opening logfile %s for writing", filename );
     show_error( buf, errno );
     return false;
     }
@@ -209,7 +209,7 @@ bool update_logfile( const std::vector< Sblock > & sblock_vector,
   if( std::fclose( f ) )
     {
     char buf[80];
-    std::snprintf( buf, sizeof( buf ), "error writing logfile %s", filename );
+    snprintf( buf, sizeof( buf ), "error writing logfile %s", filename );
     show_error( buf, errno );
     return false;
     }
@@ -230,9 +230,9 @@ void Logbook::set_rescue_domain( const long long ipos, const long long opos,
     if( _domain.pos() >= isize )
       {
       char buf[80];
-      std::snprintf( buf, sizeof( buf ), "can't start reading at pos %lld",
+      snprintf( buf, sizeof( buf ), "can't start reading at pos %lld",
                      _domain.pos() ); show_error( buf );
-      std::snprintf( buf, sizeof( buf ), "input file is only %lld bytes long",
+      snprintf( buf, sizeof( buf ), "input file is only %lld bytes long",
                      isize ); show_error( buf );
       std::exit(1);
       }
@@ -389,7 +389,7 @@ int Logbook::copy_errors() throw()
     const int msglen = std::strlen( msgbuf );
     for( int retry = 1; _max_retries < 0 || retry <= _max_retries; ++retry )
       {
-      std::snprintf( msgbuf + msglen, sizeof( msgbuf ) - msglen, "%d", retry );
+      snprintf( msgbuf + msglen, sizeof( msgbuf ) - msglen, "%d", retry );
       unsigned int index = 0;
       bool first_post = true, bad_block_found = false;
       split_domain_border_sblocks( sblock_vector, _domain );
@@ -428,8 +428,11 @@ int Logbook::copy_errors() throw()
             if( index > 0 && sblock_vector[index-1].join( result[0] ) )
               result.erase( result.begin() );
             if( result.size() )
-              { sblock_vector.insert( sblock_vector.begin() + index, result.begin(), result.end() );
-              index += result.size(); }
+              {
+              sblock_vector.insert( sblock_vector.begin() + index,
+                                    result.begin(), result.end() );
+              index += result.size();
+              }
             }
           if( retval ) return retval;
           if( !update_logfile( sblock_vector, filename, _odes ) ) return 1;
@@ -470,8 +473,8 @@ Logbook::Logbook( const long long ipos, const long long opos,
       sblock_vector.pop_back();
     if( sblock_vector.size() )
       {
-      Block b( sblock_vector.front().pos(),
-               sblock_vector.back().end() - sblock_vector.front().pos() );
+      const Block b( sblock_vector.front().pos(),
+                     sblock_vector.back().end() - sblock_vector.front().pos() );
       _domain = b.overlap( _domain );
       }
     else _domain.size( 0 );
@@ -494,8 +497,8 @@ int Logbook::do_rescue( const int ides, const int odes ) throw()
 
   for( unsigned i = 0; i < sblock_vector.size(); ++i )
     {
-    Sblock & sb = sblock_vector[i];
-    Block b = sb.overlap( _domain );
+    const Sblock & sb = sblock_vector[i];
+    const Block b = sb.overlap( _domain );
     if( b.size() == 0 ) { if( sb < _domain ) continue; else break; }
     switch( sb.status() )
       {
@@ -513,9 +516,8 @@ int Logbook::do_rescue( const int ides, const int odes ) throw()
     if( filename )
       {
       std::printf( "Initial status (read from logfile)\n" );
-      std::printf( "rescued: %10sB,", format_num( recsize ) );
-      std::printf( "  errsize:%9sB,", format_num( errsize, 99999 ) );
-      std::printf( "  errors: %7u\n", errors );
+      std::printf( "rescued: %10sB,  errsize:%9sB,  errors: %7u\n",
+                   format_num( recsize ), format_num( errsize, 99999 ), errors );
       std::printf( "Current status\n" );
       }
     }

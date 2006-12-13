@@ -100,7 +100,7 @@ bool Block::join( const Block & b ) throw()
 
 Block Block::overlap( const Block & b ) const throw()
   {
-  long long p = std::max( _pos, b._pos );
+  const long long p = std::max( _pos, b._pos );
   long long s;
   if( _size < 0 )
     { if( b._size < 0 ) s = -1; else s = std::max( 0LL, b.end() - p ); }
@@ -117,7 +117,7 @@ Block Block::split( const long long pos ) throw()
   {
   if( _pos < pos && ( _size < 0 || _pos + _size > pos ) )
     {
-    Block b( _pos, pos - _pos );
+    const Block b( _pos, pos - _pos );
     _pos = pos; if( _size > 0 ) _size -= b._size;
     return b;
     }

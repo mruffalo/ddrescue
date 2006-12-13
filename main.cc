@@ -41,12 +41,9 @@
 
 namespace {
 
-// Date of this version: 2006-04-03
-
 const char * invocation_name = 0;
 const char * const Program_name    = "GNU ddrescue";
 const char * const program_name    = "ddrescue";
-const char * const program_version = "1.2";
 const char * const program_year    = "2006";
 
 
@@ -80,7 +77,7 @@ void show_help( const int cluster, const int hardbs ) throw()
 
 void show_version() throw()
   {
-  std::printf( "%s version %s\n", Program_name, program_version );
+  std::printf( "%s version %s\n", Program_name, PROGVERSION );
   std::printf( "Copyright (C) %s Antonio Diaz Diaz.\n", program_year );
   std::printf( "This program is free software; you may redistribute it under the terms of\n" );
   std::printf( "the GNU General Public License.  This program has absolutely no warranty.\n" );
@@ -151,7 +148,7 @@ bool check_identical( const char * name1, const char * name2 ) throw()
 void internal_error( const char * msg ) throw()
   {
   char buf[80];
-  std::snprintf( buf, sizeof( buf ), "internal error: %s.\n", msg );
+  snprintf( buf, sizeof( buf ), "internal error: %s", msg );
   show_error( buf );
   exit( 3 );
   }
@@ -173,11 +170,11 @@ void show_error( const char * msg, const int errcode, const bool help ) throw()
 void write_logfile_header( FILE * f ) throw()
   {
   std::fprintf( f, "# Rescue Logfile. Created by %s version %s\n",
-                Program_name, program_version );
+                Program_name, PROGVERSION );
   }
 
 
-int main( int argc, char * argv[] ) throw()
+int main( const int argc, const char * argv[] ) throw()
   {
   long long ipos = -1, opos = -1, max_size = -1;
   const int cluster_bytes = 65536, default_hardbs = 512;
@@ -186,7 +183,7 @@ int main( int argc, char * argv[] ) throw()
   bool complete_only = false, nosplit = false;
   invocation_name = argv[0];
 
-  static const Arg_parser::Option options[] =
+  const Arg_parser::Option options[] =
     {
     { 'b', "block-size",      Arg_parser::yes },
     { 'B', "binary_prefixes", Arg_parser::no  },
@@ -255,9 +252,9 @@ int main( int argc, char * argv[] ) throw()
   if( check_identical ( iname, oname ) )
     { show_error( "infile and outfile are identical" ); return 1; }
 
-  int ides = open( iname, O_RDONLY );
+  const int ides = open( iname, O_RDONLY );
   if( ides < 0 ) { show_error( "cannot open input file", errno ); return 1; }
-  long long isize = lseek( ides, 0, SEEK_END );
+  const long long isize = lseek( ides, 0, SEEK_END );
   if( isize < 0 ) { show_error( "input file is not seekable" ); return 1; }
 
   Logbook logbook( ipos, opos, max_size, isize, logname, cluster, hardbs,
@@ -270,7 +267,7 @@ int main( int argc, char * argv[] ) throw()
     return 1;
     }
 
-  int odes = open( oname, O_WRONLY | O_CREAT | o_trunc, 0644 );
+  const int odes = open( oname, O_WRONLY | O_CREAT | o_trunc, 0644 );
   if( odes < 0 ) { show_error( "cannot open output file", errno ); return 1; }
   if( lseek( odes, 0, SEEK_SET ) )
     { show_error( "output file is not seekable" ); return 1; }

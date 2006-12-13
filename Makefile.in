@@ -1,75 +1,80 @@
-exec_prefix = $(prefix)
-bindir = $(exec_prefix)/bin
 
-DISTNAME = ddrescue-1.2
-
-CXX = g++
+DISTNAME = $(progname)-$(progversion)
 INSTALL = install
 INSTALL_PROGRAM = $(INSTALL) -p -m 755
 INSTALL_DATA = $(INSTALL) -p -m 644
 SHELL = /bin/sh
-CPPFLAGS =
-CXXFLAGS = -Wall -W -O2
-LDFLAGS =
 
 objs = arg_parser.o block.o ddrescue.o logbook.o main.o
 
-.PHONY : all doc install install-info install-man install-strip \
+
+.PHONY : all doc check install install-info install-man install-strip \
          uninstall uninstall-info uninstall-man \
          dist clean distclean
 
-all : ddrescue
+all : $(progname)
 
-ddrescue : $(objs)
-	$(CXX) $(LDFLAGS) $(CXXFLAGS) -o ddrescue $(objs)
+$(progname) : $(objs)
+	$(CXX) $(LDFLAGS) -o $(progname) $(objs)
 
-ddrescuep : $(objs)
-	$(CXX) $(LDFLAGS) $(CXXFLAGS) -pg -o ddrescuep $(objs)
+p$(progname) : $(objs)
+	$(CXX) $(LDFLAGS) -pg -o p$(progname) $(objs)
+
+s$(progname) : $(objs)
+	$(CXX) $(LDFLAGS) -static -o s$(progname) $(objs)
+
+main.o : main.cc
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -DPROGVERSION=\"$(progversion)\" -c -o $@ $<
 
 %.o : %.cc
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c -o $@ $<
 
-$(objs)      : ddrescue.h
+$(objs)      : Makefile ddrescue.h
 arg_parser.o : arg_parser.h
 main.o       : arg_parser.h
 
 
-doc : $(VPATH)/doc/ddrescue.info $(VPATH)/doc/ddrescue.1
+doc : info $(VPATH)/doc/$(progname).1
 
-$(VPATH)/doc/ddrescue.info : $(VPATH)/doc/ddrescue.texinfo
-	cd $(VPATH)/doc ; makeinfo ddrescue.texinfo
+info : $(VPATH)/doc/$(progname).info
 
-$(VPATH)/doc/ddrescue.1 : ddrescue
-	help2man -o $(VPATH)/doc/ddrescue.1 ./ddrescue
+$(VPATH)/doc/$(progname).info : $(VPATH)/doc/$(progname).texinfo
+	cd $(VPATH)/doc ; makeinfo $(progname).texinfo
 
-Makefile : Makefile.in
-	$(VPATH)/configure
+$(VPATH)/doc/$(progname).1 : $(progname)
+	help2man -o $(VPATH)/doc/$(progname).1 ./$(progname)
+
+Makefile : $(VPATH)/configure $(VPATH)/Makefile.in
+	./config.status
+
+check : $(progname)
+	@echo "No tests yet defined for $(progname)"
 
 install : all install-info
 	if test ! -d $(DESTDIR)$(bindir) ; then $(INSTALL) -d $(DESTDIR)$(bindir) ; fi
-	$(INSTALL_PROGRAM) ./ddrescue $(DESTDIR)$(bindir)/ddrescue
+	$(INSTALL_PROGRAM) ./$(progname) $(DESTDIR)$(bindir)/$(progname)
 
 install-info :
 	if test ! -d $(DESTDIR)$(infodir) ; then $(INSTALL) -d $(DESTDIR)$(infodir) ; fi
-	$(INSTALL_DATA) $(VPATH)/doc/ddrescue.info $(DESTDIR)$(infodir)/ddrescue.info
-	-install-info $(DESTDIR)$(infodir)/ddrescue.info $(DESTDIR)$(infodir)/dir
+	$(INSTALL_DATA) $(VPATH)/doc/$(progname).info $(DESTDIR)$(infodir)/$(progname).info
+	-install-info $(DESTDIR)$(infodir)/$(progname).info $(DESTDIR)$(infodir)/dir
 
 install-man :
 	if test ! -d $(DESTDIR)$(mandir)/man1 ; then $(INSTALL) -d $(DESTDIR)$(mandir)/man1 ; fi
-	$(INSTALL_DATA) $(VPATH)/doc/ddrescue.1 $(DESTDIR)$(mandir)/man1/ddrescue.1
+	$(INSTALL_DATA) $(VPATH)/doc/$(progname).1 $(DESTDIR)$(mandir)/man1/$(progname).1
 
 install-strip : all
 	$(MAKE) INSTALL_PROGRAM='$(INSTALL_PROGRAM) -s' install
 
-uninstall : uninstall-info uninstall-man
-	-rm -f $(DESTDIR)$(bindir)/ddrescue
+uninstall : uninstall-info
+	-rm -f $(DESTDIR)$(bindir)/$(progname)
 
 uninstall-info :
-	-install-info --remove $(DESTDIR)$(infodir)/ddrescue.info $(DESTDIR)$(infodir)/dir
-	-rm -f $(DESTDIR)$(infodir)/ddrescue.info
+	-install-info --remove $(DESTDIR)$(infodir)/$(progname).info $(DESTDIR)$(infodir)/dir
+	-rm -f $(DESTDIR)$(infodir)/$(progname).info
 
 uninstall-man :
-	-rm -f $(DESTDIR)$(mandir)/man1/ddrescue.1
+	-rm -f $(DESTDIR)$(mandir)/man1/$(progname).1
 
 dist :
 	ln -sf . $(DISTNAME)
@@ -83,16 +88,16 @@ dist :
 	  $(DISTNAME)/README \
 	  $(DISTNAME)/TODO \
 	  $(DISTNAME)/configure \
-	  $(DISTNAME)/doc/ddrescue.1 \
-	  $(DISTNAME)/doc/ddrescue.info \
-	  $(DISTNAME)/doc/ddrescue.texinfo \
+	  $(DISTNAME)/doc/$(progname).1 \
+	  $(DISTNAME)/doc/$(progname).info \
+	  $(DISTNAME)/doc/$(progname).texinfo \
 	  $(DISTNAME)/*.cc \
 	  $(DISTNAME)/*.h
 	rm -f $(DISTNAME)
 	bzip2 -v $(DISTNAME).tar
 
 clean :
-	-rm -f ddrescue ddrescuep $(objs)
+	-rm -f $(progname) p$(progname) s$(progname) $(objs)
 
 distclean : clean
-	-rm -f Makefile *.tar *.bz2
+	-rm -f Makefile config.status *.tar *.bz2

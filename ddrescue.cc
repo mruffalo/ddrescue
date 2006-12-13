@@ -41,7 +41,7 @@ void sighandler( int ) throw() { interrupted = true; }
 // Returns the number of bytes really read.
 // If (returned value < size) and (errno == 0), means EOF was reached.
 //
-int readblock( int fd, char * buf, int size, long long pos ) throw()
+int readblock( const int fd, char * buf, const int size, const long long pos ) throw()
   {
   int rest = size;
   errno = 0;
@@ -49,7 +49,7 @@ int readblock( int fd, char * buf, int size, long long pos ) throw()
     while( rest > 0 )
       {
       errno = 0;
-      int n = read( fd, buf + size - rest, rest );
+      const int n = read( fd, buf + size - rest, rest );
       if( n > 0 ) rest -= n;
       else if( n == 0 ) break;
       else if( errno != EINTR && errno != EAGAIN ) break;
@@ -61,7 +61,7 @@ int readblock( int fd, char * buf, int size, long long pos ) throw()
 // Returns the number of bytes really written.
 // If (returned value < size), it is always an error.
 //
-int writeblock( int fd, char * buf, int size, long long pos ) throw()
+int writeblock( const int fd, const char * buf, const int size, const long long pos ) throw()
   {
   int rest = size;
   errno = 0;
@@ -69,7 +69,7 @@ int writeblock( int fd, char * buf, int size, long long pos ) throw()
     while( rest > 0 )
       {
       errno = 0;
-      int n = write( fd, buf + size - rest, rest );
+      const int n = write( fd, buf + size - rest, rest );
       if( n > 0 ) rest -= n;
       else if( errno && errno != EINTR && errno != EAGAIN ) break;
       }
@@ -114,7 +114,7 @@ int Logbook::copy_non_tried_block( const Block & block,
     if( !errno1 ) return -2;	// EOF
     else			// Read error
       {
-      Block b( block.pos() + rd, size - rd );
+      const Block b( block.pos() + rd, size - rd );
       if( b.can_be_split( _hardbs ) )
         result.push_back( Sblock( b, Sblock::bad_cluster ) );
       else result.push_back( Sblock( b, Sblock::bad_block ) );
@@ -171,14 +171,14 @@ const char * format_num( long long num, long long max,
   static char buf[16];
 
   if( set_prefix ) si = ( set_prefix > 0 );
-  int factor = ( si ) ? 1000 : 1024;
+  const int factor = ( si ) ? 1000 : 1024;
   const char * const *prefix = ( si ) ? si_prefix : binary_prefix;
   const char *p = "";
   max = std::max( 999LL, std::min( 999999LL, max ) );
 
   for( int i = 0; i < 8 && std::llabs( num ) > std::llabs( max ); ++i )
     { num /= factor; p = prefix[i]; }
-  std::snprintf( buf, sizeof( buf ), "%lld %s", num, p );
+  snprintf( buf, sizeof( buf ), "%lld %s", num, p );
   return buf;
   }
 

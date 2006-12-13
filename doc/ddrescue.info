@@ -11,7 +11,7 @@ File: ddrescue.info,  Node: Top,  Next: Algorithm,  Up: (dir)
 
 
 
-   This manual is for GNU ddrescue (version 1.2, 3 April 2006).
+   This manual is for GNU ddrescue (version 1.3, 13 December 2006).
 
 
    GNU ddrescue is a data recovery tool. It copies data from one file or
@@ -344,7 +344,6 @@ Concept Index
 * invoking:                              Invoking ddrescue.
 * logfile structure:                     Logfile Structure.
 * options:                               Invoking ddrescue.
-* problems:                              Problems.
 * raw devices:                           Raw Devices.
 * usage:                                 Invoking ddrescue.
 * version:                               Invoking ddrescue.
@@ -353,12 +352,12 @@ Concept Index
 
 Tag Table:
 Node: Top202
-Node: Algorithm2108
-Node: Invoking ddrescue3573
-Node: Logfile Structure7147
-Node: Examples8346
-Node: Raw Devices9826
-Node: Problems11108
-Node: Concept Index11405
+Node: Algorithm2112
+Node: Invoking ddrescue3577
+Node: Logfile Structure7151
+Node: Examples8350
+Node: Raw Devices9830
+Node: Problems11112
+Node: Concept Index11409
 
 End Tag Table

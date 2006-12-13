@@ -16,6 +16,7 @@ This creates the directory ./ddrescue[version] containing the source from
 the main archive.
 
 2. Change to ddrescue directory and run configure.
+   (Try `configure --help' for usage instructions).
 
 	cd ddrescue[version]
 	./configure
@@ -23,15 +24,11 @@ the main archive.
 3. Run make.
 
 	make
-or
-	make CXX=your_compiler_name ...
-
-for overriding the defaut compiler or any other Makefile variables.
 
 4. Type `make install' to install the program and any data files and
    documentation.
 
-5. Optionally type `make install-man' to install the man page for the
+5. Optionally, type `make install-man' to install the man page for the
    program.
 
 
@@ -47,8 +44,6 @@ directory that `configure' is in.
 `configure' recognizes the option `--srcdir=DIR' to control where to
 look for the sources. Usually `configure' can determine that directory
 automatically.
-
-Try `configure --help' for usage instructions.
 
 After running `configure', you can run `make' and `make install' as
 explained above.
