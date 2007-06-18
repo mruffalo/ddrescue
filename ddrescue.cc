@@ -1,5 +1,5 @@
 /*  GNU ddrescue - Data recovery tool
-    Copyright (C) 2004, 2005, 2006 Antonio Diaz Diaz.
+    Copyright (C) 2004, 2005, 2006, 2007 Antonio Diaz Diaz.
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -116,9 +116,9 @@ int Logbook::copy_non_tried_block( const Block & block,
       {
       const Block b( block.pos() + rd, size - rd );
       if( b.can_be_split( _hardbs ) )
-        result.push_back( Sblock( b, Sblock::bad_cluster ) );
+        result.push_back( Sblock( b, Sblock::non_split ) );
       else result.push_back( Sblock( b, Sblock::bad_block ) );
-      ++errors; errsize += size - rd;
+      errsize += size - rd;
       }
     }
   return 0;
@@ -149,7 +149,6 @@ int Logbook::copy_bad_block( const Block & block,
     result.push_back( Sblock( block.pos(), rd, Sblock::done ) );
     recsize += rd; errsize -= rd;
     }
-  if( !errno1 ) --errors;
   if( rd < size )
     {
     if( !errno1 ) { errsize -= size - rd; return -2; }	// EOF
@@ -176,7 +175,7 @@ const char * format_num( long long num, long long max,
   const char *p = "";
   max = std::max( 999LL, std::min( 999999LL, max ) );
 
-  for( int i = 0; i < 8 && std::llabs( num ) > std::llabs( max ); ++i )
+  for( int i = 0; i < 8 && llabs( num ) > llabs( max ); ++i )
     { num /= factor; p = prefix[i]; }
   snprintf( buf, sizeof( buf ), "%lld %s", num, p );
   return buf;

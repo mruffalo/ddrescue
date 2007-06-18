@@ -4,15 +4,12 @@ GNU ddrescue is a data recovery tool. It copies data from one file or
 block device (hard disc, cdrom, etc) to another, trying hard to rescue
 data in case of read errors.
 
-Ddrescue does not truncate the output file if not asked to. So, every
-time you run it on the same output file, it tries to fill in the gaps.
-
 The basic operation of ddrescue is fully automatic. That is, you don't
 have to wait for an error, stop the program, read the log, run it in
 reverse mode, etc.
 
 If you use the logfile feature of ddrescue, the data is rescued very
-efficiently (only the needed blocks are read). Also you can interrupt
+efficiently, (only the needed blocks are read). Also you can interrupt
 the rescue at any time and resume it later at the same point.
 
 Automatic merging of backups: If you have two or more damaged copies of
@@ -30,7 +27,17 @@ Also, the same logfile can be used for multiple commands that copy
 different areas of the file, and for multiple recovery attempts over
 different subsets.
 
+Ddrescue does not truncate the output file if not asked to. So, every
+time you run it on the same output file, it tries to fill in the gaps.
+
+Because ddrescue needs to read and write at random places, it only works
+on seekable (random access) input and output files.
+
+If your system supports it, ddrescue can use direct disc access to read
+the input file, bypassing the kernel cache.
+
 Ddrescue aligns its I/O buffer to the sector size so that it can be used
-to read from raw devices. For efficiency reasons, also aligns it to the
-memory page size if page size is a multiple of sector size. Read the
-info file to learn how to use raw devices with ddrescue.
+for direct disc access or to read from raw devices. For efficiency
+reasons, also aligns it to the memory page size if page size is a
+multiple of sector size. Read the info file to learn how to use direct
+disc access or raw devices with ddrescue.

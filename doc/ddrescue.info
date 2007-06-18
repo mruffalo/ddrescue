@@ -1,4 +1,4 @@
-This is ddrescue.info, produced by makeinfo version 4.2 from
+This is ddrescue.info, produced by makeinfo version 4.8 from
 ddrescue.texinfo.
 
 INFO-DIR-SECTION GNU Packages
@@ -7,26 +7,48 @@ START-INFO-DIR-ENTRY
 END-INFO-DIR-ENTRY
 
 
-File: ddrescue.info,  Node: Top,  Next: Algorithm,  Up: (dir)
+File: ddrescue.info,  Node: Top,  Next: Introduction,  Up: (dir)
+
+GNU ddrescue
+************
+
+This manual is for GNU ddrescue (version 1.4, 18 June 2007).
+
+* Menu:
+
+* Introduction::	Purpose and features of GNU ddrescue
+* Algorithm::		How ddrescue recovers the data
+* Invoking ddrescue::	Command line interface
+* Logfile Structure::	Detailed format of the logfile
+* Examples::		A small tutorial with examples
+* Direct Disc Access::	Bypassing the kernel cache
+* Problems::		Reporting bugs
+* Concept Index::	Index of concepts
 
 
+   Copyright (C) 2004, 2005, 2006, 2007 Antonio Diaz Diaz.
 
-   This manual is for GNU ddrescue (version 1.3, 13 December 2006).
+   Permission is granted to copy, distribute and/or modify this document
+under the terms of the GNU Free Documentation License, Version 1.2 or
+any later version published by the Free Software Foundation; with no
+Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts.
 
+
+File: ddrescue.info,  Node: Introduction,  Next: Algorithm,  Prev: Top,  Up: Top
 
-   GNU ddrescue is a data recovery tool. It copies data from one file or
+1 Introduction
+**************
+
+GNU ddrescue is a data recovery tool. It copies data from one file or
 block device (hard disc, cdrom, etc) to another, trying hard to rescue
 data in case of read errors.
-
-   Ddrescue does not truncate the output file if not asked to. So, every
-time you run it on the same output file, it tries to fill in the gaps.
 
    The basic operation of ddrescue is fully automatic. That is, you
 don't have to wait for an error, stop the program, read the log, run it
 in reverse mode, etc.
 
    If you use the logfile feature of ddrescue, the data is rescued very
-efficiently (only the needed blocks are read). Also you can interrupt
+efficiently, (only the needed blocks are read). Also you can interrupt
 the rescue at any time and resume it later at the same point.
 
    Automatic merging of backups: If you have two or more damaged copies
@@ -37,31 +59,22 @@ areas at the same places on different input files is very low. Using
 the logfile, only the needed blocks are read from the second and
 successive copies.
 
-* Menu:
+   Ddrescue does not truncate the output file if not asked to. So, every
+time you run it on the same output file, it tries to fill in the gaps.
 
-* Algorithm::		How ddrescue recovers the data
-* Invoking ddrescue::	Command line interface
-* Logfile Structure::	Detailed format of the logfile
-* Examples::		A small tutorial with examples
-* Raw Devices::		Raw devices bypass the kernel cache
-* Problems::		Reporting bugs
-* Concept Index::	Index of concepts
+   Because ddrescue needs to read and write at random places, it only
+works on seekable (random access) input and output files.
 
-
-   Copyright (C) 2004, 2005, 2006 Antonio Diaz Diaz.
-
-   Permission is granted to copy, distribute and/or modify this document
-under the terms of the GNU Free Documentation License, Version 1.2 or
-any later version published by the Free Software Foundation; with no
-Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts.
+   If your system supports it, ddrescue can use direct disc access to
+read the input file, bypassing the kernel cache.
 
 
-File: ddrescue.info,  Node: Algorithm,  Next: Invoking ddrescue,  Prev: Top,  Up: Top
+File: ddrescue.info,  Node: Algorithm,  Next: Invoking ddrescue,  Prev: Introduction,  Up: Top
 
-Algorithm
-*********
+2 Algorithm
+***********
 
-   The algorithm of ddrescue is as follows:
+The algorithm of ddrescue is as follows:
 
    1) Optionally read a logfile describing the status of a multi-part or
 previously interrupted rescue.
@@ -89,22 +102,21 @@ different subsets. See this example:
 
 Rescue the most important part of the disc first.
      ddrescue -i0 -s50M /dev/hdc hdimage logfile
-     ddrescue -i0 -s1M -r3 /dev/hdc hdimage logfile
-
-Then rescue some key disc areas.
+     ddrescue -i0 -s1M -r3 -d /dev/hdc hdimage logfile
+   Then rescue some key disc areas.
      ddrescue -i30G -s10G /dev/hdc hdimage logfile
      ddrescue -i230G -s5G /dev/hdc hdimage logfile
-
-Now rescue the rest (does not recopy what is already done).
-     ddrescue -r3 /dev/hdc hdimage logfile
+   Now rescue the rest (does not recopy what is already done).
+     ddrescue /dev/hdc hdimage logfile
+     ddrescue -dr3 /dev/hdc hdimage logfile
 
 
 File: ddrescue.info,  Node: Invoking ddrescue,  Next: Logfile Structure,  Prev: Algorithm,  Up: Top
 
-Invoking ddrescue
-*****************
+3 Invoking ddrescue
+*******************
 
-   The format for running ddrescue is:
+The format for running ddrescue is:
 
      ddrescue [OPTIONS] INFILE OUTFILE [LOGFILE]
 
@@ -122,7 +134,7 @@ Invoking ddrescue
 `--block-size=BYTES'
 `-b BYTES'
      Hardware block size of input device in bytes (usually 512 for hard
-     discs and floppies, and 2048 for cdroms). Defaults to 512.
+     discs, 1024 for floppies, and 2048 for cdroms). Defaults to 512.
 
 `--binary-prefixes'
 `-B'
@@ -142,6 +154,12 @@ Invoking ddrescue
      logfile. Do not read new data beyond logfile limits. This is
      useful when reading from devices of undefined size, like raw
      devices.
+
+`--direct'
+`-d'
+     Use direct disc access to read the input file, bypassing the kernel
+     cache. Hardware block size must be correctly set for this to work.
+     Not all systems support this.
 
 `--max-errors=N'
 `-e N'
@@ -191,6 +209,7 @@ Invoking ddrescue
      Verbose mode.
 
 
+
    Numbers given in options (positions, sizes) may be followed by a
 multiplier and an optional `B' for "byte".
 
@@ -216,12 +235,12 @@ communication among all people possible. Thanks.
 
 File: ddrescue.info,  Node: Logfile Structure,  Next: Examples,  Prev: Invoking ddrescue,  Up: Top
 
-Logfile Structure
-*****************
+4 Logfile Structure
+*******************
 
-   The logfile is a text file easy to read and edit. Every line
-describes a block of data, and contains 2 non-negative integers and a
-status character. The first integer is a position in the input file, the
+The logfile is a text file easy to read and edit. Every line describes
+a block of data, and contains 2 non-negative integers and a status
+character. The first integer is a position in the input file, the
 second is the size (in bytes) of the data to be copied. The status
 character is one of these:
 
@@ -250,12 +269,12 @@ end of file has not been reached yet.
 values, using the same syntax that integer constants in C.
 
 
-File: ddrescue.info,  Node: Examples,  Next: Raw Devices,  Prev: Logfile Structure,  Up: Top
+File: ddrescue.info,  Node: Examples,  Next: Direct Disc Access,  Prev: Logfile Structure,  Up: Top
 
-A small tutorial with examples
-******************************
+5 A small tutorial with examples
+********************************
 
-   A failing drive tends to develop more and more errors as time passes.
+A failing drive tends to develop more and more errors as time passes.
 Because of this, you should rescue the data from a drive as soon as you
 notice the first error.
 
@@ -270,62 +289,97 @@ If something goes wrong, you have the master intact to try again.
    IMPORTANT! Never try to repair a file system on a drive with I/O
 errors; you will probably lose even more data.
 
-   After the copy is repaired, with e2fsck or some other tool appropiate
-for the type of partition, you should mount it somewhere and try to
+   If you are trying to rescue a whole partition, first repair the copy
+with e2fsck or some other tool appropiate for the type of partition you
+are trying to rescue, then mount the repaired copy somewhere and try to
 recover the files in it.
 
    If the drive is so damaged that the rescued partition can't be
 repaired or mounted, you will have to browse the rescued data with an
 hex editor and extract the desired parts by hand.
 
-Example 1: Rescue an ext2 partition in /dev/hda2 to /dev/hdb2
-     ddrescue -r3 /dev/hda2 /dev/hdb2 logfile
+   If the partition table is damaged, you can try to rescue the whole
+disc, then try to repair the partition table and the partitions on the
+copy.
+
+   If the damaged drive is not listed in /dev, then you cannot rescue
+it.  At least not with ddrescue.
+
+
+Example 1: Rescue a whole disc with two ext2 partitions in /dev/hda to
+/dev/hdb
+Note: you do not need to partition /dev/hdb beforehand.
+     ddrescue -n /dev/hda /dev/hdb logfile
+     ddrescue -dr3 /dev/hda /dev/hdb logfile
+     fdisk /dev/hdb
+     e2fsck -v -f /dev/hdb1
+     e2fsck -v -f /dev/hdb2
+
+Example 2: Rescue an ext2 partition in /dev/hda2 to /dev/hdb2
+Note: you need to create the hdb2 partition with fdisk first. hdb2
+should be of appropiate type and size.
+     ddrescue -n /dev/hda2 /dev/hdb2 logfile
+     ddrescue -dr3 /dev/hda2 /dev/hdb2 logfile
      e2fsck -v -f /dev/hdb2
      mount -t ext2 -o ro /dev/hdb2 /mnt
+     read files from /mnt
 
 Example 2: Rescue a CD-ROM in /dev/cdrom
-     ddrescue -b 2048 /dev/cdrom cdimage logfile
+     ddrescue -nb2048 /dev/cdrom cdimage logfile
+     ddrescue -db2048 -r3 /dev/cdrom cdimage logfile
      write cdimage to a blank CD-ROM
 
 
-File: ddrescue.info,  Node: Raw Devices,  Next: Problems,  Prev: Examples,  Up: Top
+File: ddrescue.info,  Node: Direct Disc Access,  Next: Problems,  Prev: Examples,  Up: Top
 
-Raw Devices
-***********
+6 Direct Disc Access
+********************
 
-   NOTE! Read your system documentation to find how to bind a raw
-device to a regular block device.
+NOTE! Try the `--direct' option first. If direct disc access is not
+available in your system, try raw devices. Read your system
+documentation to find how to bind a raw device to a regular block
+device.
 
    If you notice that the sizes and offsets in the log file are ALWAYS
 multiples of the hard sector size, maybe your kernel is caching the disc
-accesses and grouping them. In this case you may want to use a raw
-device to bypass the kernel cache and rescue more of your data.
+accesses and grouping them. In this case you may want to use direct disc
+access or a raw device to bypass the kernel cache and rescue more of
+your data.
 
    Ddrescue aligns its I/O buffer to the sector size so that it can be
-used to read from raw devices. For efficiency reasons, also aligns it
-to the memory page size if page size is a multiple of sector size.
-Ddrescue can't determine the size of a raw device, so a explicit
-`--max-size' or `--complete-only' option is needed.
+used for direct disc access or to read from raw devices. For efficiency
+reasons, also aligns it to the memory page size if page size is a
+multiple of sector size. Ddrescue can't determine the size of a raw
+device, so a explicit `--max-size' or `--complete-only' option is
+needed.
 
    Reading from a raw device seems to be slower than reading from the
 associated regular block device. So you should begin the rescue with the
 regular block device, and use the raw device only to recover the good
 sectors inside the error areas.
 
-     raw /dev/raw/raw1 /dev/hdb
-     ddrescue -n /dev/hdb /dev/hdc logfile
-     ddrescue -r3 -C /dev/raw/raw1 /dev/hdc logfile
+
+Example 1: using direct disc access
+     ddrescue -n /dev/hdb1 /dev/hdc1 logfile
+     ddrescue -d -r3 /dev/hdb1 /dev/hdc1 logfile
+     e2fsck -v -f /dev/hdc1
+     mount -t ext2 -o ro /dev/hdc1 /mnt
+
+Example 2: using a raw device
+     raw /dev/raw/raw1 /dev/hdb1
+     ddrescue -n /dev/hdb1 /dev/hdc1 logfile
+     ddrescue -r3 -C /dev/raw/raw1 /dev/hdc1 logfile
      raw /dev/raw/raw1 0 0
-     e2fsck -v -f /dev/hdc
-     mount -t ext2 -o ro /dev/hdc /mnt
+     e2fsck -v -f /dev/hdc1
+     mount -t ext2 -o ro /dev/hdc1 /mnt
 
 
-File: ddrescue.info,  Node: Problems,  Next: Concept Index,  Prev: Raw Devices,  Up: Top
+File: ddrescue.info,  Node: Problems,  Next: Concept Index,  Prev: Direct Disc Access,  Up: Top
 
-Reporting Bugs
-**************
+7 Reporting Bugs
+****************
 
-   If you find a bug in GNU ddrescue, please send electronic mail to
+If you find a bug in GNU ddrescue, please send electronic mail to
 <bug-ddrescue@gnu.org>. Include the version number, which you can find
 by running `ddrescue --version'.
 
@@ -335,29 +389,33 @@ File: ddrescue.info,  Node: Concept Index,  Prev: Problems,  Up: Top
 Concept Index
 *************
 
+ [index ]
 * Menu:
 
-* algorithm:                             Algorithm.
-* bugs:                                  Problems.
-* examples:                              Examples.
-* getting help:                          Problems.
-* invoking:                              Invoking ddrescue.
-* logfile structure:                     Logfile Structure.
-* options:                               Invoking ddrescue.
-* raw devices:                           Raw Devices.
-* usage:                                 Invoking ddrescue.
-* version:                               Invoking ddrescue.
+* algorithm:                             Algorithm.             (line 6)
+* bugs:                                  Problems.              (line 6)
+* direct disc access:                    Direct Disc Access.    (line 6)
+* examples:                              Examples.              (line 6)
+* getting help:                          Problems.              (line 6)
+* introduction:                          Introduction.          (line 6)
+* invoking:                              Invoking ddrescue.     (line 6)
+* logfile structure:                     Logfile Structure.     (line 6)
+* options:                               Invoking ddrescue.     (line 6)
+* raw devices:                           Direct Disc Access.    (line 6)
+* usage:                                 Invoking ddrescue.     (line 6)
+* version:                               Invoking ddrescue.     (line 6)
 
 
 
 Tag Table:
 Node: Top202
-Node: Algorithm2112
-Node: Invoking ddrescue3577
-Node: Logfile Structure7151
-Node: Examples8350
-Node: Raw Devices9830
-Node: Problems11112
-Node: Concept Index11409
+Node: Introduction1068
+Node: Algorithm2551
+Node: Invoking ddrescue4073
+Node: Logfile Structure7852
+Node: Examples9052
+Node: Direct Disc Access11400
+Node: Problems13093
+Node: Concept Index13398
 
 End Tag Table

@@ -1,5 +1,5 @@
 /*  GNU ddrescue - Data recovery tool
-    Copyright (C) 2004, 2005, 2006 Antonio Diaz Diaz.
+    Copyright (C) 2004, 2005, 2006, 2007 Antonio Diaz Diaz.
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -44,7 +44,7 @@ namespace {
 const char * invocation_name = 0;
 const char * const Program_name    = "GNU ddrescue";
 const char * const program_name    = "ddrescue";
-const char * const program_year    = "2006";
+const char * const program_year    = "2007";
 
 
 void show_help( const int cluster, const int hardbs ) throw()
@@ -60,6 +60,7 @@ void show_help( const int cluster, const int hardbs ) throw()
   std::printf( "  -B, --binary-prefixes        show binary multipliers in numbers [default SI]\n" );
   std::printf( "  -c, --cluster-size=<blocks>  hardware blocks to copy at a time [%d]\n", cluster );
   std::printf( "  -C, --complete-only          do not read new data beyond logfile limits\n" );
+  std::printf( "  -d, --direct                 use direct disc access for input file\n" );
   std::printf( "  -e, --max-errors=<n>         maximum number of error areas allowed\n" );
   std::printf( "  -i, --input-position=<pos>   starting position in input file [0]\n" );
   std::printf( "  -n, --no-split               do not try to split error areas\n" );
@@ -90,7 +91,7 @@ long long getnum( const char * ptr, const int bs,
   {
   errno = 0;
   char *tail;
-  long long result = std::strtoll( ptr, &tail, 0 );
+  long long result = strtoll( ptr, &tail, 0 );
   if( tail == ptr )
     { show_error( "bad or missing numerical argument", 0, true ); std::exit(1); }
 
@@ -123,7 +124,7 @@ long long getnum( const char * ptr, const int bs,
       std::exit(1); }
     for( int i = 0; i < exponent; ++i )
       {
-      if( LONG_LONG_MAX / factor >= std::llabs( result ) ) result *= factor;
+      if( LONG_LONG_MAX / factor >= llabs( result ) ) result *= factor;
       else { errno = ERANGE; break; }
       }
     }
@@ -179,7 +180,8 @@ int main( const int argc, const char * argv[] ) throw()
   long long ipos = -1, opos = -1, max_size = -1;
   const int cluster_bytes = 65536, default_hardbs = 512;
   int cluster = 0, hardbs = 512;
-  int max_errors = -1, max_retries = 0, o_trunc = 0, verbosity = 0;
+  int max_errors = -1, max_retries = 0;
+  int o_direct = 0, o_trunc = 0, verbosity = 0;
   bool complete_only = false, nosplit = false;
   invocation_name = argv[0];
 
@@ -189,6 +191,7 @@ int main( const int argc, const char * argv[] ) throw()
     { 'B', "binary_prefixes", Arg_parser::no  },
     { 'c', "cluster-size",    Arg_parser::yes },
     { 'C', "complete-only",   Arg_parser::no  },
+    { 'd', "direct",          Arg_parser::no  },
     { 'e', "max-errors",      Arg_parser::yes },
     { 'h', "help",            Arg_parser::no  },
     { 'i', "input-position",  Arg_parser::yes },
@@ -218,6 +221,13 @@ int main( const int argc, const char * argv[] ) throw()
       case 'B': format_num( 0, 0, -1 ); break;		// set binary prefixes
       case 'c': cluster = getnum( arg, 1, 1, INT_MAX ); break;
       case 'C': complete_only = true; break;
+      case 'd':
+#ifdef O_DIRECT
+                o_direct = O_DIRECT;
+#endif
+                if( !o_direct )
+                  { show_error( "direct disc access not available" ); return 1; }
+                break;
       case 'e': max_errors = getnum( arg, 0, -1, INT_MAX ); break;
       case 'h': show_help( cluster_bytes / default_hardbs, default_hardbs ); return 0;
       case 'i': ipos = getnum( arg, hardbs, 0 ); break;
@@ -252,7 +262,7 @@ int main( const int argc, const char * argv[] ) throw()
   if( check_identical ( iname, oname ) )
     { show_error( "infile and outfile are identical" ); return 1; }
 
-  const int ides = open( iname, O_RDONLY );
+  const int ides = open( iname, O_RDONLY | o_direct );
   if( ides < 0 ) { show_error( "cannot open input file", errno ); return 1; }
   const long long isize = lseek( ides, 0, SEEK_END );
   if( isize < 0 ) { show_error( "input file is not seekable" ); return 1; }
@@ -284,8 +294,13 @@ int main( const int argc, const char * argv[] ) throw()
     std::printf( ",  outfile = %sB\n", format_num( logbook.rescue_opos() ) );
     std::printf( "    Copy block size: %d hard blocks\n", cluster );
     std::printf( "Hard block size: %d bytes\n", hardbs );
-    if( max_errors >= 0 ) std::printf( "Max_errors: %d    ", max_errors );
-    if( max_retries >= 0 ) std::printf( "Max_retries: %d    ", max_retries );
+    bool nl = false;
+    if( max_errors >= 0 )
+      { nl = true; std::printf( "Max_errors: %d    ", max_errors ); }
+    if( max_retries >= 0 )
+      { nl = true; std::printf( "Max_retries: %d    ", max_retries ); }
+    if( nl ) std::printf( "\n" );
+    std::printf( "Direct: %s    ", o_direct ? "yes" : "no" );
     std::printf( "Split: %s    ", !nosplit ? "yes" : "no" );
     std::printf( "Truncate: %s\n", o_trunc ? "yes" : "no" );
     if( complete_only ) std::printf( "Complete only\n" );

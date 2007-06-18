@@ -1,5 +1,5 @@
 /*  GNU ddrescue - Data recovery tool
-    Copyright (C) 2004, 2005, 2006 Antonio Diaz Diaz.
+    Copyright (C) 2004, 2005, 2006, 2007 Antonio Diaz Diaz.
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -274,6 +274,25 @@ bool Logbook::read_logfile() throw()
   }
 
 
+void Logbook::count_errors() throw()
+  {
+  errors = 0;
+  for( unsigned i = 0; i < sblock_vector.size(); ++i )
+    {
+    const Sblock & sb = sblock_vector[i];
+    const Block b = sb.overlap( _domain );
+    if( b.size() == 0 ) { if( sb < _domain ) continue; else break; }
+    switch( sb.status() )
+      {
+      case Sblock::non_tried: break;
+      case Sblock::non_split: ++errors; break;
+      case Sblock::bad_block: errors += b.hard_blocks( _hardbs ); break;
+      case Sblock::done: break;
+      }
+    }
+  }
+
+
 // Read the non-damaged part of the domain, skipping over the damaged areas.
 //
 int Logbook::copy_non_tried() throw()
@@ -318,6 +337,7 @@ int Logbook::copy_non_tried() throw()
           { sblock_vector.insert( sblock_vector.begin() + index, result.begin(), result.end() );
           index += result.size(); }
         }
+      count_errors();
       if( retval || ( _max_errors >= 0 && errors > _max_errors ) )
         return retval;
       if( !update_logfile( sblock_vector, filename, _odes ) ) return 1;
@@ -340,14 +360,13 @@ int Logbook::split_errors() throw()
     const Sblock & sb = sblock_vector[index];
     if( !sb.overlaps( _domain ) )
       { if( sb < _domain ) { ++index; continue; } else break; }
-    if( sb.status() != Sblock::bad_cluster ) { ++index; continue; }
+    if( sb.status() != Sblock::non_split ) { ++index; continue; }
     bool block_done = false;
     while( !block_done )
       {
       Block & block = sblock_vector[index];
       Block chip = block.split_hb( _hardbs );
-      if( chip.size() > 0 ) ++errors;
-      else
+      if( chip.size() == 0 )
         {
         chip = block; sblock_vector.erase( sblock_vector.begin() + index );
         block_done = true;
@@ -372,6 +391,7 @@ int Logbook::split_errors() throw()
           { sblock_vector.insert( sblock_vector.begin() + index, result.begin(), result.end() );
           index += result.size(); }
         }
+      count_errors();
       if( retval || ( _max_errors >= 0 && errors > _max_errors ) )
         return retval;
       if( !update_logfile( sblock_vector, filename, _odes ) ) return 1;
@@ -434,7 +454,9 @@ int Logbook::copy_errors() throw()
               index += result.size();
               }
             }
-          if( retval ) return retval;
+          count_errors();
+          if( retval || ( _max_errors >= 0 && errors > _max_errors ) )
+            return retval;
           if( !update_logfile( sblock_vector, filename, _odes ) ) return 1;
           }
         }
@@ -492,7 +514,7 @@ bool Logbook::blank() const throw()
 
 int Logbook::do_rescue( const int ides, const int odes ) throw()
   {
-  recsize = 0; errsize = 0; errors = 0;
+  recsize = 0; errsize = 0;
   _ides = ides; _odes = odes;
 
   for( unsigned i = 0; i < sblock_vector.size(); ++i )
@@ -503,12 +525,12 @@ int Logbook::do_rescue( const int ides, const int odes ) throw()
     switch( sb.status() )
       {
       case Sblock::non_tried: break;
-      case Sblock::bad_cluster: ++errors; errsize += b.size(); break;
-      case Sblock::bad_block:
-        errors += b.hard_blocks( _hardbs ); errsize += b.size(); break;
+      case Sblock::non_split:
+      case Sblock::bad_block: errsize += b.size(); break;
       case Sblock::done: recsize += b.size(); break;
       }
     }
+  count_errors();
   set_handler();
   if( _verbosity >= 0 )
     {
@@ -516,8 +538,9 @@ int Logbook::do_rescue( const int ides, const int odes ) throw()
     if( filename )
       {
       std::printf( "Initial status (read from logfile)\n" );
-      std::printf( "rescued: %10sB,  errsize:%9sB,  errors: %7u\n",
-                   format_num( recsize ), format_num( errsize, 99999 ), errors );
+      std::printf( "rescued: %10sB,", format_num( recsize ) );
+      std::printf( "  errsize:%9sB,", format_num( errsize, 99999 ) );
+      std::printf( "  errors: %7u\n", errors );
       std::printf( "Current status\n" );
       }
     }

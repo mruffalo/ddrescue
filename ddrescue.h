@@ -1,5 +1,5 @@
 /*  GNU ddrescue - Data recovery tool
-    Copyright (C) 2004, 2005, 2006 Antonio Diaz Diaz.
+    Copyright (C) 2004, 2005, 2006, 2007 Antonio Diaz Diaz.
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -49,7 +49,7 @@ class Sblock : public Block
   {
 public:
   enum Status
-    { non_tried = '?', bad_cluster = '/', bad_block = '-', done = '+' };
+    { non_tried = '?', non_split = '/', bad_block = '-', done = '+' };
 private:
   Status _status;
 
@@ -85,6 +85,7 @@ class Logbook
   bool read_logfile() throw();
   int copy_non_tried_block( const Block & block, std::vector< Sblock > & result ) throw();
   int copy_bad_block( const Block & block, std::vector< Sblock > & result ) throw();
+  void count_errors() throw();
   int copy_non_tried() throw();
   int split_errors() throw();
   int copy_errors() throw();

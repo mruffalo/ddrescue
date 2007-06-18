@@ -5,8 +5,8 @@
 @finalout
 @c %**end of header
 
-@set UPDATED 13 December 2006
-@set VERSION 1.3
+@set UPDATED 18 June 2007
+@set VERSION 1.4
 
 @dircategory GNU Packages
 @direntry
@@ -29,23 +29,42 @@
 @node Top
 @top
 
-@ifinfo
 This manual is for GNU ddrescue (version @value{VERSION}, @value{UPDATED}).
 
+@menu
+* Introduction::	Purpose and features of GNU ddrescue
+* Algorithm::		How ddrescue recovers the data
+* Invoking ddrescue::	Command line interface
+* Logfile Structure::	Detailed format of the logfile
+* Examples::		A small tutorial with examples
+* Direct Disc Access::	Bypassing the kernel cache
+* Problems::		Reporting bugs
+* Concept Index::	Index of concepts
+@end menu
+
 @sp 1
+Copyright @copyright{} 2004, 2005, 2006, 2007 Antonio Diaz Diaz.
+
+Permission is granted to copy, distribute and/or modify this document
+under the terms of the GNU Free Documentation License, Version 1.2 or
+any later version published by the Free Software Foundation; with no
+Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts.
+
+
+@node Introduction
+@chapter Introduction
+@cindex introduction
+
 GNU ddrescue is a data recovery tool. It copies data from one file or
 block device (hard disc, cdrom, etc) to another, trying hard to rescue
 data in case of read errors.
-
-Ddrescue does not truncate the output file if not asked to. So, every
-time you run it on the same output file, it tries to fill in the gaps.
 
 The basic operation of ddrescue is fully automatic. That is, you don't
 have to wait for an error, stop the program, read the log, run it in
 reverse mode, etc.
 
 If you use the logfile feature of ddrescue, the data is rescued very
-efficiently (only the needed blocks are read). Also you can interrupt
+efficiently, (only the needed blocks are read). Also you can interrupt
 the rescue at any time and resume it later at the same point.
 
 Automatic merging of backups: If you have two or more damaged copies of
@@ -56,25 +75,14 @@ areas at the same places on different input files is very low. Using
 the logfile, only the needed blocks are read from the second and
 successive copies.
 
-@end ifinfo
+Ddrescue does not truncate the output file if not asked to. So, every
+time you run it on the same output file, it tries to fill in the gaps.
 
-@menu
-* Algorithm::		How ddrescue recovers the data
-* Invoking ddrescue::	Command line interface
-* Logfile Structure::	Detailed format of the logfile
-* Examples::		A small tutorial with examples
-* Raw Devices::		Raw devices bypass the kernel cache
-* Problems::		Reporting bugs
-* Concept Index::	Index of concepts
-@end menu
+Because ddrescue needs to read and write at random places, it only works
+on seekable (random access) input and output files.
 
-@sp 1
-Copyright @copyright{} 2004, 2005, 2006 Antonio Diaz Diaz.
-
-Permission is granted to copy, distribute and/or modify this document
-under the terms of the GNU Free Documentation License, Version 1.2 or
-any later version published by the Free Software Foundation; with no
-Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts.
+If your system supports it, ddrescue can use direct disc access to read
+the input file, bypassing the kernel cache.
 
 
 @node Algorithm
@@ -111,7 +119,7 @@ different subsets. See this example:
 Rescue the most important part of the disc first.
 @example
 ddrescue -i0 -s50M /dev/hdc hdimage logfile
-ddrescue -i0 -s1M -r3 /dev/hdc hdimage logfile
+ddrescue -i0 -s1M -r3 -d /dev/hdc hdimage logfile
 @end example
 @noindent
 Then rescue some key disc areas.
@@ -122,7 +130,8 @@ ddrescue -i230G -s5G /dev/hdc hdimage logfile
 @noindent
 Now rescue the rest (does not recopy what is already done).
 @example
-ddrescue -r3 /dev/hdc hdimage logfile
+ddrescue /dev/hdc hdimage logfile
+ddrescue -dr3 /dev/hdc hdimage logfile
 @end example
 
 
@@ -152,8 +161,8 @@ Print the version number of ddrescue on the standard output and exit.
 
 @item --block-size=@var{bytes}
 @itemx -b @var{bytes}
-Hardware block size of input device in bytes (usually 512 for hard discs
-and floppies, and 2048 for cdroms). Defaults to 512.
+Hardware block size of input device in bytes (usually 512 for hard
+discs, 1024 for floppies, and 2048 for cdroms). Defaults to 512.
 
 @item --binary-prefixes
 @itemx -B
@@ -171,6 +180,12 @@ is a good value for floppies).
 Limit rescue domain to the blocks of finite size read from logfile. Do
 not read new data beyond logfile limits. This is useful when reading
 from devices of undefined size, like raw devices.
+
+@item --direct
+@itemx -d
+Use direct disc access to read the input file, bypassing the kernel
+cache. Hardware block size must be correctly set for this to work. Not
+all systems support this.
 
 @item --max-errors=@var{n}
 @itemx -e @var{n}
@@ -307,60 +322,102 @@ something goes wrong, you have the master intact to try again.
 IMPORTANT! Never try to repair a file system on a drive with I/O errors;
 you will probably lose even more data.
 
-After the copy is repaired, with e2fsck or some other tool appropiate
-for the type of partition, you should mount it somewhere and try to
+If you are trying to rescue a whole partition, first repair the copy
+with e2fsck or some other tool appropiate for the type of partition you
+are trying to rescue, then mount the repaired copy somewhere and try to
 recover the files in it.
 
 If the drive is so damaged that the rescued partition can't be repaired
 or mounted, you will have to browse the rescued data with an hex editor
 and extract the desired parts by hand.
 
+If the partition table is damaged, you can try to rescue the whole disc,
+then try to repair the partition table and the partitions on the copy.
+
+If the damaged drive is not listed in /dev, then you cannot rescue it.
+At least not with ddrescue.
+
+@sp 1
 @noindent
-Example 1: Rescue an ext2 partition in /dev/hda2 to /dev/hdb2
+Example 1: Rescue a whole disc with two ext2 partitions in /dev/hda to
+/dev/hdb@*
+Note: you do not need to partition /dev/hdb beforehand.
 @example
-ddrescue -r3 /dev/hda2 /dev/hdb2 logfile
+ddrescue -n /dev/hda /dev/hdb logfile
+ddrescue -dr3 /dev/hda /dev/hdb logfile
+fdisk /dev/hdb
+e2fsck -v -f /dev/hdb1
+e2fsck -v -f /dev/hdb2
+@end example
+
+@noindent
+Example 2: Rescue an ext2 partition in /dev/hda2 to /dev/hdb2@*
+Note: you need to create the hdb2 partition with fdisk first. hdb2
+should be of appropiate type and size.
+@example
+ddrescue -n /dev/hda2 /dev/hdb2 logfile
+ddrescue -dr3 /dev/hda2 /dev/hdb2 logfile
 e2fsck -v -f /dev/hdb2
 mount -t ext2 -o ro /dev/hdb2 /mnt
+read files from /mnt
 @end example
 
 @noindent
 Example 2: Rescue a CD-ROM in /dev/cdrom
 @example
-ddrescue -b 2048 /dev/cdrom cdimage logfile
+ddrescue -nb2048 /dev/cdrom cdimage logfile
+ddrescue -db2048 -r3 /dev/cdrom cdimage logfile
 write cdimage to a blank CD-ROM
 @end example
 
 
-@node Raw Devices
-@chapter Raw Devices
+@node Direct Disc Access
+@chapter Direct Disc Access
+@cindex direct disc access
 @cindex raw devices
 
-NOTE! Read your system documentation to find how to bind a raw device to
-a regular block device.
+NOTE! Try the @samp{--direct} option first. If direct disc access is not
+available in your system, try raw devices. Read your system
+documentation to find how to bind a raw device to a regular block
+device.
 
 If you notice that the sizes and offsets in the log file are ALWAYS
 multiples of the hard sector size, maybe your kernel is caching the disc
-accesses and grouping them. In this case you may want to use a raw
-device to bypass the kernel cache and rescue more of your data.
+accesses and grouping them. In this case you may want to use direct disc
+access or a raw device to bypass the kernel cache and rescue more of
+your data.
 
 Ddrescue aligns its I/O buffer to the sector size so that it can be used
-to read from raw devices. For efficiency reasons, also aligns it to the
-memory page size if page size is a multiple of sector size. Ddrescue
-can't determine the size of a raw device, so a explicit
-@samp{--max-size} or @samp{--complete-only} option is needed.
+for direct disc access or to read from raw devices. For efficiency
+reasons, also aligns it to the memory page size if page size is a
+multiple of sector size. Ddrescue can't determine the size of a raw
+device, so a explicit @samp{--max-size} or @samp{--complete-only} option
+is needed.
 
 Reading from a raw device seems to be slower than reading from the
 associated regular block device. So you should begin the rescue with the
 regular block device, and use the raw device only to recover the good
 sectors inside the error areas.
 
+@sp 1
+@noindent
+Example 1: using direct disc access
 @example
-raw /dev/raw/raw1 /dev/hdb
-ddrescue -n /dev/hdb /dev/hdc logfile
-ddrescue -r3 -C /dev/raw/raw1 /dev/hdc logfile
+ddrescue -n /dev/hdb1 /dev/hdc1 logfile
+ddrescue -d -r3 /dev/hdb1 /dev/hdc1 logfile
+e2fsck -v -f /dev/hdc1
+mount -t ext2 -o ro /dev/hdc1 /mnt
+@end example
+
+@noindent
+Example 2: using a raw device
+@example
+raw /dev/raw/raw1 /dev/hdb1
+ddrescue -n /dev/hdb1 /dev/hdc1 logfile
+ddrescue -r3 -C /dev/raw/raw1 /dev/hdc1 logfile
 raw /dev/raw/raw1 0 0
-e2fsck -v -f /dev/hdc
-mount -t ext2 -o ro /dev/hdc /mnt
+e2fsck -v -f /dev/hdc1
+mount -t ext2 -o ro /dev/hdc1 /mnt
 @end example
 
 

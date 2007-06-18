@@ -1,5 +1,5 @@
 /*  GNU ddrescue - Data recovery tool
-    Copyright (C) 2004, 2005, 2006 Antonio Diaz Diaz.
+    Copyright (C) 2004, 2005, 2006, 2007 Antonio Diaz Diaz.
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -163,6 +163,6 @@ bool Sblock::join( const Sblock & sb ) throw()
 
 bool Sblock::isstatus( const int st ) throw()
   {
-  return ( st == non_tried || st == bad_cluster ||
+  return ( st == non_tried || st == non_split ||
            st == bad_block || st == done );
   }
