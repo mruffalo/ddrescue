@@ -1,7 +1,3 @@
-Changes in version 1.4:
+Changes in version 1.5:
 
-A new option "--direct" that instructs ddrescue to use direct disc
-access to read the input file, bypassing the kernel cache, has been
-added.
-
-A bug that displayed an incorrect initial error size has been fixed.
+The license has been updated to GPL version 3 or later.

@@ -1,9 +1,9 @@
 /*  GNU ddrescue - Data recovery tool
     Copyright (C) 2004, 2005, 2006, 2007 Antonio Diaz Diaz.
 
-    This program is free software; you can redistribute it and/or modify
+    This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
-    the Free Software Foundation; either version 2 of the License, or
+    the Free Software Foundation, either version 3 of the License, or
     (at your option) any later version.
 
     This program is distributed in the hope that it will be useful,
@@ -12,8 +12,7 @@
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
-    along with this program; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 /*
     Return values: 0 for a normal exit, 1 for environmental problems
@@ -78,10 +77,11 @@ void show_help( const int cluster, const int hardbs ) throw()
 
 void show_version() throw()
   {
-  std::printf( "%s version %s\n", Program_name, PROGVERSION );
+  std::printf( "%s %s\n", Program_name, PROGVERSION );
   std::printf( "Copyright (C) %s Antonio Diaz Diaz.\n", program_year );
-  std::printf( "This program is free software; you may redistribute it under the terms of\n" );
-  std::printf( "the GNU General Public License.  This program has absolutely no warranty.\n" );
+  std::printf( "License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>\n" );
+  std::printf( "This is free software: you are free to change and redistribute it.\n" );
+  std::printf( "There is NO WARRANTY, to the extent permitted by law.\n" );
   }
 
 

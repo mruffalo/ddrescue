@@ -3,7 +3,7 @@ ddrescue.texinfo.
 
 INFO-DIR-SECTION GNU Packages
 START-INFO-DIR-ENTRY
-* ddrescue: (ddrescue).        Data recovery tool.
+* ddrescue: (ddrescue).         Data recovery tool.
 END-INFO-DIR-ENTRY
 
 
@@ -12,7 +12,7 @@ File: ddrescue.info,  Node: Top,  Next: Introduction,  Up: (dir)
 GNU ddrescue
 ************
 
-This manual is for GNU ddrescue (version 1.4, 18 June 2007).
+This manual is for GNU ddrescue (version 1.5, 29 June 2007).
 
 * Menu:
 
@@ -408,14 +408,14 @@ Concept Index
 
 
 Tag Table:
-Node: Top202
-Node: Introduction1068
-Node: Algorithm2551
-Node: Invoking ddrescue4073
-Node: Logfile Structure7852
-Node: Examples9052
-Node: Direct Disc Access11400
-Node: Problems13093
-Node: Concept Index13398
+Node: Top203
+Node: Introduction1069
+Node: Algorithm2552
+Node: Invoking ddrescue4074
+Node: Logfile Structure7853
+Node: Examples9053
+Node: Direct Disc Access11401
+Node: Problems13094
+Node: Concept Index13399
 
 End Tag Table

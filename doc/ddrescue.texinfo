@@ -5,12 +5,12 @@
 @finalout
 @c %**end of header
 
-@set UPDATED 18 June 2007
-@set VERSION 1.4
+@set UPDATED 29 June 2007
+@set VERSION 1.5
 
 @dircategory GNU Packages
 @direntry
-* ddrescue: (ddrescue).        Data recovery tool.
+* ddrescue: (ddrescue).         Data recovery tool.
 @end direntry
 
 
