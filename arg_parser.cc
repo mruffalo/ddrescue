@@ -1,4 +1,4 @@
-/*  Arg_parser - A simple argument parser written in C++
+/*  Arg_parser - A POSIX/GNU command line argument parser.
     Copyright (C) 2006, 2007 Antonio Diaz Diaz.
 
     This program is free software: you can redistribute it and/or modify
@@ -64,6 +64,12 @@ bool Arg_parser::parse_long_option( const char * const opt, const char * const a
       {
       _error = "option `--"; _error += options[index].name;
       _error += "' doesn't allow an argument";
+      return false;
+      }
+    if( options[index].has_arg == yes && !opt[len+3] )
+      {
+      _error = "option `--"; _error += options[index].name;
+      _error += "' requires an argument";
       return false;
       }
     data.back().argument = &opt[len+3];

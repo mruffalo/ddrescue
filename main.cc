@@ -27,7 +27,6 @@
 #include <climits>
 #include <cstdio>
 #include <cstdlib>
-#include <queue>
 #include <string>
 #include <vector>
 #include <fcntl.h>
@@ -61,12 +60,14 @@ void show_help( const int cluster, const int hardbs ) throw()
   std::printf( "  -C, --complete-only          do not read new data beyond logfile limits\n" );
   std::printf( "  -d, --direct                 use direct disc access for input file\n" );
   std::printf( "  -e, --max-errors=<n>         maximum number of error areas allowed\n" );
+  std::printf( "  -F, --fill=<types>           fill given type areas with infile data (?*/-+)\n" );
   std::printf( "  -i, --input-position=<pos>   starting position in input file [0]\n" );
   std::printf( "  -n, --no-split               do not try to split error areas\n" );
   std::printf( "  -o, --output-position=<pos>  starting position in output file [ipos]\n" );
   std::printf( "  -q, --quiet                  quiet operation\n" );
   std::printf( "  -r, --max-retries=<n>        exit after given retries (-1=infinity) [0]\n" );
   std::printf( "  -s, --max-size=<bytes>       maximum size of data to be copied\n" );
+  std::printf( "  -S, --sparse                 use sparse writes for output file\n" );
   std::printf( "  -t, --truncate               truncate output file\n" );
   std::printf( "  -v, --verbose                verbose operation\n" );
   std::printf( "Numbers may be followed by a multiplier: b = blocks, k = kB = 10^3 = 1000,\n" );
@@ -85,7 +86,7 @@ void show_version() throw()
   }
 
 
-long long getnum( const char * ptr, const int bs,
+long long getnum( const char * ptr, const int bs, const int verbosity,
                   const long long min = LONG_LONG_MIN + 1,
                   const long long max = LONG_LONG_MAX ) throw()
   {
@@ -93,7 +94,11 @@ long long getnum( const char * ptr, const int bs,
   char *tail;
   long long result = strtoll( ptr, &tail, 0 );
   if( tail == ptr )
-    { show_error( "bad or missing numerical argument", 0, true ); std::exit(1); }
+    {
+    if( verbosity >= 0 )
+      show_error( "bad or missing numerical argument", 0, true );
+    std::exit( 1 );
+    }
 
   if( !errno && tail[0] )
     {
@@ -120,8 +125,11 @@ long long getnum( const char * ptr, const int bs,
       default: bad_multiplier = true;
       }
     if( bad_multiplier )
-      { show_error( "bad multiplier in numerical argument", 0, true );
-      std::exit(1); }
+      {
+      if( verbosity >= 0 )
+        show_error( "bad multiplier in numerical argument", 0, true );
+      std::exit( 1 );
+      }
     for( int i = 0; i < exponent; ++i )
       {
       if( LONG_LONG_MAX / factor >= llabs( result ) ) result *= factor;
@@ -130,8 +138,25 @@ long long getnum( const char * ptr, const int bs,
     }
   if( !errno && ( result < min || result > max ) ) errno = ERANGE;
   if( errno )
-    { show_error( "numerical argument out of limits" ); std::exit(1); }
+    {
+    if( verbosity >= 0 ) show_error( "numerical argument out of limits" );
+    std::exit( 1 );
+    }
   return result;
+  }
+
+
+void check_fill_types( const std::string filltypes, const int verbosity ) throw()
+  {
+  bool good = true;
+  for( unsigned int i = 0; i < filltypes.size(); ++i )
+    if( !Sblock::isstatus( filltypes[i] ) )
+      { good = false; break; }
+  if( !filltypes.size() || !good )
+    {
+    if( verbosity >= 0 ) show_error( "invalid type for `fill' option" );
+    std::exit( 1 );
+    }
   }
 
 
@@ -143,7 +168,146 @@ bool check_identical( const char * name1, const char * name2 ) throw()
   return ( stat1.st_ino == stat2.st_ino && stat1.st_dev == stat2.st_dev );
   }
 
+
+int do_fill( long long ipos, const long long opos, const long long max_size,
+             const char *iname, const char *oname, const char *logname,
+             const int cluster, const int hardbs, const int verbosity,
+             const std::string & filltypes ) throw()
+  {
+  if( !logname )
+    {
+    if( verbosity >= 0 )
+      show_error( "logfile required in fill mode", 0, true );
+    return 1;
+    }
+
+  Fillbook fillbook( opos, max_size, logname, cluster, hardbs, verbosity );
+  if( fillbook.domain().size() == 0 )
+    { if( verbosity >= 0 ) { show_error( "Nothing to do" ); } return 0; }
+
+  const int ides = open( iname, O_RDONLY );
+  if( ides < 0 )
+    { if( verbosity >= 0 ) show_error( "cannot open input file", errno );
+      return 1; }
+  if( ipos < 0 ) ipos = 0;
+  else if( ipos > 0 )
+    {
+    const long long isize = lseek( ides, 0, SEEK_END );
+    if( isize < 0 )
+      { if( verbosity >= 0 ) show_error( "input file is not seekable" );
+        return 1; }
+    if( isize > 0 && ipos >= isize )
+      { if( verbosity >= 0 ) { input_pos_error( ipos, isize ); } return 1; }
+    }
+  if( !fillbook.read_buffer( ipos, ides ) )
+    {
+    if( verbosity >= 0 )
+      show_error( "error reading fill data from input file" );
+    return 1;
+    }
+
+  const int odes = open( oname, O_WRONLY | O_CREAT, 0644 );
+  if( odes < 0 )
+    { if( verbosity >= 0 ) show_error( "cannot open output file", errno );
+      return 1; }
+  if( lseek( odes, 0, SEEK_SET ) )
+    { if( verbosity >= 0 ) show_error( "output file is not seekable" );
+      return 1; }
+
+  if( verbosity >= 0 ) std::printf( "\n\n" );
+  if( verbosity > 0 )
+    {
+    std::printf( "About to fill with data from %s areas of %s marked %s\n",
+                 iname, oname, filltypes.c_str() );
+    std::printf( "    Maximum size to fill: %sBytes\n",
+                 format_num( fillbook.domain().size() ) );
+    std::printf( "    Starting positions: infile = %sB", format_num( ipos ) );
+    std::printf( ",  outfile = %sB\n", format_num( fillbook.domain().pos() ) );
+    std::printf( "    Copy block size: %d hard blocks\n", cluster );
+    std::printf( "Hard block size: %d bytes\n", hardbs );
+    std::printf( "\n" );
+    }
+
+  return fillbook.do_fill( odes, filltypes );
+  }
+
+
+int do_rescue( const long long ipos, const long long opos, const long long max_size,
+               const char *iname, const char *oname, const char *logname,
+               const int cluster, const int hardbs,
+               const int max_errors, const int max_retries,
+               const int o_direct, const int o_trunc, const int verbosity,
+               const bool complete_only, const bool nosplit, const bool sparse ) throw()
+  {
+  const int ides = open( iname, O_RDONLY | o_direct );
+  if( ides < 0 )
+    { if( verbosity >= 0 ) show_error( "cannot open input file", errno );
+      return 1; }
+  const long long isize = lseek( ides, 0, SEEK_END );
+  if( isize < 0 )
+    { if( verbosity >= 0 ) show_error( "input file is not seekable" );
+      return 1; }
+
+  Rescuebook rescuebook( ipos, opos, max_size, isize, logname, cluster, hardbs,
+                         max_errors, max_retries, verbosity, complete_only,
+                         nosplit, sparse );
+  if( rescuebook.domain().size() == 0 )
+    { if( verbosity >= 0 ) { show_error( "Nothing to do" ); } return 0; }
+  if( o_trunc && !rescuebook.blank() )
+    {
+    if( verbosity >= 0 )
+      show_error( "outfile truncation and logfile input are incompatible", 0, true );
+    return 1;
+    }
+
+  const int odes = open( oname, O_WRONLY | O_CREAT | o_trunc, 0644 );
+  if( odes < 0 )
+    { if( verbosity >= 0 ) show_error( "cannot open output file", errno );
+      return 1; }
+  if( lseek( odes, 0, SEEK_SET ) )
+    { if( verbosity >= 0 ) show_error( "output file is not seekable" );
+      return 1; }
+
+  if( verbosity >= 0 ) std::printf( "\n\n" );
+  if( verbosity > 0 )
+    {
+    std::printf( "About to copy %sBytes from %s to %s\n",
+                 ( rescuebook.domain().size() >= 0 ) ?
+                   format_num( rescuebook.domain().size() ) : "an undefined number of ",
+                 iname, oname );
+    std::printf( "    Starting positions: infile = %sB",
+                 format_num( rescuebook.domain().pos() ) );
+    std::printf( ",  outfile = %sB\n", format_num( rescuebook.rescue_opos() ) );
+    std::printf( "    Copy block size: %d hard blocks\n", cluster );
+    std::printf( "Hard block size: %d bytes\n", hardbs );
+    bool nl = false;
+    if( max_errors >= 0 )
+      { nl = true; std::printf( "Max_errors: %d    ", max_errors ); }
+    if( max_retries >= 0 )
+      { nl = true; std::printf( "Max_retries: %d    ", max_retries ); }
+    if( nl ) std::printf( "\n" );
+    std::printf( "Direct: %s    ", o_direct ? "yes" : "no" );
+    std::printf( "Sparse: %s    ", sparse ? "yes" : "no" );
+    std::printf( "Split: %s    ", !nosplit ? "yes" : "no" );
+    std::printf( "Truncate: %s\n", o_trunc ? "yes" : "no" );
+    if( complete_only ) std::printf( "Complete only\n" );
+    std::printf( "\n" );
+    }
+
+  return rescuebook.do_rescue( ides, odes );
+  }
+
 } // end namespace
+
+
+void input_pos_error( const long long pos, const long long isize ) throw()
+  {
+  char buf[80];
+  snprintf( buf, sizeof( buf ), "can't start reading at pos %lld", pos );
+  show_error( buf );
+  snprintf( buf, sizeof( buf ), "input file is only %lld bytes long", isize );
+  show_error( buf );
+  }
 
 
 void internal_error( const char * msg ) throw()
@@ -151,7 +315,7 @@ void internal_error( const char * msg ) throw()
   char buf[80];
   snprintf( buf, sizeof( buf ), "internal error: %s", msg );
   show_error( buf );
-  exit( 3 );
+  std::exit( 3 );
   }
 
 
@@ -182,7 +346,8 @@ int main( const int argc, const char * argv[] ) throw()
   int cluster = 0, hardbs = 512;
   int max_errors = -1, max_retries = 0;
   int o_direct = 0, o_trunc = 0, verbosity = 0;
-  bool complete_only = false, nosplit = false;
+  bool complete_only = false, nosplit = false, sparse = false;
+  std::string filltypes;
   invocation_name = argv[0];
 
   const Arg_parser::Option options[] =
@@ -193,6 +358,7 @@ int main( const int argc, const char * argv[] ) throw()
     { 'C', "complete-only",   Arg_parser::no  },
     { 'd', "direct",          Arg_parser::no  },
     { 'e', "max-errors",      Arg_parser::yes },
+    { 'F', "fill",            Arg_parser::yes },
     { 'h', "help",            Arg_parser::no  },
     { 'i', "input-position",  Arg_parser::yes },
     { 'n', "no-split",        Arg_parser::no  },
@@ -200,6 +366,7 @@ int main( const int argc, const char * argv[] ) throw()
     { 'q', "quiet",           Arg_parser::no  },
     { 'r', "max-retries",     Arg_parser::yes },
     { 's', "max-size",        Arg_parser::yes },
+    { 'S', "sparse",          Arg_parser::no  },
     { 't', "truncate",        Arg_parser::no  },
     { 'v', "verbose",         Arg_parser::no  },
     { 'V', "version",         Arg_parser::no  },
@@ -217,25 +384,29 @@ int main( const int argc, const char * argv[] ) throw()
     const char * arg = parser.argument( argind ).c_str();
     switch( code )
       {
-      case 'b': hardbs = getnum( arg, 0, 1, INT_MAX ); break;
+      case 'b': hardbs = getnum( arg, 0, verbosity, 1, INT_MAX ); break;
       case 'B': format_num( 0, 0, -1 ); break;		// set binary prefixes
-      case 'c': cluster = getnum( arg, 1, 1, INT_MAX ); break;
+      case 'c': cluster = getnum( arg, 1, verbosity, 1, INT_MAX ); break;
       case 'C': complete_only = true; break;
       case 'd':
 #ifdef O_DIRECT
                 o_direct = O_DIRECT;
 #endif
                 if( !o_direct )
-                  { show_error( "direct disc access not available" ); return 1; }
+                  { if( verbosity >= 0 )
+                      show_error( "direct disc access not available" );
+                    return 1; }
                 break;
-      case 'e': max_errors = getnum( arg, 0, -1, INT_MAX ); break;
+      case 'e': max_errors = getnum( arg, 0, verbosity, -1, INT_MAX ); break;
+      case 'F': filltypes = arg; check_fill_types( filltypes, verbosity ); break;
       case 'h': show_help( cluster_bytes / default_hardbs, default_hardbs ); return 0;
-      case 'i': ipos = getnum( arg, hardbs, 0 ); break;
+      case 'i': ipos = getnum( arg, hardbs, verbosity, 0 ); break;
       case 'n': nosplit = true; break;
-      case 'o': opos = getnum( arg, hardbs, 0 ); break;
+      case 'o': opos = getnum( arg, hardbs, verbosity, 0 ); break;
       case 'q': verbosity = -1; break;
-      case 'r': max_retries = getnum( arg, 0, -1, INT_MAX ); break;
-      case 's': max_size = getnum( arg, hardbs, -1 ); break;
+      case 'r': max_retries = getnum( arg, 0, verbosity, -1, INT_MAX ); break;
+      case 's': max_size = getnum( arg, hardbs, verbosity, -1 ); break;
+      case 'S': sparse = true; break;
       case 't': o_trunc = O_TRUNC; break;
       case 'v': verbosity = 1; break;
       case 'V': show_version(); return 0;
@@ -244,6 +415,7 @@ int main( const int argc, const char * argv[] ) throw()
     } // end process options
 
   if( hardbs < 1 ) hardbs = default_hardbs;
+  if( cluster >= INT_MAX / hardbs ) cluster = ( INT_MAX / hardbs ) - 1;
   if( cluster < 1 ) cluster = cluster_bytes / hardbs;
   if( cluster < 1 ) cluster = 1;
 
@@ -252,60 +424,30 @@ int main( const int argc, const char * argv[] ) throw()
   if( argind < parser.arguments() ) oname = parser.argument( argind++ ).c_str();
   if( argind < parser.arguments() ) logname = parser.argument( argind++ ).c_str();
   if( argind < parser.arguments() )
-    { show_error( "too many files", 0, true ); return 1; }
+    { if( verbosity >= 0 ) show_error( "too many files", 0, true );
+      return 1; }
 
   // end scan arguments
 
   if( !iname || !oname )
-    { show_error( "both input and output must be specified", 0, true );
-    return 1; }
-  if( check_identical ( iname, oname ) )
-    { show_error( "infile and outfile are identical" ); return 1; }
-
-  const int ides = open( iname, O_RDONLY | o_direct );
-  if( ides < 0 ) { show_error( "cannot open input file", errno ); return 1; }
-  const long long isize = lseek( ides, 0, SEEK_END );
-  if( isize < 0 ) { show_error( "input file is not seekable" ); return 1; }
-
-  Logbook logbook( ipos, opos, max_size, isize, logname, cluster, hardbs,
-                   max_errors, max_retries, verbosity, complete_only, nosplit );
-  if( logbook.rescue_size() == 0 )
-    { if( verbosity >= 0 ) { show_error( "Nothing to do" ); } return 0; }
-  if( o_trunc && !logbook.blank() )
     {
-    show_error( "outfile truncation and logfile input are incompatible", 0, true );
+    if( verbosity >= 0 )
+      show_error( "both input and output must be specified", 0, true );
     return 1;
     }
+  if( check_identical ( iname, oname ) )
+    { if( verbosity >= 0 ) show_error( "infile and outfile are the same" );
+      return 1; }
 
-  const int odes = open( oname, O_WRONLY | O_CREAT | o_trunc, 0644 );
-  if( odes < 0 ) { show_error( "cannot open output file", errno ); return 1; }
-  if( lseek( odes, 0, SEEK_SET ) )
-    { show_error( "output file is not seekable" ); return 1; }
+  if( !filltypes.size() )
+    return do_rescue( ipos, opos, max_size, iname, oname, logname,
+                      cluster, hardbs, max_errors, max_retries,
+                      o_direct, o_trunc, verbosity, complete_only, nosplit, sparse );
 
-  if( verbosity >= 0 ) std::printf( "\n\n" );
-  if( verbosity > 0 )
-    {
-    std::printf( "About to copy %sBytes from %s to %s\n",
-                 ( logbook.rescue_size() >= 0 ) ?
-                   format_num( logbook.rescue_size() ) : "an undefined number of ",
-                 iname, oname );
-    std::printf( "    Starting positions: infile = %sB",
-                 format_num( logbook.rescue_ipos() ) );
-    std::printf( ",  outfile = %sB\n", format_num( logbook.rescue_opos() ) );
-    std::printf( "    Copy block size: %d hard blocks\n", cluster );
-    std::printf( "Hard block size: %d bytes\n", hardbs );
-    bool nl = false;
-    if( max_errors >= 0 )
-      { nl = true; std::printf( "Max_errors: %d    ", max_errors ); }
-    if( max_retries >= 0 )
-      { nl = true; std::printf( "Max_retries: %d    ", max_retries ); }
-    if( nl ) std::printf( "\n" );
-    std::printf( "Direct: %s    ", o_direct ? "yes" : "no" );
-    std::printf( "Split: %s    ", !nosplit ? "yes" : "no" );
-    std::printf( "Truncate: %s\n", o_trunc ? "yes" : "no" );
-    if( complete_only ) std::printf( "Complete only\n" );
-    std::printf( "\n" );
-    }
+  if( verbosity >= 0 && ( max_errors >= 0 || max_retries || o_direct ||
+                          o_trunc || complete_only || nosplit || sparse ) )
+    show_error( "warning: options -C -d -e -n -r -S and -t are ignored in fill mode" );
 
-  return logbook.do_rescue( ides, odes );
+  return do_fill( ipos, opos, max_size, iname, oname, logname, cluster,
+                  hardbs, verbosity, filltypes );
   }

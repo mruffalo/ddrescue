@@ -1,3 +1,22 @@
+2007-11-16  Antonio Diaz  <ant_diaz@teleline.es>
+
+	* Version 1.6 released.
+	* Code reorganization. New classes Fillbook and Rescuebook.
+	* logbook.cc (copy_non_tried): Added new variable `skip_counter'.
+	* Added new pass that trims error areas backward before splitting.
+	* Added support for sparse output files.
+	* Blocks longer than hardbs are now split at sector boundaries.
+	* Added new option `--fill'.
+	* Added new chapter `Fill Mode' to the manual.
+	* Added "current status" line to logfile.
+	* An interrupted retry pass is now resumed instead of reinitiated.
+	* Perfect resumability if interrupted during trimming or splitting.
+	* ddrescue.cc (set_handler) Handle also SIGHUP and SIGTERM.
+	* `--quiet' option also quiets error messages.
+	* Print a more informative error message when reading an old logfile.
+	* Added note to ddrescue.texinfo about old logfiles.
+	* Added some consistency checks.
+
 2007-06-29  Antonio Diaz  <ant_diaz@teleline.es>
 
 	* Version 1.5 released.

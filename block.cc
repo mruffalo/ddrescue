@@ -19,6 +19,7 @@
 
 #include <algorithm>
 #include <cstdio>
+#include <string>
 #include <vector>
 
 #include "ddrescue.h"
@@ -26,9 +27,9 @@
 
 Block::Block( const long long p, const long long s ) throw()
   {
-  if( p < 0 || s < -1 )
+  if( !verify( p, s ) )
     {
-    std::fprintf( stderr, "p = %lld, s = %lld\n", p, s );
+    std::fprintf( stderr, "p = %lld, s = %lld, p + s = %lld\n", p, s, p + s );
     internal_error( "bad parameter building a Block" );
     }
   _pos = p; _size = s;
@@ -47,15 +48,35 @@ long long Block::hard_blocks( const int hardbs ) const throw()
 
 void Block::pos( const long long p ) throw()
   {
-  if( p < 0 ) internal_error( "bad pos relocating a Block" );
+  if( !verify( p, _size ) ) internal_error( "bad pos relocating a Block" );
   _pos = p;
   }
 
 
 void Block::size( const long long s ) throw()
   {
-  if( s < -1 ) internal_error( "bad size resizing a Block" );
+  if( !verify( _pos, s ) ) internal_error( "bad size resizing a Block" );
   _size = s;
+  }
+
+
+void Block::dec_pos( const long long delta ) throw()
+  {
+  if( ( _size >= 0 && _size + delta < 0 ) ||
+      !verify( _pos - delta, (_size >= 0) ? _size + delta : _size ) )
+    internal_error( "bad delta left extending a Block" );
+  _pos -= delta; if( _size >= 0 ) _size += delta;
+  }
+
+
+void Block::inc_size( const long long delta ) throw()
+  {
+  if( _size >= 0 )
+    {
+    if( _size + delta < 0 || !verify( _pos, _size + delta ) )
+      internal_error( "bad delta right extending a Block" );
+    _size += delta;
+    }
   }
 
 
@@ -68,32 +89,16 @@ bool Block::can_be_split( const int hardbs ) const throw()
   }
 
 
-bool Block::follows( const Block & b ) const throw()
-  {
-  return ( b._size >= 0 && b._pos + b._size == _pos );
-  }
-
-
-bool Block::includes( const long long pos ) const throw()
-  {
-  return ( _pos <= pos && ( _size < 0 || _pos + _size > pos ) );
-  }
-
-
-bool Block::overlaps( const Block & b ) const throw()
-  {
-  return ( ( _size < 0 || _pos + _size > b._pos ) &&
-           ( b._size < 0 || b._pos + b._size > _pos ) );
-  }
-
-
 bool Block::join( const Block & b ) throw()
   {
+  bool done = false;
   if( _size >= 0 && _pos + _size == b._pos )
-    { if( b._size >= 0 ) _size += b._size; else _size = -1; return true; }
-  if( b._size >= 0 && b._pos + b._size == _pos )
-    { _pos = b._pos; if( _size >= 0 ) _size += b._size; return true; }
-  return false;
+    { if( b._size >= 0 ) _size += b._size; else _size = -1; done = true; }
+  else if( b._size >= 0 && b._pos + b._size == _pos )
+    { _pos = b._pos; if( _size >= 0 ) _size += b._size; done = true; }
+  if( done && !verify( _pos, _size ) )
+    internal_error( "size overflow joining two Blocks" );
+  return done;
   }
 
 
@@ -112,8 +117,9 @@ Block Block::overlap( const Block & b ) const throw()
   }
 
 
-Block Block::split( const long long pos ) throw()
+Block Block::split( long long pos, const int hardbs ) throw()
   {
+  if( hardbs > 1 ) pos -= pos % hardbs;
   if( _pos < pos && ( _size < 0 || _pos + _size > pos ) )
     {
     const Block b( _pos, pos - _pos );
@@ -124,9 +130,16 @@ Block Block::split( const long long pos ) throw()
   }
 
 
-Block Block::split_hb( const int hardbs ) throw()
+Block Block::backsplit( long long pos, const int hardbs ) throw()
   {
-  return this->split( _pos + hardbs - ( _pos % hardbs ) );
+  if( hardbs > 1 ) pos -= pos % hardbs;
+  if( _pos < pos && _size > 0 && _pos + _size > pos )
+    {
+    const Block b( pos, _pos + _size - pos );
+    _size -= b._size;
+    return b;
+    }
+  return Block();
   }
 
 
@@ -150,18 +163,4 @@ void Sblock::status( const Status st ) throw()
   {
   if( isstatus( st ) ) _status = st;
   else internal_error( "bad status change in a Sblock" );
-  }
-
-
-bool Sblock::join( const Sblock & sb ) throw()
-  {
-  if( _status == sb._status ) return Block::join( sb );
-  return false;
-  }
-
-
-bool Sblock::isstatus( const int st ) throw()
-  {
-  return ( st == non_tried || st == non_split ||
-           st == bad_block || st == done );
   }

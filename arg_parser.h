@@ -1,4 +1,4 @@
-/*  Arg_parser - A simple argument parser written in C++
+/*  Arg_parser - A POSIX/GNU command line argument parser.
     Copyright (C) 2006, 2007 Antonio Diaz Diaz.
 
     This program is free software: you can redistribute it and/or modify
@@ -18,7 +18,7 @@
 /*  Arg_parser reads the arguments in `argv' and creates a number of
     option codes, option arguments and non-option arguments.
 
-    In case of error, `error()' returns a non-empty error message.
+    In case of error, `error' returns a non-empty error message.
 
     `options' is an array of `struct Option' terminated by an element
     containing a code which is zero. A null name means a short-only

@@ -41,3 +41,7 @@ for direct disc access or to read from raw devices. For efficiency
 reasons, also aligns it to the memory page size if page size is a
 multiple of sector size. Read the info file to learn how to use direct
 disc access or raw devices with ddrescue.
+
+Ddrescue is also able to selectively overwrite parts of the output file,
+which has a number of interesting uses like wiping data, marking bad
+areas or even, in some cases, "repair" damaged sectors.
