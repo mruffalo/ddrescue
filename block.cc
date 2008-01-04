@@ -1,5 +1,5 @@
 /*  GNU ddrescue - Data recovery tool
-    Copyright (C) 2004, 2005, 2006, 2007 Antonio Diaz Diaz.
+    Copyright (C) 2004, 2005, 2006, 2007, 2008 Antonio Diaz Diaz.
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -36,16 +36,6 @@ Block::Block( const long long p, const long long s ) throw()
   }
 
 
-long long Block::hard_blocks( const int hardbs ) const throw()
-  {
-  if( _size <= 0 ) return _size;
-  long long s = _size + ( _pos % hardbs );
-  int tail = ( _pos + _size ) % hardbs;
-  if( tail != 0 ) s += ( hardbs - tail );
-  return s / hardbs;
-  }
-
-
 void Block::pos( const long long p ) throw()
   {
   if( !verify( p, _size ) ) internal_error( "bad pos relocating a Block" );
@@ -60,12 +50,39 @@ void Block::size( const long long s ) throw()
   }
 
 
-void Block::dec_pos( const long long delta ) throw()
+// Move end to e changing size only if needed
+//
+void Block::end( const long long e ) throw()
   {
-  if( ( _size >= 0 && _size + delta < 0 ) ||
-      !verify( _pos - delta, (_size >= 0) ? _size + delta : _size ) )
-    internal_error( "bad delta left extending a Block" );
-  _pos -= delta; if( _size >= 0 ) _size += delta;
+  if( e < 0 ) _size = -1;
+  else if( _size < 0 )
+    { if( _pos < e ) _size = e - _pos; else { _pos = e; _size = 0; } }
+  else { _pos = e - _size; if( _pos < 0 ) { _size += _pos; _pos = 0; } }
+  }
+
+
+// Align pos to next boundary if size is big enough
+//
+void Block::align_pos( const int hardbs ) throw()
+  {
+  if( hardbs > 1 )
+    {
+    const int disp = hardbs - ( _pos % hardbs );
+    if( disp < hardbs && ( _size < 0 || _size > disp ) )
+      { _pos += disp; if( _size > 0 ) _size -= disp; }
+    }
+  }
+
+
+// Align end to previous boundary if size is finite and big enough
+//
+void Block::align_end( const int hardbs ) throw()
+  {
+  if( hardbs > 1 && _size > 0 )
+    {
+    const long long new_end = end() - ( end() % hardbs );
+    if( _pos < new_end ) _size = new_end - _pos;
+    }
   }
 
 
@@ -77,15 +94,6 @@ void Block::inc_size( const long long delta ) throw()
       internal_error( "bad delta right extending a Block" );
     _size += delta;
     }
-  }
-
-
-// Returns true if 'block' spans more than one hardware block.
-//
-bool Block::can_be_split( const int hardbs ) const throw()
-  {
-  if( _size <= 0 ) return ( _size < 0 );
-  return ( _size > hardbs - ( _pos % hardbs ) );
   }
 
 
@@ -102,7 +110,7 @@ bool Block::join( const Block & b ) throw()
   }
 
 
-Block Block::overlap( const Block & b ) const throw()
+void Block::overlap( const Block & b ) throw()
   {
   const long long p = std::max( _pos, b._pos );
   long long s;
@@ -113,7 +121,7 @@ Block Block::overlap( const Block & b ) const throw()
     if( b._size < 0 ) s = std::max( 0LL, end() - p );
     else s = std::max( 0LL, std::min( end(), b.end() ) - p );
     }
-  return Block( p, s );
+  _pos = p; _size = s;
   }
 
 
@@ -124,19 +132,6 @@ Block Block::split( long long pos, const int hardbs ) throw()
     {
     const Block b( _pos, pos - _pos );
     _pos = pos; if( _size > 0 ) _size -= b._size;
-    return b;
-    }
-  return Block();
-  }
-
-
-Block Block::backsplit( long long pos, const int hardbs ) throw()
-  {
-  if( hardbs > 1 ) pos -= pos % hardbs;
-  if( _pos < pos && _size > 0 && _pos + _size > pos )
-    {
-    const Block b( pos, _pos + _size - pos );
-    _size -= b._size;
     return b;
     }
   return Block();

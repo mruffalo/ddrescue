@@ -1,3 +1,13 @@
+2008-01-04  Antonio Diaz  <ant_diaz@teleline.es>
+
+	* Version 1.7 released.
+	* Skips faster over damaged areas (small read, big jump).
+	* Logfile is maintaned minimized at all times.
+	* Rescuebook::errors now counts the error areas found.
+	* Target `check' added to Makefile.
+	* rescuebook.cc (split_errors): Added new variable `error_counter'.
+	* Added new option `--retrim'.
+
 2007-11-16  Antonio Diaz  <ant_diaz@teleline.es>
 
 	* Version 1.6 released.
@@ -8,7 +18,7 @@
 	* Blocks longer than hardbs are now split at sector boundaries.
 	* Added new option `--fill'.
 	* Added new chapter `Fill Mode' to the manual.
-	* Added "current status" line to logfile.
+	* Added status line to logfile.
 	* An interrupted retry pass is now resumed instead of reinitiated.
 	* Perfect resumability if interrupted during trimming or splitting.
 	* ddrescue.cc (set_handler) Handle also SIGHUP and SIGTERM.

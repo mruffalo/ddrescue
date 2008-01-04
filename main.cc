@@ -1,5 +1,5 @@
 /*  GNU ddrescue - Data recovery tool
-    Copyright (C) 2004, 2005, 2006, 2007 Antonio Diaz Diaz.
+    Copyright (C) 2004, 2005, 2006, 2007, 2008 Antonio Diaz Diaz.
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -27,6 +27,7 @@
 #include <climits>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <string>
 #include <vector>
 #include <fcntl.h>
@@ -42,7 +43,7 @@ namespace {
 const char * invocation_name = 0;
 const char * const Program_name    = "GNU ddrescue";
 const char * const program_name    = "ddrescue";
-const char * const program_year    = "2007";
+const char * const program_year    = "2008";
 
 
 void show_help( const int cluster, const int hardbs ) throw()
@@ -62,10 +63,11 @@ void show_help( const int cluster, const int hardbs ) throw()
   std::printf( "  -e, --max-errors=<n>         maximum number of error areas allowed\n" );
   std::printf( "  -F, --fill=<types>           fill given type areas with infile data (?*/-+)\n" );
   std::printf( "  -i, --input-position=<pos>   starting position in input file [0]\n" );
-  std::printf( "  -n, --no-split               do not try to split error areas\n" );
-  std::printf( "  -o, --output-position=<pos>  starting position in output file [ipos]\n" );
+  std::printf( "  -n, --no-split               do not try to split or retry error areas\n" );
+  std::printf( "  -o, --output-position=<pos>  starting position in output file [ipos,0]\n" );
   std::printf( "  -q, --quiet                  quiet operation\n" );
   std::printf( "  -r, --max-retries=<n>        exit after given retries (-1=infinity) [0]\n" );
+  std::printf( "  -R, --retrim                 mark all error areas as non-trimmed\n" );
   std::printf( "  -s, --max-size=<bytes>       maximum size of data to be copied\n" );
   std::printf( "  -S, --sparse                 use sparse writes for output file\n" );
   std::printf( "  -t, --truncate               truncate output file\n" );
@@ -189,8 +191,7 @@ int do_fill( long long ipos, const long long opos, const long long max_size,
   if( ides < 0 )
     { if( verbosity >= 0 ) show_error( "cannot open input file", errno );
       return 1; }
-  if( ipos < 0 ) ipos = 0;
-  else if( ipos > 0 )
+  if( ipos > 0 )
     {
     const long long isize = lseek( ides, 0, SEEK_END );
     if( isize < 0 )
@@ -237,7 +238,8 @@ int do_rescue( const long long ipos, const long long opos, const long long max_s
                const int cluster, const int hardbs,
                const int max_errors, const int max_retries,
                const int o_direct, const int o_trunc, const int verbosity,
-               const bool complete_only, const bool nosplit, const bool sparse ) throw()
+               const bool complete_only, const bool nosplit, const bool retrim,
+               const bool sparse ) throw()
   {
   const int ides = open( iname, O_RDONLY | o_direct );
   if( ides < 0 )
@@ -250,7 +252,7 @@ int do_rescue( const long long ipos, const long long opos, const long long max_s
 
   Rescuebook rescuebook( ipos, opos, max_size, isize, logname, cluster, hardbs,
                          max_errors, max_retries, verbosity, complete_only,
-                         nosplit, sparse );
+                         nosplit, retrim, sparse );
   if( rescuebook.domain().size() == 0 )
     { if( verbosity >= 0 ) { show_error( "Nothing to do" ); } return 0; }
   if( o_trunc && !rescuebook.blank() )
@@ -293,7 +295,6 @@ int do_rescue( const long long ipos, const long long opos, const long long max_s
     if( complete_only ) std::printf( "Complete only\n" );
     std::printf( "\n" );
     }
-
   return rescuebook.do_rescue( ides, odes );
   }
 
@@ -341,12 +342,12 @@ void write_logfile_header( FILE * f ) throw()
 
 int main( const int argc, const char * argv[] ) throw()
   {
-  long long ipos = -1, opos = -1, max_size = -1;
+  long long ipos = 0, opos = -1, max_size = -1;
   const int cluster_bytes = 65536, default_hardbs = 512;
   int cluster = 0, hardbs = 512;
   int max_errors = -1, max_retries = 0;
   int o_direct = 0, o_trunc = 0, verbosity = 0;
-  bool complete_only = false, nosplit = false, sparse = false;
+  bool complete_only = false, nosplit = false, retrim = false, sparse = false;
   std::string filltypes;
   invocation_name = argv[0];
 
@@ -365,6 +366,7 @@ int main( const int argc, const char * argv[] ) throw()
     { 'o', "output-position", Arg_parser::yes },
     { 'q', "quiet",           Arg_parser::no  },
     { 'r', "max-retries",     Arg_parser::yes },
+    { 'R', "retrim",          Arg_parser::no  },
     { 's', "max-size",        Arg_parser::yes },
     { 'S', "sparse",          Arg_parser::no  },
     { 't', "truncate",        Arg_parser::no  },
@@ -405,6 +407,7 @@ int main( const int argc, const char * argv[] ) throw()
       case 'o': opos = getnum( arg, hardbs, verbosity, 0 ); break;
       case 'q': verbosity = -1; break;
       case 'r': max_retries = getnum( arg, 0, verbosity, -1, INT_MAX ); break;
+      case 'R': retrim = true; break;
       case 's': max_size = getnum( arg, hardbs, verbosity, -1 ); break;
       case 'S': sparse = true; break;
       case 't': o_trunc = O_TRUNC; break;
@@ -414,6 +417,7 @@ int main( const int argc, const char * argv[] ) throw()
       }
     } // end process options
 
+  if( opos < 0 ) { if( !filltypes.size() ) opos = ipos; else opos = 0; }
   if( hardbs < 1 ) hardbs = default_hardbs;
   if( cluster >= INT_MAX / hardbs ) cluster = ( INT_MAX / hardbs ) - 1;
   if( cluster < 1 ) cluster = cluster_bytes / hardbs;
@@ -440,13 +444,13 @@ int main( const int argc, const char * argv[] ) throw()
       return 1; }
 
   if( !filltypes.size() )
-    return do_rescue( ipos, opos, max_size, iname, oname, logname,
-                      cluster, hardbs, max_errors, max_retries,
-                      o_direct, o_trunc, verbosity, complete_only, nosplit, sparse );
+    return do_rescue( ipos, opos, max_size, iname, oname, logname, cluster,
+                      hardbs, max_errors, max_retries, o_direct, o_trunc,
+                      verbosity, complete_only, nosplit, retrim, sparse );
 
   if( verbosity >= 0 && ( max_errors >= 0 || max_retries || o_direct ||
-                          o_trunc || complete_only || nosplit || sparse ) )
-    show_error( "warning: options -C -d -e -n -r -S and -t are ignored in fill mode" );
+                          o_trunc || complete_only || nosplit || retrim || sparse ) )
+    show_error( "warning: options -C -d -e -n -r -R -S and -t are ignored in fill mode" );
 
   return do_fill( ipos, opos, max_size, iname, oname, logname, cluster,
                   hardbs, verbosity, filltypes );

@@ -1,5 +1,5 @@
 /*  GNU ddrescue - Data recovery tool
-    Copyright (C) 2004, 2005, 2006, 2007 Antonio Diaz Diaz.
+    Copyright (C) 2004, 2005, 2006, 2007, 2008 Antonio Diaz Diaz.
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -19,7 +19,6 @@
 
 #include <algorithm>
 #include <cerrno>
-#include <climits>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -192,16 +191,8 @@ int Rescuebook::copy_block( const Block & b, int & copied_size, int & error_size
   copied_size = 0; error_size = 0;
   if( interrupted ) return -1;
   if( b.size() <= 0 ) internal_error( "bad size copying a Block" );
-  const int size = b.size();
-  if( size > hardbs() )
-    {
-    copied_size = readblock( _ides, iobuf(), hardbs(), b.pos() );
-    if( copied_size == hardbs() )
-      copied_size += readblock( _ides, iobuf() + copied_size,
-                                size - copied_size, b.pos() + copied_size );
-    }
-  else copied_size = readblock( _ides, iobuf(), size, b.pos() );
-  if( errno ) error_size = size - copied_size;
+  copied_size = readblock( _ides, iobuf(), b.size(), b.pos() );
+  if( errno ) error_size = b.size() - copied_size;
 
   if( copied_size > 0 &&
       write_block_or_move( _odes, iobuf(), copied_size, b.pos() + offset ) != copied_size )

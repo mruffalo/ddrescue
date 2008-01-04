@@ -5,7 +5,7 @@ INSTALL_PROGRAM = $(INSTALL) -p -m 755
 INSTALL_DATA = $(INSTALL) -p -m 644
 SHELL = /bin/sh
 
-objs = arg_parser.o block.o ddrescue.o logbook.o main.o
+objs = arg_parser.o block.o ddrescue.o fillbook.o logbook.o rescuebook.o main.o
 
 
 .PHONY : all doc check install install-info install-man install-strip \
@@ -48,7 +48,14 @@ Makefile : $(VPATH)/configure $(VPATH)/Makefile.in
 	./config.status
 
 check : $(progname)
-	@echo "No tests yet defined for $(progname)"
+	./$(progname) -qt -i15000 $(VPATH)/COPYING COPYING.tmp
+	./$(progname) -q -s15000 $(VPATH)/COPYING COPYING.tmp
+	diff -s -u $(VPATH)/COPYING COPYING.tmp
+	@echo
+	@echo "If the above command found no differences, $(progname) is correctly built"
+	@echo "and you may now install it."
+	@echo
+	-rm -f COPYING.tmp
 
 install : all install-info
 	if test ! -d $(DESTDIR)$(bindir) ; then $(INSTALL) -d $(DESTDIR)$(bindir) ; fi

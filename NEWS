@@ -1,34 +1,16 @@
-Changes in version 1.6:
+Changes in version 1.7:
 
-A major code reorganization has been undertaken.
+This version skips very fast over damaged areas.
 
-This version skips faster over damaged areas after two consecutive
-errors have been encountered.
+This version maintains the logfile minimized at all times, improving
+efficiency.
 
-A new pass has been added that trims error areas backward before splitting.
+The error count now shows the number of error areas found, irrespective
+of their sizes.
 
-Support for sparse writes to the output file has been added.
+When splitting, this version jumps to the next non-split area after two
+consecutive errors have been encountered in the current one.
 
-Blocks longer than sector size are now split at sector boundaries.
+Target "check" has been added to Makefile.
 
-The new option "--fill" has been added.
-
-The new chapter "Fill Mode" has been added to the manual.
-
-A "current status" line has been added to the logfile.
-
-This version can resume an interrupted retry pass instead of reinitiating it.
-
-This version achieves perfect resumability if interrupted during
-trimming or splitting.
-
-Handle also SIGHUP and SIGTERM (like SIGINT) to allow clean interrupt on
-connection loss or system shutdown.
-
-The "--quiet" option also quiets error messages.
-
-Print a more informative error message when reading an old logfile.
-
-A note has been added to the manual about old logfiles.
-
-Consistency checks have been added to detect possible bugs.
+The new option "--retrim" has been added.

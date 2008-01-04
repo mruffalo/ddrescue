@@ -1,5 +1,5 @@
 /*  GNU ddrescue - Data recovery tool
-    Copyright (C) 2004, 2005, 2006, 2007 Antonio Diaz Diaz.
+    Copyright (C) 2004, 2005, 2006, 2007, 2008 Antonio Diaz Diaz.
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -29,27 +29,26 @@ public:
   long long pos() const throw() { return _pos; }
   long long size() const throw() { return _size; }
   long long end() const throw() { return (_size < 0) ? -1 : _pos + _size; }
-  long long hard_blocks( const int hardbs ) const throw();
 
   void pos( const long long p ) throw();
   void size( const long long s ) throw();
-  void dec_pos( const long long delta ) throw();
+  void end( const long long e ) throw();
+  void align_pos( const int hardbs ) throw();
+  void align_end( const int hardbs ) throw();
   void inc_size( const long long delta ) throw();
 
   bool operator<( const Block & b ) const throw() { return _pos < b._pos; }
-  bool can_be_split( const int hardbs ) const throw();
   bool follows( const Block & b ) const throw()
     { return ( b._size >= 0 && b._pos + b._size == _pos ); }
+  bool includes( const Block & b ) const throw()
+    { return ( _pos <= b._pos &&
+               ( _size < 0 || ( b._size >= 0 && _pos + _size >= b._pos + b._size ) ) ); }
   bool includes( const long long pos ) const throw()
     { return ( _pos <= pos && ( _size < 0 || _pos + _size > pos ) ); }
-  bool overlaps( const Block & b ) const throw()
-    { return ( ( _size < 0 || _pos + _size > b._pos ) &&
-               ( b._size < 0 || b._pos + b._size > _pos ) ); }
 
   bool join( const Block & b ) throw();
-  Block overlap( const Block & b ) const throw();
+  void overlap( const Block & b ) throw();
   Block split( long long pos, const int hardbs = 1 ) throw();
-  Block backsplit( long long pos, const int hardbs = 1 ) throw();
   };
 
 
@@ -85,6 +84,7 @@ public:
   enum Status
     { copying = '?', trimming = '*', splitting = '/', retrying = '-',
       finished = '+' };
+
 private:
   long long _current_pos;
   Status _current_status;
@@ -94,10 +94,15 @@ private:
   const int _hardbs, _softbs, _verbosity;
   const char * _final_msg;
   int _final_errno;
+  mutable int _index;			// cached index of last find or change
   std::vector< Sblock > sblock_vector;	// note: blocks are consecutive
 
   bool read_logfile() throw();
   bool check_domain_size( const long long isize ) throw();
+  void erase_sblock( const int i ) throw()
+    { sblock_vector.erase( sblock_vector.begin() + i ); }
+  void insert_sblock( const int i, const Sblock & sb ) throw()
+    { sblock_vector.insert( sblock_vector.begin() + i, sb ); }
 
 public:
   Logbook( const long long pos, const long long max_size,
@@ -128,15 +133,15 @@ public:
   void final_errno( const int e ) throw() { _final_errno = e; }
 
   const Sblock & sblock( const int i ) const throw() { return sblock_vector[i]; }
-  Sblock & sblock( const int i ) throw() { return sblock_vector[i]; }
   int sblocks() const throw() { return sblock_vector.size(); }
+  void change_sblock_status( const int i, const Sblock::Status st ) throw()
+    { sblock_vector[i].status( st ); }
+  void truncate_vector( const long long pos ) throw();
 
-  void erase_sblock( const int i ) throw()
-    { sblock_vector.erase( sblock_vector.begin() + i ); }
-  void insert_sblock( const int i, const Sblock & sb ) throw()
-    { sblock_vector.insert( sblock_vector.begin() + i, sb ); }
-  void truncate_vector( const int i ) throw()
-    { sblock_vector.erase( sblock_vector.begin() + i, sblock_vector.end() ); }
+  int find_index( const long long pos ) const throw();
+  void find_chunk( Block & b, const Sblock::Status st ) const throw();
+  void rfind_chunk( Block & b, const Sblock::Status st ) const throw();
+  void change_chunk_status( const Block & b, const Sblock::Status st ) throw();
 
   static bool isstatus( const int st ) throw()
     { return ( st == copying || st == trimming || st == splitting ||
@@ -157,10 +162,10 @@ class Fillbook : public Logbook
   void show_status( const long long opos, bool force = false ) throw();
 
 public:
-  Fillbook( const long long pos, const long long max_size,
+  Fillbook( const long long opos, const long long max_size,
             const char * name, const int cluster, const int hardbs,
             const int verbosity ) throw()
-    : Logbook( pos, max_size, 0, name, cluster, hardbs, verbosity, true ) {}
+    : Logbook( opos, max_size, 0, name, cluster, hardbs, verbosity, true ) {}
 
   int do_fill( const int odes, const std::string & filltypes ) throw();
   bool read_buffer( const long long ipos, const int ides ) throw();
@@ -172,7 +177,7 @@ class Rescuebook : public Logbook
   long long offset;			// rescue offset (opos - ipos);
   long long sparse_size;		// end position of pending writes
   long long recsize, errsize;		// total recovered and error sizes
-  int errors;				// errors found so far
+  int errors;				// error areas found so far
   int _ides, _odes;			// input and output file descriptors
   const int _max_errors, _max_retries;
   const bool _nosplit;
@@ -185,9 +190,7 @@ class Rescuebook : public Logbook
   void count_errors() throw();
   bool too_many_errors() const throw()
     { return ( _max_errors >= 0 && errors > _max_errors ); }
-  bool find_valid_index( int & index, const Sblock::Status st ) const throw();
-  int copy_and_update( int & index, const Sblock::Status st,
-                       const int size, bool & block_done,
+  int copy_and_update( const Block & b, const Sblock::Status st,
                        int & copied_size, int & error_size,
                        const char * msg, bool & first_post ) throw();
   int copy_non_tried() throw();
@@ -201,12 +204,8 @@ public:
               const long long max_size, const long long isize,
               const char * name, const int cluster, const int hardbs,
               const int max_errors, const int max_retries, const int verbosity,
-              const bool complete_only, const bool nosplit, const bool sparse ) throw()
-    : Logbook( ipos, max_size, isize, name, cluster, hardbs,
-               verbosity, complete_only ),
-      sparse_size( 0 ), _max_errors( max_errors ),
-      _max_retries( max_retries ), _nosplit( nosplit ), _sparse( sparse )
-    { if( opos < 0 ) offset = 0; else offset = opos - domain().pos(); }
+              const bool complete_only, const bool nosplit, const bool retrim,
+              const bool sparse ) throw();
 
   long long rescue_opos() const throw() { return domain().pos() + offset; }
   int do_rescue( const int ides, const int odes ) throw();

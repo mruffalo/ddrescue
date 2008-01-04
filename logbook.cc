@@ -1,5 +1,5 @@
 /*  GNU ddrescue - Data recovery tool
-    Copyright (C) 2004, 2005, 2006, 2007 Antonio Diaz Diaz.
+    Copyright (C) 2004, 2005, 2006, 2007, 2008 Antonio Diaz Diaz.
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -20,12 +20,11 @@
 #include <algorithm>
 #include <cctype>
 #include <cerrno>
-#include <climits>
 #include <cstdio>
 #include <cstdlib>
+#include <ctime>
 #include <string>
 #include <vector>
-#include <unistd.h>
 
 #include "ddrescue.h"
 
@@ -82,10 +81,7 @@ void extend_sblock_vector( std::vector< Sblock > & sblock_vector,
     }
   Sblock & front = sblock_vector.front();
   if( front.pos() > 0 )
-    {
-    if( front.status() == Sblock::non_tried ) front.pos( 0 );
-    else sblock_vector.insert( sblock_vector.begin(), Sblock( 0, front.pos(), Sblock::non_tried ) );
-    }
+    sblock_vector.insert( sblock_vector.begin(), Sblock( 0, front.pos(), Sblock::non_tried ) );
   Sblock & back = sblock_vector.back();
   const long long end = back.end();
   if( isize > 0 )
@@ -100,17 +96,10 @@ void extend_sblock_vector( std::vector< Sblock > & sblock_vector,
       }
     if( end < 0 || end > isize ) back.size( isize - back.pos() );
     else if( end < isize )
-      {
-      if( back.status() == Sblock::non_tried ) back.size( isize - back.pos() );
-      else
-        sblock_vector.push_back( Sblock( end, isize - end, Sblock::non_tried ) );
-      }
+      sblock_vector.push_back( Sblock( end, isize - end, Sblock::non_tried ) );
     }
   else if( end >= 0 )
-    {
-    if( back.status() == Sblock::non_tried ) back.size( -1 );
-    else sblock_vector.push_back( Sblock( end, -1, Sblock::non_tried ) );
-    }
+    sblock_vector.push_back( Sblock( end, -1, Sblock::non_tried ) );
   }
 
 
@@ -177,7 +166,6 @@ bool Logbook::read_logfile() throw()
       std::exit( 2 );
       }
     }
-
   std::fclose( f );
   return true;
   }
@@ -202,9 +190,9 @@ Logbook::Logbook( const long long pos, const long long max_size,
                   const int cluster, const int hardbs,
                   const int verbosity, const bool complete_only ) throw()
   : _current_pos( 0 ), _current_status( copying ),
-    _domain( std::max( 0LL, pos ), max_size ), _filename( name ),
+    _domain( pos, max_size ), _filename( name ),
     _hardbs( hardbs ), _softbs( cluster * hardbs ), _verbosity( verbosity ),
-    _final_msg( 0 ), _final_errno( 0 )
+    _final_msg( 0 ), _final_errno( 0 ), _index( 0 )
   {
   int alignment = sysconf( _SC_PAGESIZE );
   if( alignment < _hardbs || alignment % _hardbs ) alignment = _hardbs;
@@ -227,7 +215,7 @@ Logbook::Logbook( const long long pos, const long long max_size,
       {
       const Block b( sblock_vector.front().pos(),
                      sblock_vector.back().end() - sblock_vector.front().pos() );
-      _domain = b.overlap( _domain );
+      _domain.overlap( b );
       }
     else _domain.size( 0 );
     }
@@ -334,393 +322,113 @@ bool Logbook::update_logfile( const int odes, const bool force ) throw()
   }
 
 
-int Fillbook::fill_areas( const std::string & filltypes ) throw()
+void Logbook::truncate_vector( const long long pos ) throw()
   {
-  bool first_post = true;
-  split_domain_border_sblocks();
-
-  for( int index = 0; index < sblocks(); ++index )
+  int i = sblocks() - 1;
+  while( i >= 0 && sblock_vector[i].pos() >= pos ) --i;
+  if( i < 0 ) sblock_vector.clear();
+  else
     {
-    const Sblock & sb = sblock( index );
-    if( !sb.overlaps( domain() ) ) { if( sb < domain() ) continue; else break; }
-    if( filltypes.find( sb.status() ) >= filltypes.size() ) continue;
-    if( sb.end() <= current_pos() ) continue;
-    Block b( sb.pos(), softbs() );
-    if( sb.includes( current_pos() ) ) b.pos( current_pos() );
-    if( b.end() > sb.end() ) b = b.overlap( sb );
-    current_status( copying );
-    while( b.size() > 0 )
-      {
-      if( verbosity() >= 0 )
-        { show_status( b.pos(), first_post ); first_post = false; }
-      const int retval = fill_block( b );
-      if( retval ) return retval;
-      if( !update_logfile( _odes ) ) return 1;
-      b.pos( b.pos() + softbs() );
-      if( b.end() > sb.end() ) b = b.overlap( sb );
-      }
-    ++filled_areas; --remaining_areas;
-    }
-  return 0;
-  }
-
-
-int Fillbook::do_fill( const int odes, const std::string & filltypes ) throw()
-  {
-  filled_size = 0, remaining_size = 0;
-  filled_areas = 0, remaining_areas = 0;
-  _odes = odes;
-  if( current_status() != copying || !domain().includes( current_pos() ) )
-    current_pos( 0 );
-
-  for( int i = 0; i < sblocks(); ++i )
-    {
-    const Sblock & sb = sblock( i );
-    const Block b = sb.overlap( domain() );
-    if( b.size() == 0 ) { if( sb < domain() ) continue; else break; }
-    if( filltypes.find( sb.status() ) >= filltypes.size() ) continue;
-    if( b.end() <= current_pos() ) { ++filled_areas; filled_size += b.size(); }
-    else if( b.includes( current_pos() ) )
-      {
-      filled_size += current_pos() - b.pos();
-      ++remaining_areas; remaining_size += b.end() - current_pos();
-      }
-    else { ++remaining_areas; remaining_size += b.size(); }
-    }
-  set_handler();
-  if( verbosity() >= 0 )
-    {
-    std::printf( "Press Ctrl-C to interrupt\n" );
-    if( filename() )
-      {
-      std::printf( "Initial status (read from logfile)\n" );
-      std::printf( "filled size:    %10sB,", format_num( filled_size ) );
-      std::printf( "  filled areas:    %7u\n", filled_areas );
-      std::printf( "remaining size: %10sB,", format_num( remaining_size ) );
-      std::printf( "  remaining areas: %7u\n", remaining_areas );
-      std::printf( "Current status\n" );
-      }
-    }
-  int retval = fill_areas( filltypes );
-  if( verbosity() >= 0 )
-    {
-    show_status( -1, true );
-    if( retval == 0 ) std::printf( "Finished" );
-    else if( retval < 0 ) std::printf( "Interrupted by user" );
-    std::fputc( '\n', stdout );
-    }
-  compact_sblock_vector();
-  if( retval == 0 ) current_status( finished );
-  else if( retval < 0 ) retval = 0;		// interrupted by user
-  if( !update_logfile( _odes, true ) && retval == 0 ) retval = 1;
-  if( verbosity() >= 0 && final_msg() )
-    { show_error( final_msg(), final_errno() ); }
-  return retval;
-  }
-
-
-void Rescuebook::count_errors() throw()
-  {
-  errors = 0;
-  for( int i = 0; i < sblocks(); ++i )
-    {
-    const Sblock & sb = sblock( i );
-    const Block b = sb.overlap( domain() );
-    if( b.size() == 0 ) { if( sb < domain() ) continue; else break; }
-    switch( sb.status() )
-      {
-      case Sblock::non_tried: break;
-      case Sblock::non_trimmed:
-      case Sblock::non_split: ++errors; break;
-      case Sblock::bad_block: errors += b.hard_blocks( hardbs() ); break;
-      case Sblock::finished: break;
-      }
+    Sblock & sb = sblock_vector[i];
+    if( sb.includes( pos ) ) sb.size( pos - sb.pos() );
+    sblock_vector.erase( sblock_vector.begin() + i + 1, sblock_vector.end() );
     }
   }
 
 
-bool Rescuebook::find_valid_index( int & index, const Sblock::Status st ) const throw()
+int Logbook::find_index( const long long pos ) const throw()
   {
-  while( index < sblocks() )
-    {
-    const Sblock & sb = sblock( index );
-    if( !sb.overlaps( domain() ) )
-      { if( sb < domain() ) { ++index; continue; } else break; }
-    if( sb.status() != st ) { ++index; continue; }
-    return true;
-    }
-  return false;
+  if( sblocks() == 0 ) { _index = -1; return _index; }
+  if( _index < 0 || _index >= sblocks() ) _index = sblocks() / 2;
+  while( _index + 1 < sblocks() && sblock_vector[_index].size() >= 0 &&
+         pos >= sblock_vector[_index].end() ) ++_index;
+  while( _index > 0 && pos < sblock_vector[_index].pos() ) --_index;
+  if( !sblock_vector[_index].includes( pos ) ) _index = -1;
+  return _index;
   }
 
 
-int Rescuebook::copy_and_update( int & index, const Sblock::Status st,
-                                 const int size, bool & block_done,
-                                 int & copied_size, int & error_size,
-                                 const char * msg, bool & first_post ) throw()
-  {
-  Block & b = sblock( index );
-  Block chip = b.split( b.pos() + size, hardbs() );
-  if( chip.size() == 0 ) { chip = b; b.size( 0 ); block_done = true; }
-  if( verbosity() >= 0 )
-    { show_status( chip.pos(), msg, first_post ); first_post = false; }
-  int retval = copy_block( chip, copied_size, error_size );
-  if( retval ) { b.join( chip ); return retval; }
-  if( copied_size > 0 )
-    {
-    if( index > 0 && sblock( index - 1 ).status() == Sblock::finished )
-      sblock( index - 1 ).inc_size( copied_size );
-    else
-      { insert_sblock( index, Sblock( chip.pos(), copied_size, Sblock::finished ) );
-        ++index; }
-    recsize += copied_size;
-    }
-  if( error_size > 0 )
-    {
-    if( index > 0 && sblock( index - 1 ).status() == st )
-      sblock( index - 1 ).inc_size( error_size );
-    else
-      { insert_sblock( index, Sblock( chip.pos() + copied_size, error_size, st ) );
-        ++index; }
-    }
-  if( copied_size + error_size < chip.size() )		// EOF
-    { truncate_vector( index ); block_done = true; }
-  else if( block_done && sblock( index ).size() == 0 ) erase_sblock( index );
-  count_errors();
-  return 0;
-  }
-
-
-// Read the non-damaged part of the domain, skipping over the damaged areas.
+// Find chunk from b.pos of size <= b.size and status st.
+// if not found, puts b.size to 0.
 //
-int Rescuebook::copy_non_tried() throw()
+void Logbook::find_chunk( Block & b, const Sblock::Status st ) const throw()
   {
-  const int skip_ini = -1;		// skip after 2 consecutive errors
-  int index = 0;
-  bool first_post = true;
-  split_domain_border_sblocks();
-
-  while( find_valid_index( index, Sblock::non_tried ) )
-    {
-    current_status( copying );
-    int skip_counter = skip_ini;
-    bool block_done = false;
-    while( !block_done )
-      {
-      if( skip_counter > 0 )
-        {
-        Block & b = sblock( index );
-        long long pos = softbs(); pos *= skip_counter; pos += b.pos();
-        const Sblock chip( b.split( pos, hardbs() ), Sblock::non_trimmed );
-        if( chip.size() == 0 ) skip_counter = skip_ini;	// can't skip more
-        else if( index == 0 || !sblock( index - 1 ).join( chip ) )
-          { insert_sblock( index, chip ); ++index; }
-        errsize += chip.size();
-        }
-      int copied_size, error_size;
-      int retval = copy_and_update( index, Sblock::non_trimmed, softbs(),
-                                    block_done, copied_size, error_size,
-                                    "Copying data...", first_post );
-      if( error_size > 0 )		// increment counter on error
-        { errsize += error_size; ++skip_counter; }
-      else skip_counter = skip_ini;	// reset counter on success
-      if( retval || too_many_errors() ) return retval;
-      if( !update_logfile( _odes ) ) return 1;
-      }
-    }
-  return 0;
+  if( b.size() == 0 ) return;
+  if( b.size() < 0 ) internal_error( "tried to find an infinite size chunk" );
+  if( sblocks() == 0 ) { b.size( 0 ); return; }
+  if( b.pos() < sblock_vector.front().pos() )
+    b.pos( sblock_vector.front().pos() );
+  if( find_index( b.pos() ) < 0 ) { b.size( 0 ); return; }
+  for( ; _index < sblocks(); ++_index )
+    if( st == sblock_vector[_index].status() &&
+        _domain.includes( sblock_vector[_index] ) )
+      break;
+  if( _index >= sblocks() ) { b.size( 0 ); return; }
+  if( b.pos() < sblock_vector[_index].pos() )
+    b.pos( sblock_vector[_index].pos() );
+  if( !sblock_vector[_index].includes( b ) )
+    b.overlap( sblock_vector[_index] );
+  if( b.end() != sblock_vector[_index].end() )
+    b.align_end( _hardbs );
   }
 
 
-// Trim the damaged areas backwards.
+// Find chunk from b.end backwards of size <= b.size and status st.
+// if not found, puts b.size to 0.
 //
-int Rescuebook::trim_errors() throw()
+void Logbook::rfind_chunk( Block & b, const Sblock::Status st ) const throw()
   {
-  int index = 0;
-  bool first_post = true;
-  split_domain_border_sblocks();
-
-  while( find_valid_index( index, Sblock::non_trimmed ) )
-    {
-    current_status( trimming );
-    bool block_done = false;
-    while( !block_done )
-      {
-      Block & b = sblock( index );
-      Block chip = b.backsplit( b.end() - 1, hardbs() );
-      if( chip.size() == 0 ) { chip = b; b.size( 0 ); block_done = true; }
-      if( verbosity() >= 0 )
-        { show_status( chip.pos(), "Trimming error areas...", first_post );
-          first_post = false; }
-      int copied_size, error_size;
-      int retval = copy_block( chip, copied_size, error_size );
-      if( retval ) b.join( chip );
-      else
-        {
-        if( error_size > 0 )
-          {
-          sblock( index ).status( Sblock::non_split ); block_done = true;
-          if( error_size == chip.size() ) b.join( chip );
-          else if( index + 1 < sblocks() && sblock( index + 1 ).status() == Sblock::non_split )
-            sblock( index + 1 ).dec_pos( error_size );
-          else
-            insert_sblock( index + 1, Sblock( chip.pos() + copied_size, error_size, Sblock::non_split ) );
-          }
-        if( copied_size > 0 )
-          {
-          if( index + 1 < sblocks() && sblock( index + 1 ).status() == Sblock::finished )
-            sblock( index + 1 ).dec_pos( copied_size );
-          else
-            insert_sblock( index + 1, Sblock( chip.pos(), copied_size, Sblock::finished ) );
-          recsize += copied_size; errsize -= copied_size;
-          }
-        if( copied_size + error_size < chip.size() )		// EOF
-          { if( index + 1 < sblocks() ) truncate_vector( index + 1 ); }
-        if( block_done && sblock( index ).size() == 0 ) erase_sblock( index );
-        count_errors();
-        }
-      if( retval || too_many_errors() ) return retval;
-      if( !update_logfile( _odes ) ) return 1;
-      }
-    }
-  return 0;
+  if( b.size() == 0 ) return;
+  if( b.size() < 0 ) internal_error( "tried to rfind an infinite size chunk" );
+  if( sblocks() == 0 ) { b.size( 0 ); return; }
+  if( sblock_vector.back().size() >= 0 && sblock_vector.back().end() < b.end() )
+    b.end( sblock_vector.back().end() );
+  find_index( b.end() - 1 );
+  for( ; _index >= 0; --_index )
+    if( st == sblock_vector[_index].status() &&
+        _domain.includes( sblock_vector[_index] ) )
+      break;
+  if( _index < 0 ) { b.size( 0 ); return; }
+  if( b.end() > sblock_vector[_index].end() )
+    b.end( sblock_vector[_index].end() );
+  if( !sblock_vector[_index].includes( b ) )
+    b.overlap( sblock_vector[_index] );
+  if( b.pos() != sblock_vector[_index].pos() )
+    b.align_pos( _hardbs );
   }
 
 
-// Try to read the damaged areas, splitting them into smaller pieces.
-//
-int Rescuebook::split_errors() throw()
+void Logbook::change_chunk_status( const Block & b, const Sblock::Status st ) throw()
   {
-  int index = 0;
-  bool first_post = true;
-  split_domain_border_sblocks();
-
-  while( find_valid_index( index, Sblock::non_split ) )
+  if( b.size() == 0 ) return;
+  if( b.size() < 0 )
+    internal_error( "can't change status of infinite size chunk" );
+  if( !_domain.includes( b ) || sblocks() == 0 || find_index( b.pos() ) < 0 ||
+      !_domain.includes( sblock_vector[_index] ) )
+    internal_error( "can't change status of chunk not in rescue domain" );
+  if( !sblock_vector[_index].includes( b ) )
+    internal_error( "can't change status of chunk spread over more than 1 block" );
+  if( st == sblock_vector[_index].status() ) return;
+  if( b.pos() > sblock_vector[_index].pos() )
     {
-    current_status( splitting );
-    bool block_done = false;
-    while( !block_done )
-      {
-      int copied_size, error_size;
-      int retval = copy_and_update( index, Sblock::bad_block, hardbs(),
-                                    block_done, copied_size, error_size,
-                                    "Splitting error areas...", first_post );
-      if( copied_size > 0 ) errsize -= copied_size;
-      if( retval || too_many_errors() ) return retval;
-      if( !update_logfile( _odes ) ) return 1;
-      }
+    insert_sblock( _index, sblock_vector[_index].split( b.pos() ) );
+    ++_index;
     }
-  return 0;
-  }
-
-
-int Rescuebook::copy_errors() throw()
-  {
-  if( _max_retries != 0 )
+  if( sblock_vector[_index].size() < 0 || sblock_vector[_index].size() > b.size() )
+    insert_sblock( _index, sblock_vector[_index].split( b.end() ) );
+  sblock_vector[_index].status( st );
+  if( _index + 1 < sblocks() && sblock_vector[_index+1].status() == st &&
+      _domain.includes( sblock_vector[_index+1] ) )
     {
-    char msgbuf[80] = "Copying bad blocks... Retry ";
-    const int msglen = std::strlen( msgbuf );
-    bool resume = ( current_status() == retrying &&
-                    domain().includes( current_pos() ) );
-
-    for( int retry = 1; _max_retries < 0 || retry <= _max_retries; ++retry )
-      {
-      snprintf( msgbuf + msglen, sizeof( msgbuf ) - msglen, "%d", retry );
-      int index = 0;
-      bool first_post = true, bad_block_found = false;
-      split_domain_border_sblocks();
-
-      while( find_valid_index( index, Sblock::bad_block ) )
-        {
-        bad_block_found = true;
-        if( resume )
-          {
-          Sblock & sb = sblock( index );
-          if( sb.end() <= current_pos() ) { ++index; continue; }
-          if( sb.includes( current_pos() ) )
-            {
-            Sblock head = sb.split( current_pos() );
-            if( head.size() != 0 ) { insert_sblock( index, head ); ++index; }
-            }
-          resume = false;
-          }
-        current_status( retrying );
-        bool block_done = false;
-        while( !block_done )
-          {
-          int copied_size, error_size;
-          int retval = copy_and_update( index, Sblock::bad_block, hardbs(),
-                                        block_done, copied_size, error_size,
-                                        msgbuf, first_post );
-          if( copied_size > 0 ) errsize -= copied_size;
-          if( retval || too_many_errors() ) return retval;
-          if( !update_logfile( _odes ) ) return 1;
-          }
-        }
-      if( !bad_block_found ) break;
-      }
+    if( sblock_vector[_index+1].size() < 0 ) sblock_vector[_index].size( -1 );
+    else sblock_vector[_index].inc_size( sblock_vector[_index+1].size() );
+    erase_sblock( _index + 1 );
     }
-  return 0;
-  }
-
-
-int Rescuebook::do_rescue( const int ides, const int odes ) throw()
-  {
-  bool copy_pending = false, trim_pending = false, split_pending = false;
-  recsize = 0; errsize = 0;
-  _ides = ides; _odes = odes;
-
-  for( int i = 0; i < sblocks(); ++i )
+  if( _index > 0 && sblock_vector[_index-1].status() == st &&
+      _domain.includes( sblock_vector[_index-1] ) )
     {
-    const Sblock & sb = sblock( i );
-    const Block b = sb.overlap( domain() );
-    if( b.size() == 0 ) { if( sb < domain() ) continue; else break; }
-    switch( sb.status() )
-      {
-      case Sblock::non_tried:   copy_pending = trim_pending = split_pending = true;
-                                break;
-      case Sblock::non_trimmed: trim_pending = true;	// fall through
-      case Sblock::non_split:   split_pending = true;	// fall through
-      case Sblock::bad_block:   errsize += b.size(); break;
-      case Sblock::finished:    recsize += b.size(); break;
-      }
+    if( sblock_vector[_index].size() < 0 ) sblock_vector[_index-1].size( -1 );
+    else sblock_vector[_index-1].inc_size( sblock_vector[_index].size() );
+    erase_sblock( _index ); --_index;
     }
-  count_errors();
-  set_handler();
-  if( verbosity() >= 0 )
-    {
-    std::printf( "Press Ctrl-C to interrupt\n" );
-    if( filename() )
-      {
-      std::printf( "Initial status (read from logfile)\n" );
-      std::printf( "rescued: %10sB,", format_num( recsize ) );
-      std::printf( "  errsize:%9sB,", format_num( errsize, 99999 ) );
-      std::printf( "  errors: %7u\n", errors );
-      std::printf( "Current status\n" );
-      }
-    }
-  int retval = 0;
-  if( copy_pending && !too_many_errors() ) retval = copy_non_tried();
-  if( !retval && trim_pending && !too_many_errors() ) retval = trim_errors();
-  if( !retval && split_pending && !_nosplit && !too_many_errors() )
-    retval = split_errors();
-  if( !retval && !too_many_errors() ) retval = copy_errors();
-  if( verbosity() >= 0 )
-    {
-    show_status( -1, (retval ? 0 : "Finished"), true );
-    if( retval < 0 ) std::printf( "\nInterrupted by user" );
-    else if( too_many_errors() ) std::printf("\nToo many errors in input file" );
-    std::fputc( '\n', stdout );
-    }
-  compact_sblock_vector();
-  if( retval == 0 ) current_status( finished );
-  else if( retval < 0 ) retval = 0;		// interrupted by user
-  if( !sync_sparse_file() )
-    {
-    if( verbosity() >= 0 ) show_error( "error syncing sparse output file" );
-    if( retval == 0 ) retval = 1;
-    }
-  if( !update_logfile( _odes, true ) && retval == 0 ) retval = 1;
-  if( verbosity() >= 0 && final_msg() )
-    { show_error( final_msg(), final_errno() ); }
-  return retval;
   }
