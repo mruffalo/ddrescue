@@ -1,16 +1,9 @@
-Changes in version 1.7:
+Changes in version 1.8:
 
-This version skips very fast over damaged areas.
+The new option "--generate-logfile" has been added.
 
-This version maintains the logfile minimized at all times, improving
-efficiency.
+The new option "--synchronous" has been added.
 
-The error count now shows the number of error areas found, irrespective
-of their sizes.
+Fill mode now works when outfile offset differs from 0.
 
-When splitting, this version jumps to the next non-split area after two
-consecutive errors have been encountered in the current one.
-
-Target "check" has been added to Makefile.
-
-The new option "--retrim" has been added.
+The chapter "Fill Mode" of the manual has been updated.

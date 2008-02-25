@@ -47,7 +47,7 @@ public:
     { return ( _pos <= pos && ( _size < 0 || _pos + _size > pos ) ); }
 
   bool join( const Block & b ) throw();
-  void overlap( const Block & b ) throw();
+  void crop( const Block & b ) throw();
   Block split( long long pos, const int hardbs = 1 ) throw();
   };
 
@@ -83,9 +83,10 @@ class Logbook
 public:
   enum Status
     { copying = '?', trimming = '*', splitting = '/', retrying = '-',
-      finished = '+' };
+      filling = 'F', generating = 'G', finished = '+' };
 
 private:
+  const long long _offset;		// outfile offset (opos - ipos);
   long long _current_pos;
   Status _current_status;
   Block _domain;			// rescue domain
@@ -105,16 +106,16 @@ private:
     { sblock_vector.insert( sblock_vector.begin() + i, sb ); }
 
 public:
-  Logbook( const long long pos, const long long max_size,
-           const long long isize, const char * name,
-           const int cluster, const int hardbs,
+  Logbook( const long long ipos, const long long opos,
+           const long long max_size, const long long isize,
+           const char * name, const int cluster, const int hardbs,
            const int verbosity, const bool complete_only ) throw();
   ~Logbook() throw() { delete[] iobuf_base; }
 
   bool blank() const throw();
   void compact_sblock_vector() throw();
   void split_domain_border_sblocks() throw();
-  bool update_logfile( const int odes, const bool force = false ) throw();
+  bool update_logfile( const int odes = -1, const bool force = false ) throw();
 
   long long current_pos() const throw() { return _current_pos; }
   Status current_status() const throw() { return _current_status; }
@@ -123,6 +124,7 @@ public:
   char * iobuf() const throw() { return _iobuf; }
   int hardbs() const throw() { return _hardbs; }
   int softbs() const throw() { return _softbs; }
+  long long offset() const throw() { return _offset; }
   int verbosity() const throw() { return _verbosity; }
   const char * final_msg() const throw() { return _final_msg; }
   int final_errno() const throw() { return _final_errno; }
@@ -145,7 +147,8 @@ public:
 
   static bool isstatus( const int st ) throw()
     { return ( st == copying || st == trimming || st == splitting ||
-               st == retrying || st == finished ); }
+               st == retrying || st == filling || st == generating ||
+               st == finished ); }
   };
 
 
@@ -156,37 +159,38 @@ class Fillbook : public Logbook
   int filled_areas;			// areas already filled
   int remaining_areas;			// areas to be filled
   int _odes;				// output file descriptor
+  const bool _synchronous;
 
   int fill_areas( const std::string & filltypes ) throw();
   int fill_block( const Block & b ) throw();
-  void show_status( const long long opos, bool force = false ) throw();
+  void show_status( const long long ipos, bool force = false ) throw();
 
 public:
-  Fillbook( const long long opos, const long long max_size,
-            const char * name, const int cluster, const int hardbs,
-            const int verbosity ) throw()
-    : Logbook( opos, max_size, 0, name, cluster, hardbs, verbosity, true ) {}
+  Fillbook( const long long ipos, const long long opos,
+            const long long max_size, const char * name,
+            const int cluster, const int hardbs, const int verbosity,
+            const bool synchronous ) throw()
+    : Logbook( ipos, opos, max_size, 0, name, cluster, hardbs, verbosity, true ),
+      _synchronous( synchronous ) {}
 
   int do_fill( const int odes, const std::string & filltypes ) throw();
-  bool read_buffer( const long long ipos, const int ides ) throw();
+  bool read_buffer( const int ides ) throw();
   };
 
 
 class Rescuebook : public Logbook
   {
-  long long offset;			// rescue offset (opos - ipos);
   long long sparse_size;		// end position of pending writes
   long long recsize, errsize;		// total recovered and error sizes
   int errors;				// error areas found so far
   int _ides, _odes;			// input and output file descriptors
   const int _max_errors, _max_retries;
-  const bool _nosplit;
-  const bool _sparse;
+  const bool _nosplit, _sparse, _synchronous;
 
   bool sync_sparse_file() throw();
-  int write_block_or_move( const int fd, const char * buf,
-                           const int size, const long long pos ) throw();
+  int check_block( const Block & b, int & copied_size, int & error_size ) throw();
   int copy_block( const Block & b, int & copied_size, int & error_size ) throw();
+  int check_all() throw();
   void count_errors() throw();
   bool too_many_errors() const throw()
     { return ( _max_errors >= 0 && errors > _max_errors ); }
@@ -203,11 +207,13 @@ public:
   Rescuebook( const long long ipos, const long long opos,
               const long long max_size, const long long isize,
               const char * name, const int cluster, const int hardbs,
-              const int max_errors, const int max_retries, const int verbosity,
-              const bool complete_only, const bool nosplit, const bool retrim,
-              const bool sparse ) throw();
+              const int verbosity,
+              const int max_errors = -1, const int max_retries = 0,
+              const bool complete_only = false, const bool nosplit = false,
+              const bool retrim = false, const bool sparse = false,
+              const bool synchronous = false ) throw();
 
-  long long rescue_opos() const throw() { return domain().pos() + offset; }
+  int do_generate( const int odes ) throw();
   int do_rescue( const int ides, const int odes ) throw();
   };
 
@@ -221,7 +227,6 @@ void set_handler() throw();
 
 // Defined in main.cc
 //
-void input_pos_error( const long long pos, const long long isize ) throw();
 void internal_error( const char * msg ) throw() __attribute__ ((noreturn));
 void show_error( const char * msg,
                  const int errcode = 0, const bool help = false ) throw();

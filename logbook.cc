@@ -25,6 +25,7 @@
 #include <ctime>
 #include <string>
 #include <vector>
+#include <unistd.h>
 
 #include "ddrescue.h"
 
@@ -100,6 +101,16 @@ void extend_sblock_vector( std::vector< Sblock > & sblock_vector,
     }
   else if( end >= 0 )
     sblock_vector.push_back( Sblock( end, -1, Sblock::non_tried ) );
+  }
+
+
+void input_pos_error( const long long pos, const long long isize ) throw()
+  {
+  char buf[80];
+  snprintf( buf, sizeof( buf ), "can't start reading at pos %lld", pos );
+  show_error( buf );
+  snprintf( buf, sizeof( buf ), "input file is only %lld bytes long", isize );
+  show_error( buf );
   }
 
 
@@ -185,12 +196,12 @@ bool Logbook::check_domain_size( const long long isize ) throw()
   }
 
 
-Logbook::Logbook( const long long pos, const long long max_size,
-                  const long long isize, const char * name,
-                  const int cluster, const int hardbs,
+Logbook::Logbook( const long long ipos, const long long opos,
+                  const long long max_size, const long long isize,
+                  const char * name, const int cluster, const int hardbs,
                   const int verbosity, const bool complete_only ) throw()
-  : _current_pos( 0 ), _current_status( copying ),
-    _domain( pos, max_size ), _filename( name ),
+  : _offset( opos - ipos ), _current_pos( 0 ), _current_status( copying ),
+    _domain( ipos, max_size ), _filename( name ),
     _hardbs( hardbs ), _softbs( cluster * hardbs ), _verbosity( verbosity ),
     _final_msg( 0 ), _final_errno( 0 ), _index( 0 )
   {
@@ -215,7 +226,7 @@ Logbook::Logbook( const long long pos, const long long max_size,
       {
       const Block b( sblock_vector.front().pos(),
                      sblock_vector.back().end() - sblock_vector.front().pos() );
-      _domain.overlap( b );
+      _domain.crop( b );
       }
     else _domain.size( 0 );
     }
@@ -281,7 +292,7 @@ bool Logbook::update_logfile( const int odes, const bool force ) throw()
   const time_t t2 = std::time( 0 );
   if( !force && t2 - t1 < interval ) return true;
   t1 = t2;
-  fsync( odes );
+  if( odes >= 0 ) fsync( odes );
 
   errno = 0;
   FILE *f = std::fopen( _filename, "w" );
@@ -367,7 +378,7 @@ void Logbook::find_chunk( Block & b, const Sblock::Status st ) const throw()
   if( b.pos() < sblock_vector[_index].pos() )
     b.pos( sblock_vector[_index].pos() );
   if( !sblock_vector[_index].includes( b ) )
-    b.overlap( sblock_vector[_index] );
+    b.crop( sblock_vector[_index] );
   if( b.end() != sblock_vector[_index].end() )
     b.align_end( _hardbs );
   }
@@ -392,7 +403,7 @@ void Logbook::rfind_chunk( Block & b, const Sblock::Status st ) const throw()
   if( b.end() > sblock_vector[_index].end() )
     b.end( sblock_vector[_index].end() );
   if( !sblock_vector[_index].includes( b ) )
-    b.overlap( sblock_vector[_index] );
+    b.crop( sblock_vector[_index] );
   if( b.pos() != sblock_vector[_index].pos() )
     b.align_pos( _hardbs );
   }

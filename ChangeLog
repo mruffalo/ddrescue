@@ -1,3 +1,11 @@
+2008-02-24  Antonio Diaz  <ant_diaz@teleline.es>
+
+	* Version 1.8 released.
+	* Added new option `--generate-logfile'.
+	* Added new option `--synchronous'.
+	* Fill mode now works when outfile offset differs from 0.
+	* Updated `Fill Mode' chapter of the manual.
+
 2008-01-04  Antonio Diaz  <ant_diaz@teleline.es>
 
 	* Version 1.7 released.

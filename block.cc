@@ -110,7 +110,7 @@ bool Block::join( const Block & b ) throw()
   }
 
 
-void Block::overlap( const Block & b ) throw()
+void Block::crop( const Block & b ) throw()
   {
   const long long p = std::max( _pos, b._pos );
   long long s;

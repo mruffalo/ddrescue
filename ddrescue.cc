@@ -94,18 +94,19 @@ int Fillbook::fill_block( const Block & b ) throw()
   if( b.size() <= 0 ) internal_error( "bad size filling a Block" );
   const int size = b.size();
 
-  if( writeblock( _odes, iobuf(), size, b.pos() ) != size )
+  if( writeblock( _odes, iobuf(), size, b.pos() + offset() ) != size ||
+      ( _synchronous && fsync( _odes ) < 0 ) )
     { final_msg( "write error" ); final_errno( errno ); return 1; }
   filled_size += size; remaining_size -= size;
   return 0;
   }
 
 
-void Fillbook::show_status( const long long opos, bool force ) throw()
+void Fillbook::show_status( const long long ipos, bool force ) throw()
   {
   static const char * const up = "\x1b[A";
   static long long a_rate = 0, c_rate = 0, first_size = 0, last_size = 0;
-  static long long last_opos = 0;
+  static long long last_ipos = 0;
   static time_t t0 = 0, t1 = 0;
   if( t0 == 0 )
     {
@@ -113,7 +114,7 @@ void Fillbook::show_status( const long long opos, bool force ) throw()
     std::printf( "\n\n\n" );
     }
 
-  if( opos >= 0 ) last_opos = opos;
+  if( ipos >= 0 ) last_ipos = ipos;
   time_t t2 = std::time( 0 );
   if( t2 > t1 || force )
     {
@@ -130,15 +131,15 @@ void Fillbook::show_status( const long long opos, bool force ) throw()
     std::printf( "remain size: %10sB,", format_num( remaining_size ) );
     std::printf( "  remain areas: %6u,", remaining_areas );
     std::printf( "  average rate: %9sB/s\n", format_num( a_rate, 99999 ) );
-    std::printf( "current pos: %10sB\n", format_num( last_opos ) );
+    std::printf( "current pos: %10sB\n", format_num( last_ipos + offset() ) );
     std::fflush( stdout );
     }
   }
 
 
-bool Fillbook::read_buffer( const long long ipos, const int ides ) throw()
+bool Fillbook::read_buffer( const int ides ) throw()
   {
-  const int rd = readblock( ides, iobuf(), softbs(), ipos );
+  const int rd = readblock( ides, iobuf(), softbs(), 0 );
   if( rd <= 0 ) return false;
   for( int i = rd; i < softbs(); i *= 2 )
     {
@@ -168,16 +169,30 @@ bool Rescuebook::sync_sparse_file() throw()
   }
 
 
-int Rescuebook::write_block_or_move( const int fd, const char * buf,
-                                     const int size, const long long pos ) throw()
+// Return values: 0 OK, -1 interrupted.
+// If !OK, copied_size and error_size are set to 0.
+// If OK && copied_size + error_size < b.size(), it means EOF has been reached.
+//
+int Rescuebook::check_block( const Block & b, int & copied_size, int & error_size ) throw()
   {
-  if( _sparse && block_is_zero( buf, size ) &&
-      lseek( fd, pos + size, SEEK_SET ) >= 0 )
+  current_pos( b.pos() );
+  copied_size = 0; error_size = 0;
+  if( interrupted ) return -1;
+  if( b.size() <= 0 ) internal_error( "bad size checking a Block" );
+  copied_size = readblock( _odes, iobuf(), b.size(), b.pos() + offset() );
+  if( errno ) error_size = b.size() - copied_size;
+
+  for( int pos = 0; pos < copied_size; )
     {
-    if( pos + size > sparse_size ) sparse_size = pos + size;
-    return size;
+    const int size = std::min( hardbs(), copied_size - pos );
+    if( !block_is_zero( iobuf() + pos, size ) )
+      {
+      change_chunk_status( Block( b.pos() + pos, size ), Sblock::finished );
+      recsize += size;
+      }
+    pos += size;
     }
-  return writeblock( fd, buf, size, pos );
+  return 0;
   }
 
 
@@ -194,12 +209,20 @@ int Rescuebook::copy_block( const Block & b, int & copied_size, int & error_size
   copied_size = readblock( _ides, iobuf(), b.size(), b.pos() );
   if( errno ) error_size = b.size() - copied_size;
 
-  if( copied_size > 0 &&
-      write_block_or_move( _odes, iobuf(), copied_size, b.pos() + offset ) != copied_size )
+  if( copied_size > 0 )
     {
-    copied_size = 0; error_size = 0;
-    final_msg( "write error" ); final_errno( errno );
-    return 1;
+    const long long pos = b.pos() + offset();
+    const long long end = pos + copied_size;
+    if( _sparse && block_is_zero( iobuf(), copied_size ) &&
+        lseek( _odes, end, SEEK_SET ) >= 0 )
+      { if( end > sparse_size ) sparse_size = end; }
+    else if( writeblock( _odes, iobuf(), copied_size, pos ) != copied_size ||
+             ( _synchronous && fsync( _odes ) < 0 ) )
+      {
+      copied_size = 0; error_size = 0;
+      final_msg( "write error" ); final_errno( errno );
+      return 1;
+      }
     }
   return 0;
   }
@@ -236,7 +259,7 @@ void Rescuebook::show_status( const long long ipos, const char * msg,
     std::printf( "   ipos: %10sB,   errors: %7u,  ",
                  format_num( last_ipos ), errors );
     std::printf( "  average rate: %9sB/s\n", format_num( a_rate, 99999 ) );
-    std::printf( "   opos: %10sB\n", format_num( last_ipos + offset ) );
+    std::printf( "   opos: %10sB\n", format_num( last_ipos + offset() ) );
     int len = oldlen;
     if( msg ) { len = std::strlen( msg ); if( len ) std::printf( msg ); }
     for( int i = len; i < oldlen; ++i ) std::fputc( ' ', stdout );

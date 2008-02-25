@@ -26,6 +26,37 @@
 #include "ddrescue.h"
 
 
+int Rescuebook::check_all() throw()
+  {
+  long long pos = ( (offset() >= 0) ? 0 : -offset() );
+  if( current_status() == generating && domain().includes( current_pos() ) &&
+      ( offset() >= 0 || current_pos() >= -offset() ) )
+    pos = current_pos();
+  bool first_post = true;
+
+  while( pos >= 0 )
+    {
+    Block b( pos, softbs() );
+    find_chunk( b, Sblock::non_tried );
+    if( b.size() == 0 ) break;
+    pos = b.end();
+    current_status( generating );
+    if( verbosity() >= 0 )
+      { show_status( b.pos(), "Generating logfile...", first_post ); first_post = false; }
+    int copied_size, error_size;
+    const int retval = check_block( b, copied_size, error_size );
+    if( !retval )
+      {
+      if( copied_size + error_size < b.size() )		// EOF
+        truncate_vector( b.pos() + copied_size + error_size );
+      }
+    if( retval ) return retval;
+    if( !update_logfile() ) return 1;
+    }
+  return 0;
+  }
+
+
 void Rescuebook::count_errors() throw()
   {
   bool good = true;
@@ -227,12 +258,12 @@ int Rescuebook::copy_errors() throw()
 Rescuebook::Rescuebook( const long long ipos, const long long opos,
                         const long long max_size, const long long isize,
                         const char * name, const int cluster, const int hardbs,
-                        const int max_errors, const int max_retries, const int verbosity,
+                        const int verbosity, const int max_errors, const int max_retries,
                         const bool complete_only, const bool nosplit, const bool retrim,
-                        const bool sparse ) throw()
-  : Logbook( ipos, max_size, isize, name, cluster, hardbs, verbosity, complete_only ),
-    offset( opos - ipos ), sparse_size( 0 ), _max_errors( max_errors ),
-    _max_retries( max_retries ), _nosplit( nosplit ), _sparse( sparse )
+                        const bool sparse, const bool synchronous ) throw()
+  : Logbook( ipos, opos, max_size, isize, name, cluster, hardbs, verbosity, complete_only ),
+    sparse_size( 0 ), _max_errors( max_errors ), _max_retries( max_retries ),
+    _nosplit( nosplit ), _sparse( sparse ), _synchronous( synchronous )
   {
   if( retrim )
     for( int index = 0; index < sblocks(); ++index )
@@ -242,6 +273,56 @@ Rescuebook::Rescuebook( const long long ipos, const long long opos,
       if( sb.status() == Sblock::non_split || sb.status() == Sblock::bad_block )
         change_sblock_status( index, Sblock::non_trimmed );
       }
+  }
+
+
+int Rescuebook::do_generate( const int odes ) throw()
+  {
+  recsize = 0; errsize = 0;
+  _ides = -1; _odes = odes;
+
+  split_domain_border_sblocks();
+  for( int i = 0; i < sblocks(); ++i )
+    {
+    const Sblock & sb = sblock( i );
+    if( !domain().includes( sb ) ) { if( sb < domain() ) continue; else break; }
+    switch( sb.status() )
+      {
+      case Sblock::non_tried:   break;
+      case Sblock::non_trimmed: 			// fall through
+      case Sblock::non_split:   			// fall through
+      case Sblock::bad_block:   errsize += sb.size(); break;
+      case Sblock::finished:    recsize += sb.size(); break;
+      }
+    }
+  count_errors();
+  set_handler();
+  if( verbosity() >= 0 )
+    {
+    std::printf( "Press Ctrl-C to interrupt\n" );
+    if( filename() )
+      {
+      std::printf( "Initial status (read from logfile)\n" );
+      std::printf( "rescued: %10sB,", format_num( recsize ) );
+      std::printf( "  errsize:%9sB,", format_num( errsize, 99999 ) );
+      std::printf( "  errors: %7u\n", errors );
+      std::printf( "Current status\n" );
+      }
+    }
+  int retval = check_all();
+  if( verbosity() >= 0 )
+    {
+    show_status( -1, (retval ? 0 : "Finished"), true );
+    if( retval < 0 ) std::printf( "\nInterrupted by user" );
+    std::fputc( '\n', stdout );
+    }
+  if( retval == 0 ) current_status( finished );
+  else if( retval < 0 ) retval = 0;		// interrupted by user
+  compact_sblock_vector();
+  if( !update_logfile( -1, true ) && retval == 0 ) retval = 1;
+  if( verbosity() >= 0 && final_msg() )
+    { show_error( final_msg(), final_errno() ); }
+  return retval;
   }
 
 

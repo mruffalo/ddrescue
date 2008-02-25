@@ -48,14 +48,18 @@ Makefile : $(VPATH)/configure $(VPATH)/Makefile.in
 	./config.status
 
 check : $(progname)
-	./$(progname) -qt -i15000 $(VPATH)/COPYING COPYING.tmp
-	./$(progname) -q -s15000 $(VPATH)/COPYING COPYING.tmp
-	diff -s -u $(VPATH)/COPYING COPYING.tmp
+	-rm -f COPYING.*
+	./$(progname) -q -t -i15000 $(VPATH)/COPYING COPYING.1 COPYING.log
+	./$(progname) -q -D -s15000 $(VPATH)/COPYING COPYING.1 COPYING.log
+	./$(progname) -q -F+ -o15000 $(VPATH)/COPYING COPYING.2 COPYING.log
+	./$(progname) -q -S -i15000 -o0 COPYING.2 COPYING.3
+	diff -q -s $(VPATH)/COPYING COPYING.1
+	diff -q -s $(VPATH)/COPYING COPYING.3
 	@echo
-	@echo "If the above command found no differences, $(progname) is correctly built"
-	@echo "and you may now install it."
+	@echo "If none of the above diff commands found differences,"
+	@echo "$(progname) is correctly built and you may now install it."
 	@echo
-	-rm -f COPYING.tmp
+	-rm -f COPYING.*
 
 install : all install-info
 	if test ! -d $(DESTDIR)$(bindir) ; then $(INSTALL) -d $(DESTDIR)$(bindir) ; fi

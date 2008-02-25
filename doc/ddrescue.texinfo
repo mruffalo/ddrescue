@@ -5,8 +5,8 @@
 @finalout
 @c %**end of header
 
-@set UPDATED 4 January 2008
-@set VERSION 1.7
+@set UPDATED 24 February 2008
+@set VERSION 1.8
 
 @dircategory GNU Packages
 @direntry
@@ -39,6 +39,7 @@ This manual is for GNU ddrescue (version @value{VERSION}, @value{UPDATED}).
 * Examples::		A small tutorial with examples
 * Direct Disc Access::	Bypassing the kernel cache
 * Fill Mode::		Selectively overwriting the output file
+* Generate Mode::	Generating an approximate logfile
 * Problems::		Reporting bugs
 * Concept Index::	Index of concepts
 @end menu
@@ -214,6 +215,11 @@ Use direct disc access to read the input file, bypassing the kernel
 cache. Hardware block size must be correctly set for this to work. Not
 all systems support this.
 
+@item --synchronous
+@itemx -D
+Use synchronous writes for output file. May be useful when forcing the
+drive to remap its bad sectors.
+
 @item --max-errors=@var{n}
 @itemx -e @var{n}
 Maximum number of error areas allowed before giving up. Defaults to infinity.
@@ -226,9 +232,18 @@ more of the status characters defined in the chapter Logfile Structure
 (@pxref{Logfile Structure}). See the chapter Fill Mode (@pxref{Fill
 Mode}) for a complete description of the fill mode.
 
+@item --generate-logfile
+@itemx -g
+Generate an approximate logfile from the input and output files of the
+original rescue run. Note that you should keep the original offset
+between @samp{--input-position} and @samp{--output-position} of the
+original rescue run.
+
 @item --input-position=@var{pos}
 @itemx -i @var{pos}
-Starting position in input file, in bytes. Defaults to 0.
+Starting position in input file, in bytes. Defaults to 0. In fill mode
+it refers to the original input file. See the chapter Fill Mode
+(@pxref{Fill Mode}) for details.
 
 @item --no-split
 @itemx -n
@@ -239,9 +254,8 @@ non-damaged part of the file. This option overrides the
 @item --output-position=@var{pos}
 @itemx -o @var{pos}
 Starting position in output file, in bytes. Defaults to
-@samp{--input-position} in rescue mode and to 0 in fill mode. The bytes
-below @var{pos} aren't touched if they exist and truncation is not
-requested. Else they are set to 0.
+@samp{--input-position}. The bytes below @var{pos} aren't touched if
+they exist and truncation is not requested. Else they are set to 0.
 
 @item --quiet
 @itemx -q
@@ -257,7 +271,9 @@ retries.
 @item --retrim
 @itemx -R
 Mark all error areas inside the rescue domain as non-trimmed before
-beginning the rescue.
+beginning the rescue. The effect is similar to @samp{--max-retries=1},
+but the bad sectors are tried in a different order, making perhaps
+possible to rescue some of them.
 
 @item --max-size=@var{bytes}
 @itemx -s @var{bytes}
@@ -304,10 +320,11 @@ Table of SI and binary prefixes (unit multipliers):
 @end multitable
 
 @sp 1
-NOTE: Don't believe everything Usamericans tell you. A billion is a
-million millions (million^2), a trillion is a million million millions
-(million^3), and so on. Please, respect the meaning of prefixes to make
-communication among all people possible. Thanks.
+NOTE: Don't believe everything Usamericans tell you. 10^9 is a thousand
+millions, a billion is a million millions (million^2), a trillion is a
+million million millions (million^3), and so on. Please, don't "embrace
+and extend" the meaning of prefixes, making communication among all
+people difficult. Thanks.
 
 
 @node Logfile Structure
@@ -326,12 +343,14 @@ The first non-comment line is the status line. It contains a
 non-negative integer and a status character. The integer is the position
 being tried in the input file. The status character is one of these:
 
-@multitable {Character} {retrying bad hardware blocks}
+@multitable {Character} {generating approximate logfile}
 @item Character @tab Meaning
 @item '?'       @tab copying data
 @item '*'       @tab trimming bad areas
 @item '/'       @tab splitting bad areas
 @item '-'       @tab retrying bad hardware blocks
+@item 'F'       @tab filling specified areas
+@item 'G'       @tab generating approximate logfile
 @item '+'       @tab finished
 @end multitable
 
@@ -353,7 +372,7 @@ bytes) of the data to be copied. The status character is one of these:
 And here is an example logfile:
 
 @noindent
-# Rescue Logfile. Created by GNU ddrescue version 1.6@*
+# Rescue Logfile. Created by GNU ddrescue version @value{VERSION}@*
 # current_pos  current_status@*
 0x00120000     ?@*
 #      pos         size   status@*
@@ -519,8 +538,18 @@ type characters specified as argument to the @samp{--fill} option.
 
 In fill mode the input file may have any size. If it is too small, the
 data will be duplicated as many times as necessary to fill the input
-buffer. If it is too big, only the needed data will be read. Note that
-you may specify a starting position for the input file.
+buffer. If it is too big, only the needed data will be read.
+
+Note that in fill mode the input file is always read from position 0. If
+you specify a @samp{--input-position}, it refers to the original input
+file from which the logfile was built, and is only used to calculate the
+offset between input and output positions.
+
+Note also that when filling the input file of the original rescue run
+you should set @samp{--input-position} and @samp{--output-position} to
+identical values, whereas when filling the output file of the original
+rescue run you should keep the original offset between
+@samp{--input-position} and @samp{--output-position}.
 
 The @samp{--fill} option implies the @samp{--complete-only} option.
 
@@ -563,7 +592,71 @@ will reallocate them automatically to new "spare" sectors that it keeps
 for just this purpose. WARNING! This may not work on your drive.
 
 @example
-ddrescue --fill=- /dev/zero bad_drive logfile
+ddrescue --fill=- --synchronous /dev/zero bad_drive logfile
+@end example
+
+@sp 1
+@noindent
+Fill mode can also help you to figure out, independently of the file
+system used, what files are partially or entirely in the bad areas of
+the disc. Just follow these steps:
+
+1) Copy the damaged drive with ddrescue until finished. Do not use
+sparse writes. This yields a logfile with only finished (@samp{+}) and
+bad (@samp{-}) areas.
+
+2) Mount the copied drive (or the image file, via loopback device).
+
+3) Compute a md5sum or other checksum for every file. Build a list of
+all the files and their checksums.
+
+4) Fill the bad areas of the copied drive or image file with a byte
+value different from zero.
+
+5) Verify the checksums. Those files which have different checksums this
+time reside (at least partially) in damaged disk areas.
+
+6) Optionally fill the bad areas of the copied drive or image file with
+zeros to restore the disk image.
+
+
+
+@node Generate Mode
+@chapter Generate-logfile Mode
+@cindex Generate-logfile Mode
+
+So you didn't read the tutorial and started ddrescue without a logfile.
+Now, two days later, your computer crashed and you can't know how much
+data ddrescue managed to save. And even worse, you can't resume the
+rescue; you have to restart it from the very beginning.
+
+Or maybe you started copying a drive with @w{@samp{dd
+conv=noerror,sync}} and are now in the same situation described above.
+In this case, note that you can't use a copy made by dd unless it was
+invoked with the @samp{sync} conversion argument.
+
+Don't despair (yet). Ddrescue can in some cases generate an approximate
+logfile, from the input file and the (partial) copy, that is almost as
+good as an exact logfile. It makes this by simply assuming that sectors
+containng all zeros were not rescued.
+
+However, if the destination of the copy was a drive or a partition, (or
+an existing regular file and truncation was not requested), most
+probably you will need to restart ddrescue from the very beginning.
+(This time with a logfile, of course). The reason is that old data may
+be present in the drive that have not been overwritten yet, and may be
+thus non-tried but non-zero.
+
+For example, if you first tried one of these commands:
+@example
+ddrescue infile outfile
+or
+dd if=infile of=outfile conv=noerror,sync
+@end example
+
+you can generate an approximate logfile with this command:
+@example
+ddrescue --generate-logfile infile outfile logfile
 @end example
 
 

@@ -36,8 +36,8 @@ int Fillbook::fill_areas( const std::string & filltypes ) throw()
         filltypes.find( sb.status() ) >= filltypes.size() ) continue;
     Block b( sb.pos(), softbs() );
     if( sb.includes( current_pos() ) ) b.pos( current_pos() );
-    if( b.end() > sb.end() ) b.overlap( sb );
-    current_status( copying );
+    if( b.end() > sb.end() ) b.crop( sb );
+    current_status( filling );
     while( b.size() > 0 )
       {
       if( verbosity() >= 0 )
@@ -46,7 +46,7 @@ int Fillbook::fill_areas( const std::string & filltypes ) throw()
       if( retval ) return retval;
       if( !update_logfile( _odes ) ) return 1;
       b.pos( b.end() );
-      if( b.end() > sb.end() ) b.overlap( sb );
+      if( b.end() > sb.end() ) b.crop( sb );
       }
     ++filled_areas; --remaining_areas;
     }
@@ -59,7 +59,7 @@ int Fillbook::do_fill( const int odes, const std::string & filltypes ) throw()
   filled_size = 0, remaining_size = 0;
   filled_areas = 0, remaining_areas = 0;
   _odes = odes;
-  if( current_status() != copying || !domain().includes( current_pos() ) )
+  if( current_status() != filling || !domain().includes( current_pos() ) )
     current_pos( 0 );
 
   split_domain_border_sblocks();

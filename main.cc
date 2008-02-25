@@ -60,11 +60,13 @@ void show_help( const int cluster, const int hardbs ) throw()
   std::printf( "  -c, --cluster-size=<blocks>  hardware blocks to copy at a time [%d]\n", cluster );
   std::printf( "  -C, --complete-only          do not read new data beyond logfile limits\n" );
   std::printf( "  -d, --direct                 use direct disc access for input file\n" );
+  std::printf( "  -D, --synchronous            use synchronous writes for output file\n" );
   std::printf( "  -e, --max-errors=<n>         maximum number of error areas allowed\n" );
   std::printf( "  -F, --fill=<types>           fill given type areas with infile data (?*/-+)\n" );
+  std::printf( "  -g, --generate-logfile       generate approximate logfile from partial copy\n" );
   std::printf( "  -i, --input-position=<pos>   starting position in input file [0]\n" );
   std::printf( "  -n, --no-split               do not try to split or retry error areas\n" );
-  std::printf( "  -o, --output-position=<pos>  starting position in output file [ipos,0]\n" );
+  std::printf( "  -o, --output-position=<pos>  starting position in output file [ipos]\n" );
   std::printf( "  -q, --quiet                  quiet operation\n" );
   std::printf( "  -r, --max-retries=<n>        exit after given retries (-1=infinity) [0]\n" );
   std::printf( "  -R, --retrim                 mark all error areas as non-trimmed\n" );
@@ -174,7 +176,7 @@ bool check_identical( const char * name1, const char * name2 ) throw()
 int do_fill( long long ipos, const long long opos, const long long max_size,
              const char *iname, const char *oname, const char *logname,
              const int cluster, const int hardbs, const int verbosity,
-             const std::string & filltypes ) throw()
+             const std::string & filltypes, const bool synchronous ) throw()
   {
   if( !logname )
     {
@@ -183,7 +185,8 @@ int do_fill( long long ipos, const long long opos, const long long max_size,
     return 1;
     }
 
-  Fillbook fillbook( opos, max_size, logname, cluster, hardbs, verbosity );
+  Fillbook fillbook( ipos, opos, max_size, logname, cluster, hardbs,
+                     verbosity, synchronous );
   if( fillbook.domain().size() == 0 )
     { if( verbosity >= 0 ) { show_error( "Nothing to do" ); } return 0; }
 
@@ -191,16 +194,7 @@ int do_fill( long long ipos, const long long opos, const long long max_size,
   if( ides < 0 )
     { if( verbosity >= 0 ) show_error( "cannot open input file", errno );
       return 1; }
-  if( ipos > 0 )
-    {
-    const long long isize = lseek( ides, 0, SEEK_END );
-    if( isize < 0 )
-      { if( verbosity >= 0 ) show_error( "input file is not seekable" );
-        return 1; }
-    if( isize > 0 && ipos >= isize )
-      { if( verbosity >= 0 ) { input_pos_error( ipos, isize ); } return 1; }
-    }
-  if( !fillbook.read_buffer( ipos, ides ) )
+  if( !fillbook.read_buffer( ides ) )
     {
     if( verbosity >= 0 )
       show_error( "error reading fill data from input file" );
@@ -222,8 +216,10 @@ int do_fill( long long ipos, const long long opos, const long long max_size,
                  iname, oname, filltypes.c_str() );
     std::printf( "    Maximum size to fill: %sBytes\n",
                  format_num( fillbook.domain().size() ) );
-    std::printf( "    Starting positions: infile = %sB", format_num( ipos ) );
-    std::printf( ",  outfile = %sB\n", format_num( fillbook.domain().pos() ) );
+    std::printf( "    Starting positions: infile = %sB",
+                 format_num( fillbook.domain().pos() ) );
+    std::printf( ",  outfile = %sB\n",
+                 format_num( fillbook.domain().pos() + fillbook.offset() ) );
     std::printf( "    Copy block size: %d hard blocks\n", cluster );
     std::printf( "Hard block size: %d bytes\n", hardbs );
     std::printf( "\n" );
@@ -233,13 +229,68 @@ int do_fill( long long ipos, const long long opos, const long long max_size,
   }
 
 
+int do_generate( const long long ipos, const long long opos, const long long max_size,
+                 const char *iname, const char *oname, const char *logname,
+                 const int cluster, const int hardbs, const int verbosity ) throw()
+  {
+  if( !logname )
+    {
+    if( verbosity >= 0 )
+      show_error( "logfile must be specified in generate-logfile mode", 0, true );
+    return 1;
+    }
+  const int ides = open( iname, O_RDONLY );
+  if( ides < 0 )
+    { if( verbosity >= 0 ) show_error( "cannot open input file", errno );
+      return 1; }
+  const long long isize = lseek( ides, 0, SEEK_END );
+  if( isize < 0 )
+    { if( verbosity >= 0 ) show_error( "input file is not seekable" );
+      return 1; }
+
+  Rescuebook genbook( ipos, opos, max_size, isize, logname, cluster, hardbs,
+                      verbosity );
+  if( genbook.domain().size() == 0 )
+    { if( verbosity >= 0 ) { show_error( "Nothing to do" ); } return 0; }
+  if( !genbook.blank() && genbook.current_status() != Logbook::generating )
+    {
+    if( verbosity >= 0 )
+      show_error( "logfile alredy exists and is non-empty", 0, true );
+    return 1;
+    }
+
+  const int odes = open( oname, O_RDONLY );
+  if( odes < 0 )
+    { if( verbosity >= 0 ) show_error( "cannot open output file", errno );
+      return 1; }
+  if( lseek( odes, 0, SEEK_SET ) )
+    { if( verbosity >= 0 ) show_error( "output file is not seekable" );
+      return 1; }
+
+  if( verbosity >= 0 ) std::printf( "\n\n" );
+  if( verbosity > 0 )
+    {
+    std::printf( "About to generate an approximate logfile for %s and %s\n",
+                 iname, oname );
+    std::printf( "    Starting positions: infile = %sB",
+                 format_num( genbook.domain().pos() ) );
+    std::printf( ",  outfile = %sB\n",
+                 format_num( genbook.domain().pos() + genbook.offset() ) );
+    std::printf( "    Copy block size: %d hard blocks\n", cluster );
+    std::printf( "Hard block size: %d bytes\n", hardbs );
+    std::printf( "\n" );
+    }
+  return genbook.do_generate( odes );
+  }
+
+
 int do_rescue( const long long ipos, const long long opos, const long long max_size,
                const char *iname, const char *oname, const char *logname,
                const int cluster, const int hardbs,
                const int max_errors, const int max_retries,
                const int o_direct, const int o_trunc, const int verbosity,
                const bool complete_only, const bool nosplit, const bool retrim,
-               const bool sparse ) throw()
+               const bool sparse, const bool synchronous ) throw()
   {
   const int ides = open( iname, O_RDONLY | o_direct );
   if( ides < 0 )
@@ -251,8 +302,8 @@ int do_rescue( const long long ipos, const long long opos, const long long max_s
       return 1; }
 
   Rescuebook rescuebook( ipos, opos, max_size, isize, logname, cluster, hardbs,
-                         max_errors, max_retries, verbosity, complete_only,
-                         nosplit, retrim, sparse );
+                         verbosity, max_errors, max_retries, complete_only,
+                         nosplit, retrim, sparse, synchronous );
   if( rescuebook.domain().size() == 0 )
     { if( verbosity >= 0 ) { show_error( "Nothing to do" ); } return 0; }
   if( o_trunc && !rescuebook.blank() )
@@ -279,7 +330,8 @@ int do_rescue( const long long ipos, const long long opos, const long long max_s
                  iname, oname );
     std::printf( "    Starting positions: infile = %sB",
                  format_num( rescuebook.domain().pos() ) );
-    std::printf( ",  outfile = %sB\n", format_num( rescuebook.rescue_opos() ) );
+    std::printf( ",  outfile = %sB\n",
+                 format_num( rescuebook.domain().pos() + rescuebook.offset() ) );
     std::printf( "    Copy block size: %d hard blocks\n", cluster );
     std::printf( "Hard block size: %d bytes\n", hardbs );
     bool nl = false;
@@ -299,16 +351,6 @@ int do_rescue( const long long ipos, const long long opos, const long long max_s
   }
 
 } // end namespace
-
-
-void input_pos_error( const long long pos, const long long isize ) throw()
-  {
-  char buf[80];
-  snprintf( buf, sizeof( buf ), "can't start reading at pos %lld", pos );
-  show_error( buf );
-  snprintf( buf, sizeof( buf ), "input file is only %lld bytes long", isize );
-  show_error( buf );
-  }
 
 
 void internal_error( const char * msg ) throw()
@@ -347,32 +389,35 @@ int main( const int argc, const char * argv[] ) throw()
   int cluster = 0, hardbs = 512;
   int max_errors = -1, max_retries = 0;
   int o_direct = 0, o_trunc = 0, verbosity = 0;
-  bool complete_only = false, nosplit = false, retrim = false, sparse = false;
+  bool complete_only = false, generate = false, nosplit = false;
+  bool retrim = false, sparse = false, synchronous = false;
   std::string filltypes;
   invocation_name = argv[0];
 
   const Arg_parser::Option options[] =
     {
-    { 'b', "block-size",      Arg_parser::yes },
-    { 'B', "binary_prefixes", Arg_parser::no  },
-    { 'c', "cluster-size",    Arg_parser::yes },
-    { 'C', "complete-only",   Arg_parser::no  },
-    { 'd', "direct",          Arg_parser::no  },
-    { 'e', "max-errors",      Arg_parser::yes },
-    { 'F', "fill",            Arg_parser::yes },
-    { 'h', "help",            Arg_parser::no  },
-    { 'i', "input-position",  Arg_parser::yes },
-    { 'n', "no-split",        Arg_parser::no  },
-    { 'o', "output-position", Arg_parser::yes },
-    { 'q', "quiet",           Arg_parser::no  },
-    { 'r', "max-retries",     Arg_parser::yes },
-    { 'R', "retrim",          Arg_parser::no  },
-    { 's', "max-size",        Arg_parser::yes },
-    { 'S', "sparse",          Arg_parser::no  },
-    { 't', "truncate",        Arg_parser::no  },
-    { 'v', "verbose",         Arg_parser::no  },
-    { 'V', "version",         Arg_parser::no  },
-    {  0 , 0,                 Arg_parser::no  } };
+    { 'b', "block-size",       Arg_parser::yes },
+    { 'B', "binary-prefixes",  Arg_parser::no  },
+    { 'c', "cluster-size",     Arg_parser::yes },
+    { 'C', "complete-only",    Arg_parser::no  },
+    { 'd', "direct",           Arg_parser::no  },
+    { 'D', "synchronous",      Arg_parser::no  },
+    { 'e', "max-errors",       Arg_parser::yes },
+    { 'F', "fill",             Arg_parser::yes },
+    { 'g', "generate-logfile", Arg_parser::no  },
+    { 'h', "help",             Arg_parser::no  },
+    { 'i', "input-position",   Arg_parser::yes },
+    { 'n', "no-split",         Arg_parser::no  },
+    { 'o', "output-position",  Arg_parser::yes },
+    { 'q', "quiet",            Arg_parser::no  },
+    { 'r', "max-retries",      Arg_parser::yes },
+    { 'R', "retrim",           Arg_parser::no  },
+    { 's', "max-size",         Arg_parser::yes },
+    { 'S', "sparse",           Arg_parser::no  },
+    { 't', "truncate",         Arg_parser::no  },
+    { 'v', "verbose",          Arg_parser::no  },
+    { 'V', "version",          Arg_parser::no  },
+    {  0 , 0,                  Arg_parser::no  } };
 
   Arg_parser parser( argc, argv, options );
   if( parser.error().size() )				// bad option
@@ -399,8 +444,10 @@ int main( const int argc, const char * argv[] ) throw()
                       show_error( "direct disc access not available" );
                     return 1; }
                 break;
+      case 'D': synchronous = true; break;
       case 'e': max_errors = getnum( arg, 0, verbosity, -1, INT_MAX ); break;
       case 'F': filltypes = arg; check_fill_types( filltypes, verbosity ); break;
+      case 'g': generate = true; break;
       case 'h': show_help( cluster_bytes / default_hardbs, default_hardbs ); return 0;
       case 'i': ipos = getnum( arg, hardbs, verbosity, 0 ); break;
       case 'n': nosplit = true; break;
@@ -417,7 +464,7 @@ int main( const int argc, const char * argv[] ) throw()
       }
     } // end process options
 
-  if( opos < 0 ) { if( !filltypes.size() ) opos = ipos; else opos = 0; }
+  if( opos < 0 ) opos = ipos;
   if( hardbs < 1 ) hardbs = default_hardbs;
   if( cluster >= INT_MAX / hardbs ) cluster = ( INT_MAX / hardbs ) - 1;
   if( cluster < 1 ) cluster = cluster_bytes / hardbs;
@@ -436,22 +483,35 @@ int main( const int argc, const char * argv[] ) throw()
   if( !iname || !oname )
     {
     if( verbosity >= 0 )
-      show_error( "both input and output must be specified", 0, true );
+      show_error( "both input and output files must be specified", 0, true );
     return 1;
     }
   if( check_identical ( iname, oname ) )
     { if( verbosity >= 0 ) show_error( "infile and outfile are the same" );
       return 1; }
 
-  if( !filltypes.size() )
-    return do_rescue( ipos, opos, max_size, iname, oname, logname, cluster,
-                      hardbs, max_errors, max_retries, o_direct, o_trunc,
-                      verbosity, complete_only, nosplit, retrim, sparse );
+  if( filltypes.size() )
+    {
+    if( verbosity >= 0 &&
+        ( max_errors >= 0 || max_retries || o_direct || o_trunc ||
+          complete_only || generate || nosplit || retrim || sparse || synchronous ) )
+      show_error( "warning: options -C -d -D -e -g -n -r -R -S and -t are ignored in fill mode" );
 
-  if( verbosity >= 0 && ( max_errors >= 0 || max_retries || o_direct ||
-                          o_trunc || complete_only || nosplit || retrim || sparse ) )
-    show_error( "warning: options -C -d -e -n -r -R -S and -t are ignored in fill mode" );
+    return do_fill( ipos, opos, max_size, iname, oname, logname, cluster,
+                    hardbs, verbosity, filltypes, synchronous );
+    }
+  if( generate )
+    {
+    if( verbosity >= 0 &&
+        ( max_errors >= 0 || max_retries || o_direct || o_trunc ||
+          complete_only || nosplit || retrim || sparse || synchronous ) )
+      show_error( "warning: options -C -d -D -e -n -r -R -S and -t are ignored in generate-logfile mode" );
 
-  return do_fill( ipos, opos, max_size, iname, oname, logname, cluster,
-                  hardbs, verbosity, filltypes );
+    return do_generate( ipos, opos, max_size, iname, oname, logname, cluster,
+                        hardbs, verbosity );
+    }
+  return do_rescue( ipos, opos, max_size, iname, oname, logname, cluster,
+                    hardbs, max_errors, max_retries, o_direct, o_trunc,
+                    verbosity, complete_only, nosplit, retrim, sparse,
+                    synchronous );
   }

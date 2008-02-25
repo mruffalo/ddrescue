@@ -12,7 +12,7 @@ File: ddrescue.info,  Node: Top,  Next: Introduction,  Up: (dir)
 GNU ddrescue
 ************
 
-This manual is for GNU ddrescue (version 1.7, 4 January 2008).
+This manual is for GNU ddrescue (version 1.8, 24 February 2008).
 
 * Menu:
 
@@ -23,6 +23,7 @@ This manual is for GNU ddrescue (version 1.7, 4 January 2008).
 * Examples::		A small tutorial with examples
 * Direct Disc Access::	Bypassing the kernel cache
 * Fill Mode::		Selectively overwriting the output file
+* Generate Mode::	Generating an approximate logfile
 * Problems::		Reporting bugs
 * Concept Index::	Index of concepts
 
@@ -189,6 +190,11 @@ The format for running ddrescue is:
      cache. Hardware block size must be correctly set for this to work.
      Not all systems support this.
 
+`--synchronous'
+`-D'
+     Use synchronous writes for output file. May be useful when forcing
+     the drive to remap its bad sectors.
+
 `--max-errors=N'
 `-e N'
      Maximum number of error areas allowed before giving up. Defaults
@@ -202,9 +208,18 @@ The format for running ddrescue is:
      Structure (*note Logfile Structure::). See the chapter Fill Mode
      (*note Fill Mode::) for a complete description of the fill mode.
 
+`--generate-logfile'
+`-g'
+     Generate an approximate logfile from the input and output files of
+     the original rescue run. Note that you should keep the original
+     offset between `--input-position' and `--output-position' of the
+     original rescue run.
+
 `--input-position=POS'
 `-i POS'
-     Starting position in input file, in bytes. Defaults to 0.
+     Starting position in input file, in bytes. Defaults to 0. In fill
+     mode it refers to the original input file. See the chapter Fill
+     Mode (*note Fill Mode::) for details.
 
 `--no-split'
 `-n'
@@ -215,9 +230,8 @@ The format for running ddrescue is:
 `--output-position=POS'
 `-o POS'
      Starting position in output file, in bytes. Defaults to
-     `--input-position' in rescue mode and to 0 in fill mode. The bytes
-     below POS aren't touched if they exist and truncation is not
-     requested. Else they are set to 0.
+     `--input-position'. The bytes below POS aren't touched if they
+     exist and truncation is not requested. Else they are set to 0.
 
 `--quiet'
 `-q'
@@ -233,7 +247,9 @@ The format for running ddrescue is:
 `--retrim'
 `-R'
      Mark all error areas inside the rescue domain as non-trimmed before
-     beginning the rescue.
+     beginning the rescue. The effect is similar to `--max-retries=1',
+     but the bad sectors are tried in a different order, making perhaps
+     possible to rescue some of them.
 
 `--max-size=BYTES'
 `-s BYTES'
@@ -276,10 +292,11 @@ Z        zettabyte (10^21)         |   Zi       zebibyte (2^70)
 Y        yottabyte (10^24)         |   Yi       yobibyte (2^80)
 
 
-   NOTE: Don't believe everything Usamericans tell you. A billion is a
-million millions (million^2), a trillion is a million million millions
-(million^3), and so on. Please, respect the meaning of prefixes to make
-communication among all people possible. Thanks.
+   NOTE: Don't believe everything Usamericans tell you. 10^9 is a
+thousand millions, a billion is a million millions (million^2), a
+trillion is a million million millions (million^3), and so on. Please,
+don't "embrace and extend" the meaning of prefixes, making
+communication among all people difficult. Thanks.
 
 
 File: ddrescue.info,  Node: Logfile Structure,  Next: Examples,  Prev: Invoking ddrescue,  Up: Top
@@ -304,6 +321,8 @@ Character   Meaning
 '*'         trimming bad areas
 '/'         splitting bad areas
 '-'         retrying bad hardware blocks
+'F'         filling specified areas
+'G'         generating approximate logfile
 '+'         finished
 
    Every line in the list of data blocks describes a block of data, and
@@ -320,7 +339,7 @@ Character   Meaning
 
 And here is an example logfile:
 
-# Rescue Logfile. Created by GNU ddrescue version 1.6
+# Rescue Logfile. Created by GNU ddrescue version 1.8
 # current_pos  current_status
 0x00120000     ?
 #      pos         size   status
@@ -458,7 +477,7 @@ Example 2: using a raw device
      mount -t ext2 -o ro /dev/hdc1 /mnt
 
 
-File: ddrescue.info,  Node: Fill Mode,  Next: Problems,  Prev: Direct Disc Access,  Up: Top
+File: ddrescue.info,  Node: Fill Mode,  Next: Generate Mode,  Prev: Direct Disc Access,  Up: Top
 
 7 Fill Mode
 ***********
@@ -472,8 +491,18 @@ type characters specified as argument to the `--fill' option.
 
    In fill mode the input file may have any size. If it is too small,
 the data will be duplicated as many times as necessary to fill the input
-buffer. If it is too big, only the needed data will be read. Note that
-you may specify a starting position for the input file.
+buffer. If it is too big, only the needed data will be read.
+
+   Note that in fill mode the input file is always read from position
+0. If you specify a `--input-position', it refers to the original input
+file from which the logfile was built, and is only used to calculate the
+offset between input and output positions.
+
+   Note also that when filling the input file of the original rescue run
+you should set `--input-position' and `--output-position' to identical
+values, whereas when filling the output file of the original rescue run
+you should keep the original offset between `--input-position' and
+`--output-position'.
 
    The `--fill' option implies the `--complete-only' option.
 
@@ -507,12 +536,71 @@ by drive age, you can probably just rewrite those sectors, and the drive
 will reallocate them automatically to new "spare" sectors that it keeps
 for just this purpose. WARNING! This may not work on your drive.
 
-     ddrescue --fill=- /dev/zero bad_drive logfile
+     ddrescue --fill=- --synchronous /dev/zero bad_drive logfile
+
+
+Fill mode can also help you to figure out, independently of the file
+system used, what files are partially or entirely in the bad areas of
+the disc. Just follow these steps:
+
+   1) Copy the damaged drive with ddrescue until finished. Do not use
+sparse writes. This yields a logfile with only finished (`+') and bad
+(`-') areas.
+
+   2) Mount the copied drive (or the image file, via loopback device).
+
+   3) Compute a md5sum or other checksum for every file. Build a list of
+all the files and their checksums.
+
+   4) Fill the bad areas of the copied drive or image file with a byte
+value different from zero.
+
+   5) Verify the checksums. Those files which have different checksums
+this time reside (at least partially) in damaged disk areas.
+
+   6) Optionally fill the bad areas of the copied drive or image file
+with zeros to restore the disk image.
 
 
-File: ddrescue.info,  Node: Problems,  Next: Concept Index,  Prev: Fill Mode,  Up: Top
+File: ddrescue.info,  Node: Generate Mode,  Next: Problems,  Prev: Fill Mode,  Up: Top
 
-8 Reporting Bugs
+8 Generate-logfile Mode
+***********************
+
+So you didn't read the tutorial and started ddrescue without a logfile.
+Now, two days later, your computer crashed and you can't know how much
+data ddrescue managed to save. And even worse, you can't resume the
+rescue; you have to restart it from the very beginning.
+
+   Or maybe you started copying a drive with `dd conv=noerror,sync' and
+are now in the same situation described above.  In this case, note that
+you can't use a copy made by dd unless it was invoked with the `sync'
+conversion argument.
+
+   Don't despair (yet). Ddrescue can in some cases generate an
+approximate logfile, from the input file and the (partial) copy, that
+is almost as good as an exact logfile. It makes this by simply assuming
+that sectors containng all zeros were not rescued.
+
+   However, if the destination of the copy was a drive or a partition,
+(or an existing regular file and truncation was not requested), most
+probably you will need to restart ddrescue from the very beginning.
+(This time with a logfile, of course). The reason is that old data may
+be present in the drive that have not been overwritten yet, and may be
+thus non-tried but non-zero.
+
+   For example, if you first tried one of these commands:
+     ddrescue infile outfile
+     or
+     dd if=infile of=outfile conv=noerror,sync
+
+   you can generate an approximate logfile with this command:
+     ddrescue --generate-logfile infile outfile logfile
+
+
+File: ddrescue.info,  Node: Problems,  Next: Concept Index,  Prev: Generate Mode,  Up: Top
+
+9 Reporting Bugs
 ****************
 
 If you find a bug in GNU ddrescue, please send electronic mail to
@@ -533,6 +621,7 @@ Concept Index
 * direct disc access:                    Direct Disc Access.    (line 6)
 * examples:                              Examples.              (line 6)
 * Fill Mode:                             Fill Mode.             (line 6)
+* Generate-logfile Mode:                 Generate Mode.         (line 6)
 * getting help:                          Problems.              (line 6)
 * introduction:                          Introduction.          (line 6)
 * invoking:                              Invoking ddrescue.     (line 6)
@@ -546,14 +635,15 @@ Concept Index
 
 Tag Table:
 Node: Top203
-Node: Introduction956
-Node: Algorithm2661
-Node: Invoking ddrescue5254
-Node: Logfile Structure9844
-Node: Examples11837
-Node: Direct Disc Access14522
-Node: Fill Mode16385
-Node: Problems18610
-Node: Concept Index18906
+Node: Introduction1010
+Node: Algorithm2715
+Node: Invoking ddrescue5308
+Node: Logfile Structure10578
+Node: Examples12650
+Node: Direct Disc Access15335
+Node: Fill Mode17198
+Node: Generate Mode20792
+Node: Problems22334
+Node: Concept Index22634
 
 End Tag Table
