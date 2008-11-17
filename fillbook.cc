@@ -21,6 +21,7 @@
 #include <string>
 #include <vector>
 
+#include "block.h"
 #include "ddrescue.h"
 
 
@@ -31,7 +32,7 @@ int Fillbook::fill_areas( const std::string & filltypes ) throw()
   for( int index = 0; index < sblocks(); ++index )
     {
     const Sblock & sb = sblock( index );
-    if( !domain().includes( sb ) ) { if( sb < domain() ) continue; else break; }
+    if( !domain().includes( sb ) ) { if( domain() < sb ) break; else continue; }
     if( sb.end() <= current_pos() ||
         filltypes.find( sb.status() ) >= filltypes.size() ) continue;
     Block b( sb.pos(), softbs() );
@@ -40,7 +41,7 @@ int Fillbook::fill_areas( const std::string & filltypes ) throw()
     current_status( filling );
     while( b.size() > 0 )
       {
-      if( verbosity() >= 0 )
+      if( verbosity >= 0 )
         { show_status( b.pos(), first_post ); first_post = false; }
       const int retval = fill_block( b );
       if( retval ) return retval;
@@ -66,7 +67,7 @@ int Fillbook::do_fill( const int odes, const std::string & filltypes ) throw()
   for( int i = 0; i < sblocks(); ++i )
     {
     const Sblock & sb = sblock( i );
-    if( !domain().includes( sb ) ) { if( sb < domain() ) continue; else break; }
+    if( !domain().includes( sb ) ) { if( domain() < sb ) break; else continue; }
     if( filltypes.find( sb.status() ) >= filltypes.size() ) continue;
     if( sb.end() <= current_pos() ) { ++filled_areas; filled_size += sb.size(); }
     else if( sb.includes( current_pos() ) )
@@ -77,7 +78,7 @@ int Fillbook::do_fill( const int odes, const std::string & filltypes ) throw()
     else { ++remaining_areas; remaining_size += sb.size(); }
     }
   set_handler();
-  if( verbosity() >= 0 )
+  if( verbosity >= 0 )
     {
     std::printf( "Press Ctrl-C to interrupt\n" );
     if( filename() )
@@ -91,7 +92,7 @@ int Fillbook::do_fill( const int odes, const std::string & filltypes ) throw()
       }
     }
   int retval = fill_areas( filltypes );
-  if( verbosity() >= 0 )
+  if( verbosity >= 0 )
     {
     show_status( -1, true );
     if( retval == 0 ) std::printf( "Finished" );
@@ -102,7 +103,6 @@ int Fillbook::do_fill( const int odes, const std::string & filltypes ) throw()
   else if( retval < 0 ) retval = 0;		// interrupted by user
   compact_sblock_vector();
   if( !update_logfile( _odes, true ) && retval == 0 ) retval = 1;
-  if( verbosity() >= 0 && final_msg() )
-    { show_error( final_msg(), final_errno() ); }
+  if( final_msg() ) show_error( final_msg(), final_errno() );
   return retval;
   }

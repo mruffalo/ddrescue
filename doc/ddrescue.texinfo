@@ -5,8 +5,8 @@
 @finalout
 @c %**end of header
 
-@set UPDATED 24 February 2008
-@set VERSION 1.8
+@set UPDATED 17 November 2008
+@set VERSION 1.9
 
 @dircategory GNU Packages
 @direntry
@@ -74,6 +74,12 @@ error-free file. This is so because the probability of having damaged
 areas at the same places on different input files is very low. Using
 the logfile, only the needed blocks are read from the second and
 successive copies.
+
+Recordable CD and DVD media keep their data only for a finite time
+(typically for many years). After that time, data loss develops slowly
+with read errors growing from the outer media region towards the inside.
+Just make two (or more) copies of every important CD/DVD you burn so
+that you can later recover them with ddrescue.
 
 Ddrescue does not truncate the output file if not asked to. So, every
 time you run it on the same output file, it tries to fill in the gaps.
@@ -189,8 +195,9 @@ Print the version number of ddrescue on the standard output and exit.
 
 @item --block-size=@var{bytes}
 @itemx -b @var{bytes}
-Hardware block size of input device in bytes (usually 512 for hard
-discs, 1024 for floppies, and 2048 for cdroms). Defaults to 512.
+Hardware block size of input device in bytes (usually 512 for hard discs
+and 3.5" floppies, 1024 for 5.25" floppies, and 2048 for cdroms).
+Defaults to 512.
 
 @item --binary-prefixes
 @itemx -B
@@ -200,8 +207,8 @@ SI prefixes (powers of 1000) are used by default. (See table below).
 @item --cluster-size=@var{blocks}
 @itemx -c @var{blocks}
 Number of hardware blocks (sectors) to copy at a time. Defaults to
-@w{64KiB / hardware_block_size}. Try smaller values for slow drives (18
-is a good value for floppies).
+@w{64KiB / hardware_block_size}. Try smaller values for slow drives. The
+number of sectors per track (18 or 9) is a good value for floppies.
 
 @item --complete-only
 @itemx -C
@@ -244,6 +251,12 @@ original rescue run.
 Starting position in input file, in bytes. Defaults to 0. In fill mode
 it refers to the original input file. See the chapter Fill Mode
 (@pxref{Fill Mode}) for details.
+
+@item --domain-logfile=@var{file}
+@itemx -m @var{file}
+Restrict the rescue domain to the areas marked as finished in the
+logfile @var{file}. This is useful if the destination drive fails during
+the rescue.
 
 @item --no-split
 @itemx -n
@@ -448,6 +461,7 @@ e2fsck -v -f /dev/hdb1
 e2fsck -v -f /dev/hdb2
 @end example
 
+@sp 1
 @noindent
 Example 2: Rescue an ext2 partition in /dev/hda2 to /dev/hdb2@*
 Note: you need to create the hdb2 partition with fdisk first. hdb2
@@ -461,6 +475,7 @@ mount -t ext2 -o ro /dev/hdb2 /mnt
 read files from /mnt
 @end example
 
+@sp 1
 @noindent
 Example 3: Rescue a CD-ROM in /dev/cdrom
 
@@ -468,6 +483,18 @@ Example 3: Rescue a CD-ROM in /dev/cdrom
 ddrescue -n -b2048 /dev/cdrom cdimage logfile
 ddrescue -d -b2048 /dev/cdrom cdimage logfile
 write cdimage to a blank CD-ROM
+@end example
+
+@sp 1
+@noindent
+Example 4: While rescuing a whole disc in /dev/hda to /dev/hdb, /dev/hdb
+fails and you have to rescue data to a third disc, /dev/hdc
+
+@example
+ddrescue -n /dev/hda /dev/hdb logfile1     <-- /dev/hdb fails here
+ddrescue -m logfile1 /dev/hdb /dev/hdc logfile2
+ddrescue -n /dev/hda /dev/hdc logfile2
+ddrescue -dr3 /dev/hda /dev/hdc logfile2
 @end example
 
 
@@ -496,10 +523,10 @@ of a raw device, so a explicit @samp{--max-size} or
 @samp{--complete-only} option is needed.
 
 Using direct disc access, or reading from a raw device, may be slower
-than normal cached reading, at least for hard discs. In this case you
-may want to make a first pass using normal cached reads, and use direct
-disc access, or a raw device, only to recover the good sectors inside
-the error areas.
+than normal cached reading for hard discs (but faster for floppies). In
+this case you may want to make a first pass using normal cached reads,
+and use direct disc access, or a raw device, only to recover the good
+sectors inside the error areas.
 
 @sp 1
 @noindent
@@ -512,6 +539,7 @@ e2fsck -v -f /dev/hdc1
 mount -t ext2 -o ro /dev/hdc1 /mnt
 @end example
 
+@sp 1
 @noindent
 Example 2: using a raw device
 
@@ -664,6 +692,11 @@ ddrescue --generate-logfile infile outfile logfile
 @chapter Reporting Bugs
 @cindex bugs
 @cindex getting help
+
+There are probably bugs in ddrescue. There are certainly errors and
+omissions in this manual. If you report them, they will get fixed. If
+you don't, no one will ever know about them and they will remain unfixed
+for all eternity, if not longer.
 
 If you find a bug in GNU ddrescue, please send electronic mail to
 @email{bug-ddrescue@@gnu.org}. Include the version number, which you can

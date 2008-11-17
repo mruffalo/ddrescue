@@ -22,7 +22,22 @@
 #include <string>
 #include <vector>
 
+#include "block.h"
 #include "ddrescue.h"
+
+
+namespace {
+
+void input_pos_error( const long long pos, const long long isize ) throw()
+  {
+  char buf[80];
+  snprintf( buf, sizeof buf, "can't start reading at pos %lld", pos );
+  show_error( buf );
+  snprintf( buf, sizeof buf, "input file is only %lld bytes long", isize );
+  show_error( buf );
+  }
+
+} // end namespace
 
 
 Block::Block( const long long p, const long long s ) throw()
@@ -134,7 +149,7 @@ Block Block::split( long long pos, const int hardbs ) throw()
     _pos = pos; if( _size > 0 ) _size -= b._size;
     return b;
     }
-  return Block();
+  return Block( 0, 0 );
   }
 
 
@@ -158,4 +173,35 @@ void Sblock::status( const Status st ) throw()
   {
   if( isstatus( st ) ) _status = st;
   else internal_error( "bad status change in a Sblock" );
+  }
+
+
+void Domain::crop( const Block & b ) throw()
+  {
+  for( int i = block_vector.size() - 1; i >= 0; --i )
+    {
+    block_vector[i].crop( b );
+    if( block_vector[i].size() == 0 )
+      block_vector.erase( block_vector.begin() + i );
+    }
+  }
+
+
+bool Domain::crop_by_file_size( const long long isize ) throw()
+  {
+  if( isize > 0 )
+    for( unsigned int i = 0; i < block_vector.size(); ++i )
+      {
+      if( block_vector[i].pos() >= isize )
+        {
+        if( i == 0 )
+          { input_pos_error( block_vector[i].pos(), isize ); return false; }
+        block_vector.erase( block_vector.begin() + i, block_vector.end() );
+        break;
+        }
+      const long long end = block_vector[i].end();
+      if( end < 0 || end > isize )
+        block_vector[i].size( isize - block_vector[i].pos() );
+      }
+  return true;
   }

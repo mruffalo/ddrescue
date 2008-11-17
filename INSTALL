@@ -1,8 +1,8 @@
 Requirements
 ------------
 You will need a C++ compiler.
-I use gcc 3.3.6, but the code should compile with any standards compliant
-compiler.
+I use gcc 4.3.1 and 3.3.6, but the code should compile with any
+standards compliant compiler.
 Gcc is available at http://gcc.gnu.org.
 
 
@@ -10,7 +10,9 @@ Procedure
 ---------
 1. Unpack the archive if you have not done so already:
 
-	bunzip2 -c ddrescue[version].tar.bz2 | tar -xf -
+	bzip2 -cd ddrescue[version].tar.bz2 | tar -xf -
+or
+	lzip -cd ddrescue[version].tar.lz | tar -xf -
 
 This creates the directory ./ddrescue[version] containing the source from
 the main archive.

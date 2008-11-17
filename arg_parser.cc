@@ -23,7 +23,7 @@
 
 
 bool Arg_parser::parse_long_option( const char * const opt, const char * const arg,
-                                    const Option options[], int & argind ) throw()
+                                    const Option options[], int & argind )
   {
   unsigned int len;
   int index = -1;
@@ -93,27 +93,27 @@ bool Arg_parser::parse_long_option( const char * const opt, const char * const a
 
 
 bool Arg_parser::parse_short_option( const char * const opt, const char * const arg,
-                                     const Option options[], int & argind ) throw()
+                                     const Option options[], int & argind )
   {
   int cind = 1;			// character index in opt
 
   while( cind > 0 )
     {
     int index = -1;
-    const unsigned char code = opt[cind];
+    const unsigned char c = opt[cind];
 
-    if( code != 0 )
+    if( c != 0 )
       for( int i = 0; options[i].code; ++i )
-        if( code == options[i].code )
+        if( c == options[i].code )
           { index = i; break; }
 
     if( index < 0 )
       {
-      _error = "invalid option -- "; _error += code;
+      _error = "invalid option -- "; _error += c;
       return false;
       }
 
-    data.push_back( Record( code ) );
+    data.push_back( Record( c ) );
     if( opt[++cind] == 0 ) { ++argind; cind = 0; }	// opt finished
 
     if( options[index].has_arg != no && cind > 0 && opt[cind] )
@@ -124,7 +124,7 @@ bool Arg_parser::parse_short_option( const char * const opt, const char * const 
       {
       if( !arg || !arg[0] )
         {
-        _error = "option requires an argument -- "; _error += code;
+        _error = "option requires an argument -- "; _error += c;
         return false;
         }
       data.back().argument = arg; ++argind; cind = 0;
@@ -135,7 +135,7 @@ bool Arg_parser::parse_short_option( const char * const opt, const char * const 
 
 
 Arg_parser::Arg_parser( const int argc, const char * const argv[],
-                        const Option options[], const bool in_order ) throw()
+                        const Option options[], const bool in_order )
   {
   if( argc < 2 || !argv || !options ) return;
 
@@ -176,7 +176,7 @@ Arg_parser::Arg_parser( const int argc, const char * const argv[],
 
 
 Arg_parser::Arg_parser( const char * const opt, const char * const arg,
-                        const Option options[] ) throw()
+                        const Option options[] )
   {
   if( !opt || !opt[0] || !options ) return;
 

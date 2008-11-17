@@ -23,6 +23,7 @@
 #include <string>
 #include <vector>
 
+#include "block.h"
 #include "ddrescue.h"
 
 
@@ -41,7 +42,7 @@ int Rescuebook::check_all() throw()
     if( b.size() == 0 ) break;
     pos = b.end();
     current_status( generating );
-    if( verbosity() >= 0 )
+    if( verbosity >= 0 )
       { show_status( b.pos(), "Generating logfile...", first_post ); first_post = false; }
     int copied_size, error_size;
     const int retval = check_block( b, copied_size, error_size );
@@ -64,7 +65,7 @@ void Rescuebook::count_errors() throw()
   for( int i = 0; i < sblocks(); ++i )
     {
     const Sblock & sb = sblock( i );
-    if( !domain().includes( sb ) ) { if( sb < domain() ) continue; else break; }
+    if( !domain().includes( sb ) ) { if( domain() < sb ) break; else continue; }
     switch( sb.status() )
       {
       case Sblock::non_tried:
@@ -81,7 +82,7 @@ int Rescuebook::copy_and_update( const Block & b, const Sblock::Status st,
                                  int & copied_size, int & error_size,
                                  const char * msg, bool & first_post ) throw()
   {
-  if( verbosity() >= 0 )
+  if( verbosity >= 0 )
     { show_status( b.pos(), msg, first_post ); first_post = false; }
   const int retval = copy_block( b, copied_size, error_size );
   if( !retval )
@@ -146,7 +147,7 @@ int Rescuebook::copy_non_tried() throw()
 //
 int Rescuebook::trim_errors() throw()
   {
-  long long pos = LONG_LONG_MAX - hardbs();
+  long long pos = LLONG_MAX - hardbs();
   bool first_post = true;
 
   while( pos >= 0 )
@@ -232,7 +233,7 @@ int Rescuebook::copy_errors() throw()
     long long pos = 0;
     if( resume ) { resume = false; pos = current_pos(); }
     bool first_post = true, block_found = false;
-    snprintf( msgbuf + msglen, sizeof( msgbuf ) - msglen, "%d", retry );
+    snprintf( msgbuf + msglen, ( sizeof msgbuf ) - msglen, "%d", retry );
 
     while( pos >= 0 )
       {
@@ -256,12 +257,12 @@ int Rescuebook::copy_errors() throw()
 
 
 Rescuebook::Rescuebook( const long long ipos, const long long opos,
-                        const long long max_size, const long long isize,
+                        Domain & dom, const long long isize,
                         const char * name, const int cluster, const int hardbs,
-                        const int verbosity, const int max_errors, const int max_retries,
+                        const int max_errors, const int max_retries,
                         const bool complete_only, const bool nosplit, const bool retrim,
                         const bool sparse, const bool synchronous ) throw()
-  : Logbook( ipos, opos, max_size, isize, name, cluster, hardbs, verbosity, complete_only ),
+  : Logbook( ipos, opos, dom, isize, name, cluster, hardbs, complete_only ),
     sparse_size( 0 ), _max_errors( max_errors ), _max_retries( max_retries ),
     _nosplit( nosplit ), _sparse( sparse ), _synchronous( synchronous )
   {
@@ -269,7 +270,7 @@ Rescuebook::Rescuebook( const long long ipos, const long long opos,
     for( int index = 0; index < sblocks(); ++index )
       {
       const Sblock & sb = sblock( index );
-      if( !domain().includes( sb ) ) { if( sb < domain() ) continue; else break; }
+      if( !domain().includes( sb ) ) { if( domain() < sb ) break; else continue; }
       if( sb.status() == Sblock::non_split || sb.status() == Sblock::bad_block )
         change_sblock_status( index, Sblock::non_trimmed );
       }
@@ -285,7 +286,7 @@ int Rescuebook::do_generate( const int odes ) throw()
   for( int i = 0; i < sblocks(); ++i )
     {
     const Sblock & sb = sblock( i );
-    if( !domain().includes( sb ) ) { if( sb < domain() ) continue; else break; }
+    if( !domain().includes( sb ) ) { if( domain() < sb ) break; else continue; }
     switch( sb.status() )
       {
       case Sblock::non_tried:   break;
@@ -297,7 +298,7 @@ int Rescuebook::do_generate( const int odes ) throw()
     }
   count_errors();
   set_handler();
-  if( verbosity() >= 0 )
+  if( verbosity >= 0 )
     {
     std::printf( "Press Ctrl-C to interrupt\n" );
     if( filename() )
@@ -310,7 +311,7 @@ int Rescuebook::do_generate( const int odes ) throw()
       }
     }
   int retval = check_all();
-  if( verbosity() >= 0 )
+  if( verbosity >= 0 )
     {
     show_status( -1, (retval ? 0 : "Finished"), true );
     if( retval < 0 ) std::printf( "\nInterrupted by user" );
@@ -320,8 +321,7 @@ int Rescuebook::do_generate( const int odes ) throw()
   else if( retval < 0 ) retval = 0;		// interrupted by user
   compact_sblock_vector();
   if( !update_logfile( -1, true ) && retval == 0 ) retval = 1;
-  if( verbosity() >= 0 && final_msg() )
-    { show_error( final_msg(), final_errno() ); }
+  if( final_msg() ) show_error( final_msg(), final_errno() );
   return retval;
   }
 
@@ -336,7 +336,7 @@ int Rescuebook::do_rescue( const int ides, const int odes ) throw()
   for( int i = 0; i < sblocks(); ++i )
     {
     const Sblock & sb = sblock( i );
-    if( !domain().includes( sb ) ) { if( sb < domain() ) continue; else break; }
+    if( !domain().includes( sb ) ) { if( domain() < sb ) break; else continue; }
     switch( sb.status() )
       {
       case Sblock::non_tried:   copy_pending = trim_pending = split_pending = true;
@@ -349,7 +349,7 @@ int Rescuebook::do_rescue( const int ides, const int odes ) throw()
     }
   count_errors();
   set_handler();
-  if( verbosity() >= 0 )
+  if( verbosity >= 0 )
     {
     std::printf( "Press Ctrl-C to interrupt\n" );
     if( filename() )
@@ -370,7 +370,7 @@ int Rescuebook::do_rescue( const int ides, const int odes ) throw()
     retval = split_errors();
   if( !retval && _max_retries != 0 && !too_many_errors() )
     retval = copy_errors();
-  if( verbosity() >= 0 )
+  if( verbosity >= 0 )
     {
     show_status( -1, (retval ? 0 : "Finished"), true );
     if( retval < 0 ) std::printf( "\nInterrupted by user" );
@@ -381,12 +381,11 @@ int Rescuebook::do_rescue( const int ides, const int odes ) throw()
   else if( retval < 0 ) retval = 0;		// interrupted by user
   if( !sync_sparse_file() )
     {
-    if( verbosity() >= 0 ) show_error( "error syncing sparse output file" );
+    show_error( "error syncing sparse output file" );
     if( retval == 0 ) retval = 1;
     }
   compact_sblock_vector();
   if( !update_logfile( _odes, true ) && retval == 0 ) retval = 1;
-  if( verbosity() >= 0 && final_msg() )
-    { show_error( final_msg(), final_errno() ); }
+  if( final_msg() ) show_error( final_msg(), final_errno() );
   return retval;
   }

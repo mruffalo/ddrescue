@@ -1,9 +1,5 @@
-Changes in version 1.8:
+Changes in version 1.9:
 
-The new option "--generate-logfile" has been added.
+The new option "--domain-logfile" has been added.
 
-The new option "--synchronous" has been added.
-
-Fill mode now works when outfile offset differs from 0.
-
-The chapter "Fill Mode" of the manual has been updated.
+Verbosity control of user messages has been simplified.

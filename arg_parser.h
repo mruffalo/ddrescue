@@ -55,24 +55,24 @@ private:
     {
     int code;
     std::string argument;
-    Record( const int c = 0 ) : code( c ) {}
+    Record( const int c = 0 ) throw() : code( c ) {}
     };
 
   std::string _error;
   std::vector< Record > data;
 
   bool parse_long_option( const char * const opt, const char * const arg,
-                          const Option options[], int & argind ) throw();
+                          const Option options[], int & argind );
   bool parse_short_option( const char * const opt, const char * const arg,
-                           const Option options[], int & argind ) throw();
+                           const Option options[], int & argind );
 
 public:
   Arg_parser( const int argc, const char * const argv[],
-              const Option options[], const bool in_order = false ) throw();
+              const Option options[], const bool in_order = false );
 
       // Restricted constructor. Parses a single token and argument (if any)
   Arg_parser( const char * const opt, const char * const arg,
-              const Option options[] ) throw();
+              const Option options[] );
 
   const std::string & error() const throw() { return _error; }
 

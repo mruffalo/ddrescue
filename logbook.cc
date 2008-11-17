@@ -27,6 +27,7 @@
 #include <vector>
 #include <unistd.h>
 
+#include "block.h"
 #include "ddrescue.h"
 
 
@@ -72,7 +73,7 @@ const char * my_fgets( FILE * f, int & linenum ) throw()
 
 
 void extend_sblock_vector( std::vector< Sblock > & sblock_vector,
-                           const long long isize, const int verbosity ) throw()
+                           const long long isize ) throw()
   {
   if( sblock_vector.size() == 0 )
     {
@@ -91,8 +92,7 @@ void extend_sblock_vector( std::vector< Sblock > & sblock_vector,
       {
       if( back.pos() == isize && back.status() == Sblock::non_tried )
         { sblock_vector.pop_back(); return; }
-      if( verbosity >= 0 )
-        show_error( "bad logfile; last block begins past end of input file" );
+      show_error( "bad logfile; last block begins past end of input file" );
       std::exit( 1 );
       }
     if( end < 0 || end > isize ) back.size( isize - back.pos() );
@@ -104,31 +104,18 @@ void extend_sblock_vector( std::vector< Sblock > & sblock_vector,
   }
 
 
-void input_pos_error( const long long pos, const long long isize ) throw()
-  {
-  char buf[80];
-  snprintf( buf, sizeof( buf ), "can't start reading at pos %lld", pos );
-  show_error( buf );
-  snprintf( buf, sizeof( buf ), "input file is only %lld bytes long", isize );
-  show_error( buf );
-  }
-
-
 void show_logfile_error( const char * filename, const int linenum ) throw()
   {
   char buf[80];
-  snprintf( buf, sizeof( buf ), "error in logfile %s, line %d",
-                 filename, linenum );
+  snprintf( buf, sizeof buf, "error in logfile %s, line %d", filename, linenum );
   show_error( buf );
   }
 
-} // end namespace
 
-
-bool Logbook::read_logfile() throw()
+bool read_logfile( const char * name, std::vector< Sblock > & sblock_vector,
+                   long long & current_pos, Logbook::Status & current_status ) throw()
   {
-  if( !_filename ) return false;
-  FILE *f = std::fopen( _filename, "r" );
+  FILE *f = std::fopen( name, "r" );
   if( !f ) return false;
   int linenum = 0;
   sblock_vector.clear();
@@ -137,14 +124,13 @@ bool Logbook::read_logfile() throw()
   if( line )						// status line
     {
     char ch;
-    int n = std::sscanf( line, "%lli %c\n", &_current_pos, &ch );
-    if( n == 2 && _current_pos >= 0 && isstatus( ch ) )
-      _current_status = Logbook::Status( ch );
+    int n = std::sscanf( line, "%lli %c\n", &current_pos, &ch );
+    if( n == 2 && current_pos >= 0 && Logbook::isstatus( ch ) )
+      current_status = Logbook::Status( ch );
     else
       {
-      if( _verbosity >= 0 )
-        { show_logfile_error( _filename, linenum );
-          show_error( "Are you using a logfile from ddrescue 1.5 or older?" ); }
+      show_logfile_error( name, linenum );
+      show_error( "Are you using a logfile from ddrescue 1.5 or older?" );
       std::exit( 2 );
       }
 
@@ -160,20 +146,17 @@ bool Logbook::read_logfile() throw()
         Sblock::Status st = Sblock::Status( ch );
         Sblock sb( pos, size, st );
         if( sblock_vector.size() > 0 && !sb.follows( sblock_vector.back() ) )
-          { if( _verbosity >= 0 ) show_logfile_error( _filename, linenum );
-            std::exit( 2 ); }
+          { show_logfile_error( name, linenum ); std::exit( 2 ); }
         sblock_vector.push_back( sb );
         }
       else
-        { if( _verbosity >= 0 ) show_logfile_error( _filename, linenum );
-          std::exit( 2 ); }
+        { show_logfile_error( name, linenum ); std::exit( 2 ); }
       }
     if( sblock_vector.size() && sblock_vector.back().size() < 0 &&
         sblock_vector.back().status() != Sblock::non_tried )
       {
-      if( _verbosity >= 0 )
-        { show_logfile_error( _filename, linenum );
-          show_error( "Only areas of type non_tried may have an undefined size" ); }
+      show_logfile_error( name, linenum );
+      show_error( "Only areas of type non_tried may have an undefined size" );
       std::exit( 2 );
       }
     }
@@ -181,28 +164,40 @@ bool Logbook::read_logfile() throw()
   return true;
   }
 
+} // end namespace
 
-bool Logbook::check_domain_size( const long long isize ) throw()
+
+Domain::Domain( const char * name, const long long p, const long long s ) throw()
   {
-  if( isize > 0 )
+  const Block b( p, s );
+  if( !name ) { block_vector.push_back( b ); return; }
+  std::vector< Sblock > sblock_vector;
+  long long current_pos;			// not used
+  Logbook::Status current_status;		// not used
+  if( !read_logfile( name, sblock_vector, current_pos, current_status ) )
     {
-    if( _domain.pos() >= isize )
-      { if( _verbosity >= 0 ) input_pos_error( _domain.pos(), isize );
-        return false; }
-    if( _domain.size() < 0  || _domain.pos() + _domain.size() > isize )
-      _domain.size( isize - _domain.pos() );
+    char buf[80];
+    snprintf( buf, sizeof buf,
+              "logfile `%s' does not exist or is not readable", name );
+    show_error( buf );
+    std::exit( 1 );
     }
-  return true;
+  for( unsigned int i = 0; i < sblock_vector.size(); ++i )
+    {
+    const Sblock & sb = sblock_vector[i];
+    if( sb.status() == Sblock::finished ) block_vector.push_back( sb );
+    }
+  this->crop( b );
   }
 
 
-Logbook::Logbook( const long long ipos, const long long opos,
-                  const long long max_size, const long long isize,
+Logbook::Logbook( const long long ipos, const long long opos, Domain & dom,
+                  const long long isize,
                   const char * name, const int cluster, const int hardbs,
-                  const int verbosity, const bool complete_only ) throw()
+                  const bool complete_only ) throw()
   : _offset( opos - ipos ), _current_pos( 0 ), _current_status( copying ),
-    _domain( ipos, max_size ), _filename( name ),
-    _hardbs( hardbs ), _softbs( cluster * hardbs ), _verbosity( verbosity ),
+    _domain( dom ), _filename( name ),
+    _hardbs( hardbs ), _softbs( cluster * hardbs ),
     _final_msg( 0 ), _final_errno( 0 ), _index( 0 )
   {
   int alignment = sysconf( _SC_PAGESIZE );
@@ -215,9 +210,10 @@ Logbook::Logbook( const long long ipos, const long long opos,
     if( disp > 0 && disp < alignment ) _iobuf += disp;
     }
 
-  if( !check_domain_size( isize ) ) std::exit( 1 );
-  if( _filename ) read_logfile();
-  if( !complete_only ) extend_sblock_vector( sblock_vector, isize, _verbosity );
+  if( !_domain.crop_by_file_size( isize ) ) std::exit( 1 );
+  if( _filename )
+    read_logfile( _filename, sblock_vector, _current_pos, _current_status );
+  if( !complete_only ) extend_sblock_vector( sblock_vector, isize );
   else		// limit domain to blocks of finite size read from logfile
     {
     if( sblock_vector.size() && sblock_vector.back().size() < 0 )
@@ -228,7 +224,7 @@ Logbook::Logbook( const long long ipos, const long long opos,
                      sblock_vector.back().end() - sblock_vector.front().pos() );
       _domain.crop( b );
       }
-    else _domain.size( 0 );
+    else _domain.clear();
     }
   compact_sblock_vector();
   }
@@ -254,27 +250,15 @@ void Logbook::compact_sblock_vector() throw()
 
 void Logbook::split_domain_border_sblocks() throw()
   {
-  unsigned int i = 0;
-  for( ; i < sblock_vector.size(); ++i )
+  for( unsigned int i = 0; i < sblock_vector.size(); ++i )
     {
     Sblock & sb = sblock_vector[i];
-    if( sb.includes( _domain.pos() ) )
+    const long long pos = _domain.breaks_block_by( sb );
+    if( pos > 0 )
       {
-      Sblock head = sb.split( _domain.pos() );
-      if( head.size() > 0 ) { insert_sblock( i, head ); ++i; }
-      break;
-      }
-    }
-  const long long end = _domain.end();
-  if( end < 0 ) return;
-  for( ; i < sblock_vector.size(); ++i )
-    {
-    Sblock & sb = sblock_vector[i];
-    if( sb.includes( end ) )
-      {
-      Sblock head = sb.split( end );
-      if( head.size() > 0 ) { insert_sblock( i, head ); ++i; }
-      break;
+      Sblock head = sb.split( pos );
+      if( head.size() > 0 ) insert_sblock( i, head );
+      else internal_error( "empty block created by split_domain_border_sblocks" );
       }
     }
   }
@@ -298,12 +282,9 @@ bool Logbook::update_logfile( const int odes, const bool force ) throw()
   FILE *f = std::fopen( _filename, "w" );
   if( !f )
     {
-    if( _verbosity >= 0 )
-      {
-      char buf[80];
-      snprintf( buf, sizeof( buf ), "error opening logfile %s for writing", _filename );
-      show_error( buf, errno );
-      }
+    char buf[80];
+    snprintf( buf, sizeof buf, "error opening logfile %s for writing", _filename );
+    show_error( buf, errno );
     return false;
     }
 
@@ -321,12 +302,9 @@ bool Logbook::update_logfile( const int odes, const bool force ) throw()
 
   if( std::fclose( f ) )
     {
-    if( _verbosity >= 0 )
-      {
-      char buf[80];
-      snprintf( buf, sizeof( buf ), "error writing logfile %s", _filename );
-      show_error( buf, errno );
-      }
+    char buf[80];
+    snprintf( buf, sizeof buf, "error writing logfile %s", _filename );
+    show_error( buf, errno );
     return false;
     }
   return true;

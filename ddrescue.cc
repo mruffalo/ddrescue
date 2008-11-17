@@ -28,6 +28,7 @@
 #include <signal.h>
 #include <unistd.h>
 
+#include "block.h"
 #include "ddrescue.h"
 
 
@@ -104,7 +105,7 @@ int Fillbook::fill_block( const Block & b ) throw()
 
 void Fillbook::show_status( const long long ipos, bool force ) throw()
   {
-  static const char * const up = "\x1b[A";
+  const char * const up = "\x1b[A";
   static long long a_rate = 0, c_rate = 0, first_size = 0, last_size = 0;
   static long long last_ipos = 0;
   static time_t t0 = 0, t1 = 0;
@@ -231,7 +232,7 @@ int Rescuebook::copy_block( const Block & b, int & copied_size, int & error_size
 void Rescuebook::show_status( const long long ipos, const char * msg,
                               bool force ) throw()
   {
-  static const char * const up = "\x1b[A";
+  const char * const up = "\x1b[A";
   static long long a_rate = 0, c_rate = 0, first_size = 0, last_size = 0;
   static long long last_ipos = 0;
   static time_t t0 = 0, t1 = 0;
@@ -273,9 +274,9 @@ void Rescuebook::show_status( const long long ipos, const char * msg,
 const char * format_num( long long num, long long max,
                          const int set_prefix ) throw()
   {
-  static const char * const si_prefix[8] =
+  const char * const si_prefix[8] =
     { "k", "M", "G", "T", "P", "E", "Z", "Y" };
-  static const char * const binary_prefix[8] =
+  const char * const binary_prefix[8] =
     { "Ki", "Mi", "Gi", "Ti", "Pi", "Ei", "Zi", "Yi" };
   static bool si = true;
   static char buf[16];
@@ -288,7 +289,7 @@ const char * format_num( long long num, long long max,
 
   for( int i = 0; i < 8 && llabs( num ) > llabs( max ); ++i )
     { num /= factor; p = prefix[i]; }
-  snprintf( buf, sizeof( buf ), "%lld %s", num, p );
+  snprintf( buf, sizeof buf, "%lld %s", num, p );
   return buf;
   }
 

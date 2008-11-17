@@ -15,67 +15,15 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-class Block
-  {
-  long long _pos, _size;		// size == -1 means undefined size
-
-  static bool verify( const long long p, const long long s ) throw()
-    { return ( p >= 0 && s >= -1 && ( s < 0 || p + s >= 0 ) ); }
-
-public:
-  Block() throw() : _pos( 0 ), _size( 0 ) {}
-  Block( const long long p, const long long s ) throw();
-
-  long long pos() const throw() { return _pos; }
-  long long size() const throw() { return _size; }
-  long long end() const throw() { return (_size < 0) ? -1 : _pos + _size; }
-
-  void pos( const long long p ) throw();
-  void size( const long long s ) throw();
-  void end( const long long e ) throw();
-  void align_pos( const int hardbs ) throw();
-  void align_end( const int hardbs ) throw();
-  void inc_size( const long long delta ) throw();
-
-  bool operator<( const Block & b ) const throw() { return _pos < b._pos; }
-  bool follows( const Block & b ) const throw()
-    { return ( b._size >= 0 && b._pos + b._size == _pos ); }
-  bool includes( const Block & b ) const throw()
-    { return ( _pos <= b._pos &&
-               ( _size < 0 || ( b._size >= 0 && _pos + _size >= b._pos + b._size ) ) ); }
-  bool includes( const long long pos ) const throw()
-    { return ( _pos <= pos && ( _size < 0 || _pos + _size > pos ) ); }
-
-  bool join( const Block & b ) throw();
-  void crop( const Block & b ) throw();
-  Block split( long long pos, const int hardbs = 1 ) throw();
-  };
-
-
-class Sblock : public Block
-  {
-public:
-  enum Status
-    { non_tried = '?', non_trimmed = '*', non_split = '/', bad_block = '-',
-      finished = '+' };
-private:
-  Status _status;
-
-public:
-  Sblock( const Block & b, const Status st ) throw();
-  Sblock( const long long p, const long long s, const Status st ) throw();
-
-  Status status() const throw() { return _status; }
-  void status( const Status st ) throw();
-
-  bool join( const Sblock & sb ) throw()
-    { if( _status == sb._status ) return Block::join( sb ); else return false; }
-  Sblock split( const long long pos, const int hardbs = 1 ) throw()
-    { return Sblock( Block::split( pos, hardbs ), _status ); }
-  static bool isstatus( const int st ) throw()
-    { return ( st == non_tried || st == non_trimmed || st == non_split ||
-               st == bad_block || st == finished ); }
-  };
+#ifndef LLONG_MAX
+#define LLONG_MAX  0x7FFFFFFFFFFFFFFFLL
+#endif
+#ifndef LLONG_MIN
+#define LLONG_MIN  (-LLONG_MAX - 1LL)
+#endif
+#ifndef ULLONG_MAX
+#define ULLONG_MAX 0xFFFFFFFFFFFFFFFFULL
+#endif
 
 
 class Logbook
@@ -89,27 +37,25 @@ private:
   const long long _offset;		// outfile offset (opos - ipos);
   long long _current_pos;
   Status _current_status;
-  Block _domain;			// rescue domain
+  Domain & _domain;			// rescue domain
   char *iobuf_base, *_iobuf;		// iobuf is aligned to page and hardbs
   const char * const _filename;
-  const int _hardbs, _softbs, _verbosity;
+  const int _hardbs, _softbs;
   const char * _final_msg;
   int _final_errno;
   mutable int _index;			// cached index of last find or change
   std::vector< Sblock > sblock_vector;	// note: blocks are consecutive
 
-  bool read_logfile() throw();
-  bool check_domain_size( const long long isize ) throw();
   void erase_sblock( const int i ) throw()
     { sblock_vector.erase( sblock_vector.begin() + i ); }
   void insert_sblock( const int i, const Sblock & sb ) throw()
     { sblock_vector.insert( sblock_vector.begin() + i, sb ); }
 
 public:
-  Logbook( const long long ipos, const long long opos,
-           const long long max_size, const long long isize,
+  Logbook( const long long ipos, const long long opos, Domain & dom,
+           const long long isize,
            const char * name, const int cluster, const int hardbs,
-           const int verbosity, const bool complete_only ) throw();
+           const bool complete_only ) throw();
   ~Logbook() throw() { delete[] iobuf_base; }
 
   bool blank() const throw();
@@ -119,13 +65,12 @@ public:
 
   long long current_pos() const throw() { return _current_pos; }
   Status current_status() const throw() { return _current_status; }
-  const Block & domain() const throw() { return _domain; }
+  const Domain & domain() const throw() { return _domain; }
   const char *filename() const throw() { return _filename; }
   char * iobuf() const throw() { return _iobuf; }
   int hardbs() const throw() { return _hardbs; }
   int softbs() const throw() { return _softbs; }
   long long offset() const throw() { return _offset; }
-  int verbosity() const throw() { return _verbosity; }
   const char * final_msg() const throw() { return _final_msg; }
   int final_errno() const throw() { return _final_errno; }
 
@@ -166,11 +111,11 @@ class Fillbook : public Logbook
   void show_status( const long long ipos, bool force = false ) throw();
 
 public:
-  Fillbook( const long long ipos, const long long opos,
-            const long long max_size, const char * name,
-            const int cluster, const int hardbs, const int verbosity,
+  Fillbook( const long long ipos, const long long opos, Domain & dom,
+            const char * name,
+            const int cluster, const int hardbs,
             const bool synchronous ) throw()
-    : Logbook( ipos, opos, max_size, 0, name, cluster, hardbs, verbosity, true ),
+    : Logbook( ipos, opos, dom, 0, name, cluster, hardbs, true ),
       _synchronous( synchronous ) {}
 
   int do_fill( const int odes, const std::string & filltypes ) throw();
@@ -205,9 +150,8 @@ class Rescuebook : public Logbook
                     bool force = false ) throw();
 public:
   Rescuebook( const long long ipos, const long long opos,
-              const long long max_size, const long long isize,
+              Domain & dom, const long long isize,
               const char * name, const int cluster, const int hardbs,
-              const int verbosity,
               const int max_errors = -1, const int max_retries = 0,
               const bool complete_only = false, const bool nosplit = false,
               const bool retrim = false, const bool sparse = false,
@@ -227,6 +171,7 @@ void set_handler() throw();
 
 // Defined in main.cc
 //
+extern int verbosity;
 void internal_error( const char * msg ) throw() __attribute__ ((noreturn));
 void show_error( const char * msg,
                  const int errcode = 0, const bool help = false ) throw();

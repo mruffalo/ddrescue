@@ -1,3 +1,10 @@
+2008-11-17  Antonio Diaz  <ant_diaz@teleline.es>
+
+	* Version 1.9 released.
+	* Added new option `--domain-logfile'.
+	* Verbosity control of messages has been simplified.
+	* Changed LONG_LONG_MAX to LLONG_MAX.
+
 2008-02-24  Antonio Diaz  <ant_diaz@teleline.es>
 
 	* Version 1.8 released.
@@ -136,3 +143,10 @@
 2004-08-12  Antonio Diaz  <ant_diaz@teleline.es>
 
 	* Version 0.1 released.
+
+
+Copyright (C) 2008 Antonio Diaz Diaz.
+
+This file is a collection of facts, and thus it is not copyrightable,
+but just in case, I give you unlimited permission to copy, distribute
+and modify it.

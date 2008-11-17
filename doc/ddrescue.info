@@ -12,7 +12,7 @@ File: ddrescue.info,  Node: Top,  Next: Introduction,  Up: (dir)
 GNU ddrescue
 ************
 
-This manual is for GNU ddrescue (version 1.8, 24 February 2008).
+This manual is for GNU ddrescue (version 1.9, 17 November 2008).
 
 * Menu:
 
@@ -58,6 +58,12 @@ error-free file. This is so because the probability of having damaged
 areas at the same places on different input files is very low. Using
 the logfile, only the needed blocks are read from the second and
 successive copies.
+
+   Recordable CD and DVD media keep their data only for a finite time
+(typically for many years). After that time, data loss develops slowly
+with read errors growing from the outer media region towards the inside.
+Just make two (or more) copies of every important CD/DVD you burn so
+that you can later recover them with ddrescue.
 
    Ddrescue does not truncate the output file if not asked to. So, every
 time you run it on the same output file, it tries to fill in the gaps.
@@ -163,7 +169,8 @@ The format for running ddrescue is:
 `--block-size=BYTES'
 `-b BYTES'
      Hardware block size of input device in bytes (usually 512 for hard
-     discs, 1024 for floppies, and 2048 for cdroms). Defaults to 512.
+     discs and 3.5" floppies, 1024 for 5.25" floppies, and 2048 for
+     cdroms).  Defaults to 512.
 
 `--binary-prefixes'
 `-B'
@@ -174,8 +181,9 @@ The format for running ddrescue is:
 `--cluster-size=BLOCKS'
 `-c BLOCKS'
      Number of hardware blocks (sectors) to copy at a time. Defaults to
-     64KiB / hardware_block_size. Try smaller values for slow drives (18
-     is a good value for floppies).
+     64KiB / hardware_block_size. Try smaller values for slow drives.
+     The number of sectors per track (18 or 9) is a good value for
+     floppies.
 
 `--complete-only'
 `-C'
@@ -220,6 +228,12 @@ The format for running ddrescue is:
      Starting position in input file, in bytes. Defaults to 0. In fill
      mode it refers to the original input file. See the chapter Fill
      Mode (*note Fill Mode::) for details.
+
+`--domain-logfile=FILE'
+`-m FILE'
+     Restrict the rescue domain to the areas marked as finished in the
+     logfile FILE. This is useful if the destination drive fails during
+     the rescue.
 
 `--no-split'
 `-n'
@@ -339,7 +353,7 @@ Character   Meaning
 
 And here is an example logfile:
 
-# Rescue Logfile. Created by GNU ddrescue version 1.8
+# Rescue Logfile. Created by GNU ddrescue version 1.9
 # current_pos  current_status
 0x00120000     ?
 #      pos         size   status
@@ -412,6 +426,7 @@ Note: you do not need to partition /dev/hdb beforehand.
      e2fsck -v -f /dev/hdb1
      e2fsck -v -f /dev/hdb2
 
+
 Example 2: Rescue an ext2 partition in /dev/hda2 to /dev/hdb2
 Note: you need to create the hdb2 partition with fdisk first. hdb2
 should be of appropiate type and size.
@@ -422,11 +437,21 @@ should be of appropiate type and size.
      mount -t ext2 -o ro /dev/hdb2 /mnt
      read files from /mnt
 
+
 Example 3: Rescue a CD-ROM in /dev/cdrom
 
      ddrescue -n -b2048 /dev/cdrom cdimage logfile
      ddrescue -d -b2048 /dev/cdrom cdimage logfile
      write cdimage to a blank CD-ROM
+
+
+Example 4: While rescuing a whole disc in /dev/hda to /dev/hdb, /dev/hdb
+fails and you have to rescue data to a third disc, /dev/hdc
+
+     ddrescue -n /dev/hda /dev/hdb logfile1     <-- /dev/hdb fails here
+     ddrescue -m logfile1 /dev/hdb /dev/hdc logfile2
+     ddrescue -n /dev/hda /dev/hdc logfile2
+     ddrescue -dr3 /dev/hda /dev/hdc logfile2
 
 
 File: ddrescue.info,  Node: Direct Disc Access,  Next: Fill Mode,  Prev: Examples,  Up: Top
@@ -454,10 +479,10 @@ of a raw device, so a explicit `--max-size' or `--complete-only' option
 is needed.
 
    Using direct disc access, or reading from a raw device, may be slower
-than normal cached reading, at least for hard discs. In this case you
-may want to make a first pass using normal cached reads, and use direct
-disc access, or a raw device, only to recover the good sectors inside
-the error areas.
+than normal cached reading for hard discs (but faster for floppies). In
+this case you may want to make a first pass using normal cached reads,
+and use direct disc access, or a raw device, only to recover the good
+sectors inside the error areas.
 
 
 Example 1: using direct disc access
@@ -466,6 +491,7 @@ Example 1: using direct disc access
      ddrescue -d -r3 /dev/hdb1 /dev/hdc1 logfile
      e2fsck -v -f /dev/hdc1
      mount -t ext2 -o ro /dev/hdc1 /mnt
+
 
 Example 2: using a raw device
 
@@ -603,7 +629,12 @@ File: ddrescue.info,  Node: Problems,  Next: Concept Index,  Prev: Generate Mode
 9 Reporting Bugs
 ****************
 
-If you find a bug in GNU ddrescue, please send electronic mail to
+There are probably bugs in ddrescue. There are certainly errors and
+omissions in this manual. If you report them, they will get fixed. If
+you don't, no one will ever know about them and they will remain unfixed
+for all eternity, if not longer.
+
+   If you find a bug in GNU ddrescue, please send electronic mail to
 <bug-ddrescue@gnu.org>. Include the version number, which you can find
 by running `ddrescue --version'.
 
@@ -636,14 +667,14 @@ Concept Index
 Tag Table:
 Node: Top203
 Node: Introduction1010
-Node: Algorithm2715
-Node: Invoking ddrescue5308
-Node: Logfile Structure10578
-Node: Examples12650
-Node: Direct Disc Access15335
-Node: Fill Mode17198
-Node: Generate Mode20792
-Node: Problems22334
-Node: Concept Index22634
+Node: Algorithm3046
+Node: Invoking ddrescue5639
+Node: Logfile Structure11177
+Node: Examples13249
+Node: Direct Disc Access16287
+Node: Fill Mode18167
+Node: Generate Mode21761
+Node: Problems23303
+Node: Concept Index23851
 
 End Tag Table

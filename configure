@@ -5,13 +5,13 @@
 # This configure script is free software: you have unlimited permission
 # to copy, distribute and modify it.
 #
-# Date of this version: 2008-02-24
+# Date of this version: 2008-11-17
 
 invocation_name=$0
-args=$*
+args=
 no_create=
 progname=ddrescue
-progversion=1.8
+progversion=1.9
 srctrigger=ddrescue.h
 
 # clear some things potentially inherited from environment.
@@ -36,6 +36,9 @@ while [ x"$1" != x ] ; do
 	# Get the first arg, and shuffle
 	option=$1
 	shift
+
+	# Add the argument quoted to args
+	args="${args} \"${option}\""
 
 	# Split out the argument for options that take them
 	case ${option} in
