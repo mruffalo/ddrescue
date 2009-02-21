@@ -17,11 +17,11 @@ all : $(progname)
 $(progname) : $(objs)
 	$(CXX) $(LDFLAGS) -o $(progname) $(objs)
 
-p$(progname) : $(objs)
-	$(CXX) $(LDFLAGS) -pg -o p$(progname) $(objs)
+profiled_$(progname) : $(objs)
+	$(CXX) $(LDFLAGS) -pg -o profiled_$(progname) $(objs)
 
-s$(progname) : $(objs)
-	$(CXX) $(LDFLAGS) -static -o s$(progname) $(objs)
+static_$(progname) : $(objs)
+	$(CXX) $(LDFLAGS) -static -o static_$(progname) $(objs)
 
 main.o : main.cc
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -DPROGVERSION=\"$(progversion)\" -c -o $@ $<
@@ -39,7 +39,7 @@ doc : info $(VPATH)/doc/$(progname).1
 info : $(VPATH)/doc/$(progname).info
 
 $(VPATH)/doc/$(progname).info : $(VPATH)/doc/$(progname).texinfo
-	cd $(VPATH)/doc ; makeinfo $(progname).texinfo
+	cd $(VPATH)/doc && makeinfo $(progname).texinfo
 
 $(VPATH)/doc/$(progname).1 : $(progname)
 	help2man -o $(VPATH)/doc/$(progname).1 ./$(progname)
@@ -47,22 +47,8 @@ $(VPATH)/doc/$(progname).1 : $(progname)
 Makefile : $(VPATH)/configure $(VPATH)/Makefile.in
 	./config.status
 
-check : $(progname)
-	@-rm -f COPYING.*
-	./$(progname) -q -t -i15000 $(VPATH)/COPYING COPYING.1 COPYING.log
-	./$(progname) -q -D -s15000 $(VPATH)/COPYING COPYING.1 COPYING.log
-	./$(progname) -q -F+ -o15000 $(VPATH)/COPYING COPYING.2 COPYING.log
-	./$(progname) -q -S -i15000 -o0 COPYING.2 COPYING.3
-	./$(progname) -q -t -m $(VPATH)/testsuite/logfile1 $(VPATH)/COPYING COPYING.2
-	./$(progname) -q -m $(VPATH)/testsuite/logfile2 $(VPATH)/COPYING COPYING.2
-	diff -q $(VPATH)/COPYING COPYING.1
-	diff -q $(VPATH)/COPYING COPYING.2
-	diff -q $(VPATH)/COPYING COPYING.3
-	@echo
-	@echo "If none of the above diff commands found differences,"
-	@echo "$(progname) is correctly built and you may now install it."
-	@echo
-	@-rm -f COPYING.*
+check : all $(VPATH)/testsuite/check.sh
+	@$(VPATH)/testsuite/check.sh $(VPATH)/testsuite
 
 install : all install-info
 	if test ! -d $(DESTDIR)$(bindir) ; then $(INSTALL) -d $(DESTDIR)$(bindir) ; fi
@@ -71,7 +57,7 @@ install : all install-info
 install-info :
 	if test ! -d $(DESTDIR)$(infodir) ; then $(INSTALL) -d $(DESTDIR)$(infodir) ; fi
 	$(INSTALL_DATA) $(VPATH)/doc/$(progname).info $(DESTDIR)$(infodir)/$(progname).info
-	-install-info $(DESTDIR)$(infodir)/$(progname).info $(DESTDIR)$(infodir)/dir
+	-install-info --info-dir=$(DESTDIR)$(infodir) $(DESTDIR)$(infodir)/$(progname).info
 
 install-man :
 	if test ! -d $(DESTDIR)$(mandir)/man1 ; then $(INSTALL) -d $(DESTDIR)$(mandir)/man1 ; fi
@@ -100,20 +86,20 @@ dist :
 	  $(DISTNAME)/Makefile.in \
 	  $(DISTNAME)/NEWS \
 	  $(DISTNAME)/README \
-	  $(DISTNAME)/TODO \
 	  $(DISTNAME)/configure \
 	  $(DISTNAME)/doc/$(progname).1 \
 	  $(DISTNAME)/doc/$(progname).info \
 	  $(DISTNAME)/doc/$(progname).texinfo \
+	  $(DISTNAME)/testsuite/check.sh \
 	  $(DISTNAME)/testsuite/logfile1 \
 	  $(DISTNAME)/testsuite/logfile2 \
-	  $(DISTNAME)/*.cc \
-	  $(DISTNAME)/*.h
+	  $(DISTNAME)/*.h \
+	  $(DISTNAME)/*.cc
 	rm -f $(DISTNAME)
-	bzip2 -v $(DISTNAME).tar
+	lzip -v -9 $(DISTNAME).tar
 
 clean :
-	-rm -f $(progname) p$(progname) s$(progname) $(objs)
+	-rm -f $(progname) profiled_$(progname) static_$(progname) $(objs)
 
 distclean : clean
-	-rm -f Makefile config.status *.tar *.bz2
+	-rm -f Makefile config.status *.tar *.tar.lz

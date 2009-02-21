@@ -1,5 +1,5 @@
 /*  GNU ddrescue - Data recovery tool
-    Copyright (C) 2004, 2005, 2006, 2007, 2008 Antonio Diaz Diaz.
+    Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009 Antonio Diaz Diaz.
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -17,6 +17,7 @@
 
 #define _FILE_OFFSET_BITS 64
 
+#include <climits>
 #include <cstdio>
 #include <string>
 #include <vector>
@@ -25,7 +26,7 @@
 #include "ddrescue.h"
 
 
-int Fillbook::fill_areas( const std::string & filltypes ) throw()
+int Fillbook::fill_areas( const std::string & filltypes )
   {
   bool first_post = true;
 
@@ -55,7 +56,7 @@ int Fillbook::fill_areas( const std::string & filltypes ) throw()
   }
 
 
-int Fillbook::do_fill( const int odes, const std::string & filltypes ) throw()
+int Fillbook::do_fill( const int odes, const std::string & filltypes )
   {
   filled_size = 0, remaining_size = 0;
   filled_areas = 0, remaining_areas = 0;
@@ -63,7 +64,6 @@ int Fillbook::do_fill( const int odes, const std::string & filltypes ) throw()
   if( current_status() != filling || !domain().includes( current_pos() ) )
     current_pos( 0 );
 
-  split_domain_border_sblocks();
   for( int i = 0; i < sblocks(); ++i )
     {
     const Sblock & sb = sblock( i );

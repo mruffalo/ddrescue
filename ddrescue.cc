@@ -1,5 +1,5 @@
 /*  GNU ddrescue - Data recovery tool
-    Copyright (C) 2004, 2005, 2006, 2007, 2008 Antonio Diaz Diaz.
+    Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009 Antonio Diaz Diaz.
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -19,6 +19,7 @@
 
 #include <algorithm>
 #include <cerrno>
+#include <climits>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -88,7 +89,7 @@ bool block_is_zero( const char * buf, const int size ) throw()
 
 // Return values: 1 write error, 0 OK, -1 interrupted.
 //
-int Fillbook::fill_block( const Block & b ) throw()
+int Fillbook::fill_block( const Block & b )
   {
   current_pos( b.pos() );
   if( interrupted ) return -1;
@@ -174,7 +175,7 @@ bool Rescuebook::sync_sparse_file() throw()
 // If !OK, copied_size and error_size are set to 0.
 // If OK && copied_size + error_size < b.size(), it means EOF has been reached.
 //
-int Rescuebook::check_block( const Block & b, int & copied_size, int & error_size ) throw()
+int Rescuebook::check_block( const Block & b, int & copied_size, int & error_size )
   {
   current_pos( b.pos() );
   copied_size = 0; error_size = 0;
@@ -201,7 +202,7 @@ int Rescuebook::check_block( const Block & b, int & copied_size, int & error_siz
 // If !OK, copied_size and error_size are set to 0.
 // If OK && copied_size + error_size < b.size(), it means EOF has been reached.
 //
-int Rescuebook::copy_block( const Block & b, int & copied_size, int & error_size ) throw()
+int Rescuebook::copy_block( const Block & b, int & copied_size, int & error_size )
   {
   current_pos( b.pos() );
   copied_size = 0; error_size = 0;
@@ -253,6 +254,7 @@ void Rescuebook::show_status( const long long ipos, const char * msg,
       c_rate = ( recsize - last_size ) / ( t2 - t1 );
       t1 = t2; last_size = recsize;
       }
+    count_errors();
     std::printf( "\r%s%s%s", up, up, up );
     std::printf( "rescued: %10sB,", format_num( recsize ) );
     std::printf( "  errsize:%9sB,", format_num( errsize, 99999 ) );
@@ -271,7 +273,7 @@ void Rescuebook::show_status( const long long ipos, const char * msg,
   }
 
 
-const char * format_num( long long num, long long max,
+const char * format_num( long long num, long long limit,
                          const int set_prefix ) throw()
   {
   const char * const si_prefix[8] =
@@ -285,9 +287,10 @@ const char * format_num( long long num, long long max,
   const int factor = ( si ) ? 1000 : 1024;
   const char * const *prefix = ( si ) ? si_prefix : binary_prefix;
   const char *p = "";
-  max = std::max( 999LL, std::min( 999999LL, max ) );
+  limit = std::max( 999LL, std::min( 999999LL, limit ) );
 
-  for( int i = 0; i < 8 && llabs( num ) > llabs( max ); ++i )
+  for( int i = 0; i < 8 && ( llabs( num ) > limit ||
+       ( llabs( num ) >= factor && num % factor == 0 ) ); ++i )
     { num /= factor; p = prefix[i]; }
   snprintf( buf, sizeof buf, "%lld %s", num, p );
   return buf;

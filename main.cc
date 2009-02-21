@@ -1,5 +1,5 @@
 /*  GNU ddrescue - Data recovery tool
-    Copyright (C) 2004, 2005, 2006, 2007, 2008 Antonio Diaz Diaz.
+    Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009 Antonio Diaz Diaz.
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -44,7 +44,7 @@ namespace {
 const char * invocation_name = 0;
 const char * const Program_name    = "GNU ddrescue";
 const char * const program_name    = "ddrescue";
-const char * const program_year    = "2008";
+const char * const program_year    = "2009";
 
 
 void show_help( const int cluster, const int hardbs ) throw()
@@ -72,13 +72,16 @@ void show_help( const int cluster, const int hardbs ) throw()
   std::printf( "  -q, --quiet                  suppress all messages\n" );
   std::printf( "  -r, --max-retries=<n>        exit after given retries (-1=infinity) [0]\n" );
   std::printf( "  -R, --retrim                 mark all error areas as non-trimmed\n" );
-  std::printf( "  -s, --max-size=<bytes>       maximum size of data to be copied\n" );
+  std::printf( "  -s, --max-size=<bytes>       maximum size of input data to be copied\n" );
   std::printf( "  -S, --sparse                 use sparse writes for output file\n" );
-  std::printf( "  -t, --truncate               truncate output file\n" );
+  std::printf( "  -t, --truncate               truncate output file to zero size\n" );
+  std::printf( "  -T, --try-again              mark non-split, non-trimmed areas as non-tried\n" );
   std::printf( "  -v, --verbose                verbose operation\n" );
   std::printf( "Numbers may be followed by a multiplier: b = blocks, k = kB = 10^3 = 1000,\n" );
   std::printf( "Ki = KiB = 2^10 = 1024, M = 10^6, Mi = 2^20, G = 10^9, Gi = 2^30, etc...\n" );
   std::printf( "\nReport bugs to bug-ddrescue@gnu.org\n");
+  std::printf( "Ddrescue home page: http://www.gnu.org/software/ddrescue/ddrescue.html\n" );
+  std::printf( "General help using GNU software: http://www.gnu.org/gethelp\n" );
   }
 
 
@@ -152,11 +155,11 @@ long long getnum( const char * ptr, const int bs,
 
 void check_fill_types( const std::string filltypes ) throw()
   {
-  bool good = true;
+  bool error = false;
   for( unsigned int i = 0; i < filltypes.size(); ++i )
     if( !Sblock::isstatus( filltypes[i] ) )
-      { good = false; break; }
-  if( !filltypes.size() || !good )
+      { error = true; break; }
+  if( !filltypes.size() || error )
     {
     show_error( "invalid type for `fill' option" );
     std::exit( 1 );
@@ -176,7 +179,7 @@ bool check_identical( const char * name1, const char * name2 ) throw()
 int do_fill( long long ipos, const long long opos, Domain & domain,
              const char *iname, const char *oname, const char *logname,
              const int cluster, const int hardbs,
-             const std::string & filltypes, const bool synchronous ) throw()
+             const std::string & filltypes, const bool synchronous )
   {
   if( !logname )
     {
@@ -222,13 +225,14 @@ int do_fill( long long ipos, const long long opos, Domain & domain,
 
 int do_generate( const long long ipos, const long long opos, Domain & domain,
                  const char *iname, const char *oname, const char *logname,
-                 const int cluster, const int hardbs ) throw()
+                 const int cluster, const int hardbs )
   {
   if( !logname )
     {
     show_error( "logfile must be specified in generate-logfile mode", 0, true );
     return 1;
     }
+
   const int ides = open( iname, O_RDONLY );
   if( ides < 0 )
     { show_error( "cannot open input file", errno ); return 1; }
@@ -273,8 +277,9 @@ int do_rescue( const long long ipos, const long long opos, Domain & domain,
                const int cluster, const int hardbs,
                const int max_errors, const int max_retries,
                const int o_direct, const int o_trunc,
-               const bool complete_only, const bool nosplit, const bool retrim,
-               const bool sparse, const bool synchronous ) throw()
+               const bool complete_only, const bool nosplit,
+               const bool retrim, const bool sparse,
+               const bool synchronous, const bool try_again )
   {
   const int ides = open( iname, O_RDONLY | o_direct );
   if( ides < 0 )
@@ -285,7 +290,7 @@ int do_rescue( const long long ipos, const long long opos, Domain & domain,
 
   Rescuebook rescuebook( ipos, opos, domain, isize, logname, cluster, hardbs,
                          max_errors, max_retries, complete_only,
-                         nosplit, retrim, sparse, synchronous );
+                         nosplit, retrim, sparse, synchronous, try_again );
   if( rescuebook.domain().size() == 0 )
     { show_error( "Nothing to do" ); return 0; }
   if( o_trunc && !rescuebook.blank() )
@@ -304,9 +309,7 @@ int do_rescue( const long long ipos, const long long opos, Domain & domain,
   if( verbosity > 0 )
     {
     std::printf( "About to copy %sBytes from %s to %s\n",
-                 ( rescuebook.domain().size() >= 0 ) ?
-                   format_num( rescuebook.domain().size() ) : "an undefined number of ",
-                 iname, oname );
+                 format_num( rescuebook.domain().size() ), iname, oname );
     std::printf( "    Starting positions: infile = %sB",
                  format_num( rescuebook.domain().pos() ) );
     std::printf( ",  outfile = %sB\n",
@@ -351,7 +354,7 @@ void show_error( const char * msg, const int errcode, const bool help ) throw()
   }
 
 
-void internal_error( const char * msg ) throw()
+void internal_error( const char * msg )
   {
   std::string s( "internal error: " ); s += msg;
   show_error( s.c_str() );
@@ -366,7 +369,7 @@ void write_logfile_header( FILE * f ) throw()
   }
 
 
-int main( const int argc, const char * argv[] ) throw()
+int main( const int argc, const char * argv[] )
   {
   long long ipos = 0, opos = -1, max_size = -1;
   const char * domain_logfile_name = 0;
@@ -376,6 +379,7 @@ int main( const int argc, const char * argv[] ) throw()
   int o_direct = 0, o_trunc = 0;
   bool complete_only = false, generate = false, nosplit = false;
   bool retrim = false, sparse = false, synchronous = false;
+  bool try_again = false;
   std::string filltypes;
   invocation_name = argv[0];
 
@@ -401,6 +405,7 @@ int main( const int argc, const char * argv[] ) throw()
     { 's', "max-size",         Arg_parser::yes },
     { 'S', "sparse",           Arg_parser::no  },
     { 't', "truncate",         Arg_parser::no  },
+    { 'T', "try-again",        Arg_parser::no  },
     { 'v', "verbose",          Arg_parser::no  },
     { 'V', "version",          Arg_parser::no  },
     {  0 , 0,                  Arg_parser::no  } };
@@ -443,6 +448,7 @@ int main( const int argc, const char * argv[] ) throw()
       case 's': max_size = getnum( arg, hardbs, -1 ); break;
       case 'S': sparse = true; break;
       case 't': o_trunc = O_TRUNC; break;
+      case 'T': try_again = true; break;
       case 'v': verbosity = 1; break;
       case 'V': show_version(); return 0;
       default : internal_error( "uncaught option" );
@@ -477,8 +483,9 @@ int main( const int argc, const char * argv[] ) throw()
   if( filltypes.size() )
     {
     if( max_errors >= 0 || max_retries || o_direct || o_trunc ||
-        complete_only || generate || nosplit || retrim || sparse || synchronous )
-      show_error( "warning: options -C -d -D -e -g -n -r -R -S and -t are ignored in fill mode" );
+        complete_only || generate || nosplit || retrim || sparse ||
+        synchronous || try_again )
+      show_error( "warning: options -C -d -D -e -g -n -r -R -S -t and -T are ignored in fill mode" );
 
     return do_fill( ipos, opos, domain, iname, oname, logname, cluster,
                     hardbs, filltypes, synchronous );
@@ -486,12 +493,14 @@ int main( const int argc, const char * argv[] ) throw()
   if( generate )
     {
     if( max_errors >= 0 || max_retries || o_direct || o_trunc ||
-        complete_only || nosplit || retrim || sparse || synchronous )
-      show_error( "warning: options -C -d -D -e -n -r -R -S and -t are ignored in generate-logfile mode" );
+        complete_only || nosplit || retrim || sparse || synchronous ||
+        try_again )
+      show_error( "warning: options -C -d -D -e -n -r -R -S -t and -T are ignored in generate-logfile mode" );
 
     return do_generate( ipos, opos, domain, iname, oname, logname, cluster, hardbs );
     }
   return do_rescue( ipos, opos, domain, iname, oname, logname, cluster,
                     hardbs, max_errors, max_retries, o_direct, o_trunc,
-                    complete_only, nosplit, retrim, sparse, synchronous );
+                    complete_only, nosplit, retrim, sparse, synchronous,
+                    try_again );
   }

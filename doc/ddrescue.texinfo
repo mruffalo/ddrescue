@@ -5,12 +5,12 @@
 @finalout
 @c %**end of header
 
-@set UPDATED 17 November 2008
-@set VERSION 1.9
+@set UPDATED 19 February 2009
+@set VERSION 1.10
 
 @dircategory GNU Packages
 @direntry
-* ddrescue: (ddrescue).         Data recovery tool.
+* ddrescue: (ddrescue).         Data recovery tool
 @end direntry
 
 
@@ -45,7 +45,8 @@ This manual is for GNU ddrescue (version @value{VERSION}, @value{UPDATED}).
 @end menu
 
 @sp 1
-Copyright @copyright{} 2004, 2005, 2006, 2007, 2008 Antonio Diaz Diaz.
+Copyright @copyright{} 2004, 2005, 2006, 2007, 2008, 2009
+Antonio Diaz Diaz.
 
 This manual is free documentation: you have unlimited permission
 to copy, distribute and modify it.
@@ -115,7 +116,8 @@ getting out of them as fast as possible. This behavior reduces the
 chances of rescuing the remaining good data.
 
 The algorithm of ddrescue is as follows: (the user may interrupt the
-process at any point)
+process at any point, but be aware that a bad drive can block ddrescue
+for a long time until the kernel gives up)
 
 1) Optionally read a logfile describing the status of a multi-part or
 previously interrupted rescue. If no logfile is specified or is empty or
@@ -133,8 +135,8 @@ into smaller pieces and reading the non-damaged pieces, until the
 hardware block size is reached. Mark the pieces that can't be read as
 bad hardware blocks.
 
-5) Try to read the damaged hardware blocks until the specified number
-of retries is reached.
+5) Try to read the bad hardware blocks until the specified number of
+retries is reached.
 
 6) Optionally write a logfile for later use.
 
@@ -290,10 +292,12 @@ possible to rescue some of them.
 
 @item --max-size=@var{bytes}
 @itemx -s @var{bytes}
-Maximum size of data to be copied, in bytes. Note that this parameter
-specifies the amount of data to be copied, not the size of the output
-file. So, for example, the following command creates an output file 300
-bytes long, but only writes data on the last 200 bytes:
+Maximum size of the input data to be copied, in bytes. If ddrescue can't
+determine the size of the input device, you may need to specify it with
+this option. Note that this option specifies the size of the input data
+to be copied, not the size of the output file. So, for example, the
+following command creates an output file 300 bytes long, but only writes
+data on the last 200 bytes:
 @example
 ddrescue -i 100 -s 200 infile outfile logfile
 @end example
@@ -305,7 +309,16 @@ cases. Not all systems support this.
 
 @item --truncate
 @itemx -t
-Truncate output file.
+Truncate output file to zero size before writing to it. Only works for
+regular files, not for drives or partitions.
+
+@item --try-again
+@itemx -T
+Mark all non-split and non-trimmed areas inside the rescue domain as
+non-tried before beginning the rescue. Try this if the drive stops
+responding and ddrescue immediately starts splitting error areas when
+restarted. If @samp{--retrim} is also specified, mark all error areas
+inside the rescue domain as non-tried.
 
 @item --verbose
 @itemx -v
@@ -331,13 +344,6 @@ Table of SI and binary prefixes (unit multipliers):
 @item Z @tab zettabyte (10^21)        @tab | @tab Zi @tab zebibyte (2^70)
 @item Y @tab yottabyte (10^24)        @tab | @tab Yi @tab yobibyte (2^80)
 @end multitable
-
-@sp 1
-NOTE: Don't believe everything Usamericans tell you. 10^9 is a thousand
-millions, a billion is a million millions (million^2), a trillion is a
-million million millions (million^3), and so on. Please, don't "embrace
-and extend" the meaning of prefixes, making communication among all
-people difficult. Thanks.
 
 
 @node Logfile Structure
@@ -398,9 +404,7 @@ And here is an example logfile:
 @end multitable
 
 Any line beginning with @samp{#} is a comment line. The blocks must be
-contiguous and non-overlapping. The size field of the last line is
-special. If it is -1 means that the size of the file is undefined and
-end of file has not been reached yet.
+contiguous and non-overlapping.
 
 If you edit the file, you may use decimal, hexadecimal or octal values,
 using the same syntax that integer constants in C++.
@@ -437,9 +441,10 @@ with e2fsck or some other tool appropiate for the type of partition you
 are trying to rescue, then mount the repaired copy somewhere and try to
 recover the files in it.
 
-If the drive is so damaged that the rescued partition can't be repaired
-or mounted, you will have to browse the rescued data with an hex editor
-and extract the desired parts by hand.
+If the drive is so damaged that the file system in the rescued partition
+can't be repaired or mounted, you will have to browse the rescued data
+with an hex editor and extract the desired parts by hand or use a file
+recovery tool like photorec.
 
 If the partition table is damaged, you may try to rescue the whole disc,
 then try to repair the partition table and the partitions on the copy.
@@ -487,14 +492,26 @@ write cdimage to a blank CD-ROM
 
 @sp 1
 @noindent
-Example 4: While rescuing a whole disc in /dev/hda to /dev/hdb, /dev/hdb
-fails and you have to rescue data to a third disc, /dev/hdc
+Example 4: While rescuing the whole drive /dev/hda to /dev/hdb, /dev/hdb
+fails and you have to rescue data to a third drive, /dev/hdc
 
 @example
 ddrescue -n /dev/hda /dev/hdb logfile1     <-- /dev/hdb fails here
 ddrescue -m logfile1 /dev/hdb /dev/hdc logfile2
 ddrescue -n /dev/hda /dev/hdc logfile2
 ddrescue -dr3 /dev/hda /dev/hdc logfile2
+@end example
+
+@sp 1
+@noindent
+Example 5: While rescuing the whole drive /dev/hda to /dev/hdb, /dev/hda
+stops responding and disappears from /dev
+
+@example
+ddrescue -n /dev/hda /dev/hdb logfile      <-- /dev/hda fails here
+  (restart /dev/hda or reboot computer as many times as needed)
+ddrescue -nT /dev/hda /dev/hdb logfile
+ddrescue -dr3 /dev/hda /dev/hdb logfile
 @end example
 
 

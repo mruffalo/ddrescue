@@ -1,5 +1,5 @@
 /*  GNU ddrescue - Data recovery tool
-    Copyright (C) 2004, 2005, 2006, 2007, 2008 Antonio Diaz Diaz.
+    Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009 Antonio Diaz Diaz.
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -27,7 +27,7 @@
 #include "ddrescue.h"
 
 
-int Rescuebook::check_all() throw()
+int Rescuebook::check_all()
   {
   long long pos = ( (offset() >= 0) ? 0 : -offset() );
   if( current_status() == generating && domain().includes( current_pos() ) &&
@@ -39,7 +39,7 @@ int Rescuebook::check_all() throw()
     {
     Block b( pos, softbs() );
     find_chunk( b, Sblock::non_tried );
-    if( b.size() == 0 ) break;
+    if( b.size() <= 0 ) break;
     pos = b.end();
     current_status( generating );
     if( verbosity >= 0 )
@@ -80,7 +80,7 @@ void Rescuebook::count_errors() throw()
 
 int Rescuebook::copy_and_update( const Block & b, const Sblock::Status st,
                                  int & copied_size, int & error_size,
-                                 const char * msg, bool & first_post ) throw()
+                                 const char * msg, bool & first_post )
   {
   if( verbosity >= 0 )
     { show_status( b.pos(), msg, first_post ); first_post = false; }
@@ -95,8 +95,18 @@ int Rescuebook::copy_and_update( const Block & b, const Sblock::Status st,
       recsize += copied_size;
       }
     if( error_size > 0 )
-      change_chunk_status( Block( b.pos() + copied_size, error_size ), st );
-    count_errors();
+      {
+      if( error_size >= hardbs() && st != Sblock::bad_block )
+        {
+        const Block b1( b.pos() + copied_size, hardbs() );
+        const Block b2( b1.end(), error_size - b1.size() );
+        change_chunk_status( b1, Sblock::bad_block );
+        change_chunk_status( b2, st );
+        }
+      else
+        change_chunk_status( Block( b.pos() + copied_size, error_size ), st );
+      if( _max_errors >= 0 ) count_errors();
+      }
     }
   return retval;
   }
@@ -104,7 +114,7 @@ int Rescuebook::copy_and_update( const Block & b, const Sblock::Status st,
 
 // Read the non-damaged part of the domain, skipping over the damaged areas.
 //
-int Rescuebook::copy_non_tried() throw()
+int Rescuebook::copy_non_tried()
   {
   long long pos = 0;
   long long skip_size = hardbs();	// size to skip on error
@@ -114,9 +124,9 @@ int Rescuebook::copy_non_tried() throw()
     {
     Block b( pos, skip_size ? hardbs() : softbs() );
     find_chunk( b, Sblock::non_tried );
-    if( b.size() == 0 ) break;
     if( pos != b.pos() ) skip_size = 0;	// reset size on block change
     pos = b.end();
+    if( pos < 0 || b.size() <= 0 ) break;
     current_status( copying );
     int copied_size, error_size;
     const int retval = copy_and_update( b, skip_size ? Sblock::bad_block : Sblock::non_trimmed,
@@ -124,15 +134,14 @@ int Rescuebook::copy_non_tried() throw()
                                         "Copying data...", first_post );
     if( error_size > 0 )
       {
-      if( skip_size >= softbs() )
-        {
-        b.pos( pos ); b.size( skip_size );
-        find_chunk( b, Sblock::non_tried );
-        if( pos == b.pos() && b.size() > 0 )
-          { change_chunk_status( b, Sblock::non_trimmed );
-            pos = b.end(); errsize += b.size(); }
-        }
-      errsize += error_size; skip_size += softbs();
+      errsize += error_size;
+      if( skip_size < skipbs() ) skip_size = skipbs();
+      else if( skip_size < LLONG_MAX / 4 ) skip_size *= 2;
+      b.pos( pos ); b.size( skip_size ); b.fix_size();
+      find_chunk( b, Sblock::non_tried );
+      if( pos == b.pos() && b.size() > 0 )
+        { change_chunk_status( b, Sblock::non_trimmed );
+          pos = b.end(); errsize += b.size(); }
       }
     else if( skip_size > 0 && copied_size > 0 )
       { skip_size -= copied_size; if( skip_size < 0 ) skip_size = 0; }
@@ -145,7 +154,7 @@ int Rescuebook::copy_non_tried() throw()
 
 // Trim the damaged areas backwards.
 //
-int Rescuebook::trim_errors() throw()
+int Rescuebook::trim_errors()
   {
   long long pos = LLONG_MAX - hardbs();
   bool first_post = true;
@@ -154,7 +163,7 @@ int Rescuebook::trim_errors() throw()
     {
     Block b( pos, hardbs() );
     rfind_chunk( b, Sblock::non_trimmed );
-    if( b.size() == 0 ) break;
+    if( b.size() <= 0 ) break;
     pos = b.pos() - hardbs();
     current_status( trimming );
     int copied_size, error_size;
@@ -178,7 +187,7 @@ int Rescuebook::trim_errors() throw()
 
 // Try to read the damaged areas, splitting them into smaller pieces.
 //
-int Rescuebook::split_errors() throw()
+int Rescuebook::split_errors()
   {
   bool first_post = true;
   bool resume = ( current_status() == splitting &&
@@ -194,7 +203,7 @@ int Rescuebook::split_errors() throw()
       {
       Block b( pos, hardbs() );
       find_chunk( b, Sblock::non_split );
-      if( b.size() == 0 ) break;
+      if( b.size() <= 0 ) break;
       pos = b.end();
       block_found = true;
       current_status( splitting );
@@ -209,8 +218,12 @@ int Rescuebook::split_errors() throw()
         error_counter = 0;
         const int index = find_index( pos );
         if( index >= 0 && sblock( index ).status() == Sblock::non_split )
-          { pos += softbs();
-            if( !sblock( index ).includes( pos ) ) pos = sblock( index ).end(); }
+          {
+          const Sblock & sb = sblock( index );
+          if( sb.size() >= skipbs() && sb.size() >= 5 * hardbs() )
+            pos += ( sb.size() / ( 2 * hardbs() ) ) * hardbs();
+          else pos = sb.end();
+          }
         }
       if( retval || too_many_errors() ) return retval;
       if( !update_logfile( _odes ) ) return 1;
@@ -221,7 +234,7 @@ int Rescuebook::split_errors() throw()
   }
 
 
-int Rescuebook::copy_errors() throw()
+int Rescuebook::copy_errors()
   {
   char msgbuf[80] = "Copying bad blocks... Retry ";
   const int msglen = std::strlen( msgbuf );
@@ -239,7 +252,7 @@ int Rescuebook::copy_errors() throw()
       {
       Block b( pos, hardbs() );
       find_chunk( b, Sblock::bad_block );
-      if( b.size() == 0 ) break;
+      if( b.size() <= 0 ) break;
       pos = b.end();
       block_found = true;
       current_status( retrying );
@@ -260,29 +273,42 @@ Rescuebook::Rescuebook( const long long ipos, const long long opos,
                         Domain & dom, const long long isize,
                         const char * name, const int cluster, const int hardbs,
                         const int max_errors, const int max_retries,
-                        const bool complete_only, const bool nosplit, const bool retrim,
-                        const bool sparse, const bool synchronous ) throw()
+                        const bool complete_only, const bool nosplit,
+                        const bool retrim, const bool sparse,
+                        const bool synchronous, const bool try_again )
   : Logbook( ipos, opos, dom, isize, name, cluster, hardbs, complete_only ),
     sparse_size( 0 ), _max_errors( max_errors ), _max_retries( max_retries ),
+    _skipbs( std::max( 65536, hardbs ) ),
     _nosplit( nosplit ), _sparse( sparse ), _synchronous( synchronous )
   {
   if( retrim )
     for( int index = 0; index < sblocks(); ++index )
       {
       const Sblock & sb = sblock( index );
-      if( !domain().includes( sb ) ) { if( domain() < sb ) break; else continue; }
-      if( sb.status() == Sblock::non_split || sb.status() == Sblock::bad_block )
+      if( !domain().includes( sb ) )
+        { if( domain() < sb ) break; else continue; }
+      if( sb.status() == Sblock::non_split ||
+          sb.status() == Sblock::bad_block )
         change_sblock_status( index, Sblock::non_trimmed );
+      }
+  if( try_again )
+    for( int index = 0; index < sblocks(); ++index )
+      {
+      const Sblock & sb = sblock( index );
+      if( !domain().includes( sb ) )
+        { if( domain() < sb ) break; else continue; }
+      if( sb.status() == Sblock::non_split ||
+          sb.status() == Sblock::non_trimmed )
+        change_sblock_status( index, Sblock::non_tried );
       }
   }
 
 
-int Rescuebook::do_generate( const int odes ) throw()
+int Rescuebook::do_generate( const int odes )
   {
   recsize = 0; errsize = 0;
   _ides = -1; _odes = odes;
 
-  split_domain_border_sblocks();
   for( int i = 0; i < sblocks(); ++i )
     {
     const Sblock & sb = sblock( i );
@@ -326,13 +352,12 @@ int Rescuebook::do_generate( const int odes ) throw()
   }
 
 
-int Rescuebook::do_rescue( const int ides, const int odes ) throw()
+int Rescuebook::do_rescue( const int ides, const int odes )
   {
   bool copy_pending = false, trim_pending = false, split_pending = false;
   recsize = 0; errsize = 0;
   _ides = ides; _odes = odes;
 
-  split_domain_border_sblocks();
   for( int i = 0; i < sblocks(); ++i )
     {
     const Sblock & sb = sblock( i );

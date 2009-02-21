@@ -51,3 +51,13 @@ disc access or raw devices with ddrescue.
 Ddrescue is also able to selectively overwrite parts of the output file,
 which has a number of interesting uses like wiping data, marking bad
 areas or even, in some cases, "repair" damaged sectors.
+
+
+Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009 Antonio Diaz Diaz.
+
+This file is free documentation: you have unlimited permission to copy,
+distribute and modify it.
+
+The file Makefile.in is a data file used by configure to produce the
+Makefile. It has the same copyright owner and permissions that this
+file.

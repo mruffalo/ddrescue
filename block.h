@@ -1,5 +1,5 @@
 /*  GNU ddrescue - Data recovery tool
-    Copyright (C) 2004, 2005, 2006, 2007, 2008 Antonio Diaz Diaz.
+    Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009 Antonio Diaz Diaz.
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -15,38 +15,49 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#ifndef LLONG_MAX
+#define LLONG_MAX  0x7FFFFFFFFFFFFFFFLL
+#endif
+#ifndef LLONG_MIN
+#define LLONG_MIN  (-LLONG_MAX - 1LL)
+#endif
+#ifndef ULLONG_MAX
+#define ULLONG_MAX 0xFFFFFFFFFFFFFFFFULL
+#endif
+
+
 class Block
   {
-  long long _pos, _size;		// size == -1 means undefined size
-
-  static bool verify( const long long p, const long long s ) throw()
-    { return ( p >= 0 && s >= -1 && ( s < 0 || p + s >= 0 ) ); }
+  long long _pos, _size;		// pos + size <= LLONG_MAX
 
 public:
-  Block( const long long p, const long long s ) throw();
+  Block( const long long p, const long long s ) throw()
+    : _pos( p ), _size( s ) {}
 
   long long pos() const throw() { return _pos; }
   long long size() const throw() { return _size; }
-  long long end() const throw() { return (_size < 0) ? -1 : _pos + _size; }
+  long long end() const throw() { return _pos + _size; }
 
-  void pos( const long long p ) throw();
-  void size( const long long s ) throw();
-  void end( const long long e ) throw();
+  void pos( const long long p ) throw() { _pos = p; }
+  void size( const long long s ) throw() { _size = s; }
+  void fix_size() throw()	// limit _size to largest possible value
+    { if( _size < 0 || _size > LLONG_MAX - _pos ) _size = LLONG_MAX - _pos; }
+  void end( const long long e ) throw()
+    { _pos = e - _size; if( _pos < 0 ) { _size += _pos; _pos = 0; } }
   void align_pos( const int hardbs ) throw();
   void align_end( const int hardbs ) throw();
-  void inc_size( const long long delta ) throw();
+  void inc_size( const long long delta ) throw() { _size += delta; }
 
   bool follows( const Block & b ) const throw()
-    { return ( b._size >= 0 && b._pos + b._size == _pos ); }
+    { return ( _pos == b.end() ); }
   bool includes( const Block & b ) const throw()
-    { return ( _pos <= b._pos &&
-               ( _size < 0 || ( b._size >= 0 && _pos + _size >= b._pos + b._size ) ) ); }
+    { return ( _pos <= b._pos && end() >= b.end() ); }
   bool includes( const long long pos ) const throw()
-    { return ( _pos <= pos && ( _size < 0 || _pos + _size > pos ) ); }
+    { return ( _pos <= pos && end() > pos ); }
 
-  bool join( const Block & b ) throw();
   void crop( const Block & b ) throw();
-  Block split( long long pos, const int hardbs = 1 ) throw();
+  bool join( const Block & b );
+  Block split( long long pos, const int hardbs = 1 );
   };
 
 
@@ -60,15 +71,17 @@ private:
   Status _status;
 
 public:
-  Sblock( const Block & b, const Status st ) throw();
-  Sblock( const long long p, const long long s, const Status st ) throw();
+  Sblock( const Block & b, const Status st ) throw()
+    : Block( b ), _status( st ) {}
+  Sblock( const long long p, const long long s, const Status st ) throw()
+    : Block( p, s ), _status( st ) {}
 
   Status status() const throw() { return _status; }
-  void status( const Status st ) throw();
+  void status( const Status st ) throw() { _status = st; }
 
   bool join( const Sblock & sb ) throw()
     { if( _status == sb._status ) return Block::join( sb ); else return false; }
-  Sblock split( const long long pos, const int hardbs = 1 ) throw()
+  Sblock split( const long long pos, const int hardbs = 1 )
     { return Sblock( Block::split( pos, hardbs ), _status ); }
   static bool isstatus( const int st ) throw()
     { return ( st == non_tried || st == non_trimmed || st == non_split ||
@@ -81,7 +94,7 @@ class Domain
   std::vector< Block > block_vector;	// blocks are ordered and don't overlap
 
 public:
-  Domain( const char * name, const long long p, const long long s ) throw();
+  Domain( const char * name, const long long p, const long long s );
 
   long long pos() const throw()
     { if( block_vector.size() ) return block_vector[0].pos(); else return 0; }
@@ -90,16 +103,12 @@ public:
     {
     long long s = 0;
     for( unsigned int i = 0; i < block_vector.size(); ++i )
-      {
-      if( block_vector[i].size() < 0 ) return -1;
-      else s += block_vector[i].size();
-      }
+      s += block_vector[i].size();
     return s;
     }
 
   bool operator<( const Block & b ) const throw()
-    { return ( block_vector.size() && block_vector.back().size() >= 0 &&
-               block_vector.back().end() <= b.pos() ); }
+    { return ( block_vector.size() && block_vector.back().end() <= b.pos() ); }
 
   long long breaks_block_by( const Block & b ) const throw()
     {
@@ -108,7 +117,7 @@ public:
       const Block & db = block_vector[i];
       if( b.includes( db.pos() ) && b.pos() < db.pos() ) return db.pos();
       const long long end = db.end();
-      if( end > 0 && b.includes( end ) && b.pos() < end ) return end;
+      if( b.includes( end ) && b.pos() < end ) return end;
       }
     return 0;
     }
@@ -127,7 +136,7 @@ public:
     return false;
     }
 
-  void clear() throw() { block_vector.clear(); }
-  void crop( const Block & b ) throw();
-  bool crop_by_file_size( const long long isize ) throw();
+  void clear() { block_vector.clear(); }
+  void crop( const Block & b );
+  bool crop_by_file_size( const long long isize );
   };

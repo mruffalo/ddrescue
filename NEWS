@@ -1,5 +1,12 @@
-Changes in version 1.9:
+Changes in version 1.10:
 
-The new option "--domain-logfile" has been added.
+The new option "--try-again" has been added.
 
-Verbosity control of user messages has been simplified.
+The size skipped when bad sectors are found has been made independent of
+"cluster-size".
+
+Rescue speed has been improved for large logfiles.
+
+An overflow reading from devices of undefined size has been fixed.
+
+"make install-info" should now work on Debian and OS X.

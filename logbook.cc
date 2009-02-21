@@ -1,5 +1,5 @@
 /*  GNU ddrescue - Data recovery tool
-    Copyright (C) 2004, 2005, 2006, 2007, 2008 Antonio Diaz Diaz.
+    Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009 Antonio Diaz Diaz.
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cerrno>
+#include <climits>
 #include <cstdio>
 #include <cstdlib>
 #include <ctime>
@@ -73,11 +74,12 @@ const char * my_fgets( FILE * f, int & linenum ) throw()
 
 
 void extend_sblock_vector( std::vector< Sblock > & sblock_vector,
-                           const long long isize ) throw()
+                           const long long isize )
   {
   if( sblock_vector.size() == 0 )
     {
     Sblock sb( 0, (isize > 0) ? isize : -1, Sblock::non_tried );
+    sb.fix_size();
     sblock_vector.push_back( sb );
     return;
     }
@@ -100,11 +102,15 @@ void extend_sblock_vector( std::vector< Sblock > & sblock_vector,
       sblock_vector.push_back( Sblock( end, isize - end, Sblock::non_tried ) );
     }
   else if( end >= 0 )
-    sblock_vector.push_back( Sblock( end, -1, Sblock::non_tried ) );
+    {
+    Sblock sb( end, -1, Sblock::non_tried );
+    sb.fix_size();
+    if( sb.size() > 0 ) sblock_vector.push_back( sb );
+    }
   }
 
 
-void show_logfile_error( const char * filename, const int linenum ) throw()
+void show_logfile_error( const char * filename, const int linenum )
   {
   char buf[80];
   snprintf( buf, sizeof buf, "error in logfile %s, line %d", filename, linenum );
@@ -113,7 +119,7 @@ void show_logfile_error( const char * filename, const int linenum ) throw()
 
 
 bool read_logfile( const char * name, std::vector< Sblock > & sblock_vector,
-                   long long & current_pos, Logbook::Status & current_status ) throw()
+                   long long & current_pos, Logbook::Status & current_status )
   {
   FILE *f = std::fopen( name, "r" );
   if( !f ) return false;
@@ -144,20 +150,13 @@ bool read_logfile( const char * name, std::vector< Sblock > & sblock_vector,
           Sblock::isstatus( ch ) )
         {
         Sblock::Status st = Sblock::Status( ch );
-        Sblock sb( pos, size, st );
+        Sblock sb( pos, size, st ); sb.fix_size();
         if( sblock_vector.size() > 0 && !sb.follows( sblock_vector.back() ) )
           { show_logfile_error( name, linenum ); std::exit( 2 ); }
         sblock_vector.push_back( sb );
         }
       else
         { show_logfile_error( name, linenum ); std::exit( 2 ); }
-      }
-    if( sblock_vector.size() && sblock_vector.back().size() < 0 &&
-        sblock_vector.back().status() != Sblock::non_tried )
-      {
-      show_logfile_error( name, linenum );
-      show_error( "Only areas of type non_tried may have an undefined size" );
-      std::exit( 2 );
       }
     }
   std::fclose( f );
@@ -167,9 +166,9 @@ bool read_logfile( const char * name, std::vector< Sblock > & sblock_vector,
 } // end namespace
 
 
-Domain::Domain( const char * name, const long long p, const long long s ) throw()
+Domain::Domain( const char * name, const long long p, const long long s )
   {
-  const Block b( p, s );
+  Block b( p, s ); b.fix_size();
   if( !name ) { block_vector.push_back( b ); return; }
   std::vector< Sblock > sblock_vector;
   long long current_pos;			// not used
@@ -191,10 +190,26 @@ Domain::Domain( const char * name, const long long p, const long long s ) throw(
   }
 
 
+void Logbook::split_domain_border_sblocks()
+  {
+  for( unsigned int i = 0; i < sblock_vector.size(); ++i )
+    {
+    Sblock & sb = sblock_vector[i];
+    const long long pos = _domain.breaks_block_by( sb );
+    if( pos > 0 )
+      {
+      const Sblock head( sb.split( pos ) );
+      if( head.size() > 0 ) insert_sblock( i, head );
+      else internal_error( "empty block created by split_domain_border_sblocks" );
+      }
+    }
+  }
+
+
 Logbook::Logbook( const long long ipos, const long long opos, Domain & dom,
                   const long long isize,
                   const char * name, const int cluster, const int hardbs,
-                  const bool complete_only ) throw()
+                  const bool complete_only )
   : _offset( opos - ipos ), _current_pos( 0 ), _current_status( copying ),
     _domain( dom ), _filename( name ),
     _hardbs( hardbs ), _softbs( cluster * hardbs ),
@@ -214,60 +229,39 @@ Logbook::Logbook( const long long ipos, const long long opos, Domain & dom,
   if( _filename )
     read_logfile( _filename, sblock_vector, _current_pos, _current_status );
   if( !complete_only ) extend_sblock_vector( sblock_vector, isize );
-  else		// limit domain to blocks of finite size read from logfile
+  else if( sblock_vector.size() )  // limit domain to blocks read from logfile
     {
-    if( sblock_vector.size() && sblock_vector.back().size() < 0 )
-      sblock_vector.pop_back();
-    if( sblock_vector.size() )
-      {
-      const Block b( sblock_vector.front().pos(),
-                     sblock_vector.back().end() - sblock_vector.front().pos() );
-      _domain.crop( b );
-      }
-    else _domain.clear();
+    const Block b( sblock_vector.front().pos(),
+                   sblock_vector.back().end() - sblock_vector.front().pos() );
+    _domain.crop( b );
     }
   compact_sblock_vector();
+  split_domain_border_sblocks();
+  if( sblock_vector.size() == 0 ) _domain.clear();
   }
 
 
 bool Logbook::blank() const throw()
   {
-  return ( sblock_vector.size() == 1 &&
-           sblock_vector[0].status() == Sblock::non_tried );
-  }
-
-
-void Logbook::compact_sblock_vector() throw()
-  {
-  for( unsigned int i = 1; i < sblock_vector.size(); )
-    {
-    if( sblock_vector[i-1].join( sblock_vector[i] ) )
-      sblock_vector.erase( sblock_vector.begin() + i );
-    else ++i;
-    }
-  }
-
-
-void Logbook::split_domain_border_sblocks() throw()
-  {
   for( unsigned int i = 0; i < sblock_vector.size(); ++i )
-    {
-    Sblock & sb = sblock_vector[i];
-    const long long pos = _domain.breaks_block_by( sb );
-    if( pos > 0 )
-      {
-      Sblock head = sb.split( pos );
-      if( head.size() > 0 ) insert_sblock( i, head );
-      else internal_error( "empty block created by split_domain_border_sblocks" );
-      }
-    }
+    if( sblock_vector[i].status() != Sblock::non_tried )
+      return false;
+  return true;
+  }
+
+
+void Logbook::compact_sblock_vector()
+  {
+  for( unsigned int i = sblock_vector.size(); i >= 2; --i )
+    if( sblock_vector[i-2].join( sblock_vector[i-1] ) )
+      sblock_vector.erase( sblock_vector.begin() + i - 1 );
   }
 
 
 // Writes periodically the logfile to disc.
 // Returns false only if update is attempted and fails.
 //
-bool Logbook::update_logfile( const int odes, const bool force ) throw()
+bool Logbook::update_logfile( const int odes, const bool force )
   {
   static time_t t1 = std::time( 0 );
 
@@ -295,9 +289,7 @@ bool Logbook::update_logfile( const int odes, const bool force ) throw()
   for( unsigned int i = 0; i < sblock_vector.size(); ++i )
     {
     const Sblock & sb = sblock_vector[i];
-    if( sb.size() >= 0 )
-      std::fprintf( f, "0x%08llX  0x%08llX  %c\n", sb.pos(), sb.size(), sb.status() );
-    else std::fprintf( f, "0x%08llX          -1  %c\n", sb.pos(), sb.status() );
+    std::fprintf( f, "0x%08llX  0x%08llX  %c\n", sb.pos(), sb.size(), sb.status() );
     }
 
   if( std::fclose( f ) )
@@ -311,11 +303,15 @@ bool Logbook::update_logfile( const int odes, const bool force ) throw()
   }
 
 
-void Logbook::truncate_vector( const long long pos ) throw()
+void Logbook::truncate_vector( const long long pos )
   {
   int i = sblocks() - 1;
   while( i >= 0 && sblock_vector[i].pos() >= pos ) --i;
-  if( i < 0 ) sblock_vector.clear();
+  if( i < 0 )
+    {
+    sblock_vector.clear();
+    sblock_vector.push_back( Sblock( pos, 0, Sblock::finished ) );
+    }
   else
     {
     Sblock & sb = sblock_vector[i];
@@ -327,11 +323,11 @@ void Logbook::truncate_vector( const long long pos ) throw()
 
 int Logbook::find_index( const long long pos ) const throw()
   {
-  if( sblocks() == 0 ) { _index = -1; return _index; }
   if( _index < 0 || _index >= sblocks() ) _index = sblocks() / 2;
-  while( _index + 1 < sblocks() && sblock_vector[_index].size() >= 0 &&
-         pos >= sblock_vector[_index].end() ) ++_index;
-  while( _index > 0 && pos < sblock_vector[_index].pos() ) --_index;
+  while( _index + 1 < sblocks() && pos >= sblock_vector[_index].end() )
+    ++_index;
+  while( _index > 0 && pos < sblock_vector[_index].pos() )
+    --_index;
   if( !sblock_vector[_index].includes( pos ) ) _index = -1;
   return _index;
   }
@@ -340,21 +336,21 @@ int Logbook::find_index( const long long pos ) const throw()
 // Find chunk from b.pos of size <= b.size and status st.
 // if not found, puts b.size to 0.
 //
-void Logbook::find_chunk( Block & b, const Sblock::Status st ) const throw()
+void Logbook::find_chunk( Block & b, const Sblock::Status st ) const
   {
-  if( b.size() == 0 ) return;
-  if( b.size() < 0 ) internal_error( "tried to find an infinite size chunk" );
-  if( sblocks() == 0 ) { b.size( 0 ); return; }
+  if( b.size() <= 0 ) return;
   if( b.pos() < sblock_vector.front().pos() )
     b.pos( sblock_vector.front().pos() );
   if( find_index( b.pos() ) < 0 ) { b.size( 0 ); return; }
-  for( ; _index < sblocks(); ++_index )
-    if( st == sblock_vector[_index].status() &&
-        _domain.includes( sblock_vector[_index] ) )
-      break;
-  if( _index >= sblocks() ) { b.size( 0 ); return; }
+  int i;
+  for( i = _index; i < sblocks(); ++i )
+    if( sblock_vector[i].status() == st &&
+        _domain.includes( sblock_vector[i] ) )
+      { _index = i; break; }
+  if( i >= sblocks() ) { b.size( 0 ); return; }
   if( b.pos() < sblock_vector[_index].pos() )
     b.pos( sblock_vector[_index].pos() );
+  b.fix_size();
   if( !sblock_vector[_index].includes( b ) )
     b.crop( sblock_vector[_index] );
   if( b.end() != sblock_vector[_index].end() )
@@ -365,16 +361,15 @@ void Logbook::find_chunk( Block & b, const Sblock::Status st ) const throw()
 // Find chunk from b.end backwards of size <= b.size and status st.
 // if not found, puts b.size to 0.
 //
-void Logbook::rfind_chunk( Block & b, const Sblock::Status st ) const throw()
+void Logbook::rfind_chunk( Block & b, const Sblock::Status st ) const
   {
-  if( b.size() == 0 ) return;
-  if( b.size() < 0 ) internal_error( "tried to rfind an infinite size chunk" );
-  if( sblocks() == 0 ) { b.size( 0 ); return; }
-  if( sblock_vector.back().size() >= 0 && sblock_vector.back().end() < b.end() )
+  if( b.size() <= 0 ) return;
+  b.fix_size();
+  if( sblock_vector.back().end() < b.end() )
     b.end( sblock_vector.back().end() );
   find_index( b.end() - 1 );
   for( ; _index >= 0; --_index )
-    if( st == sblock_vector[_index].status() &&
+    if( sblock_vector[_index].status() == st &&
         _domain.includes( sblock_vector[_index] ) )
       break;
   if( _index < 0 ) { b.size( 0 ); return; }
@@ -387,37 +382,53 @@ void Logbook::rfind_chunk( Block & b, const Sblock::Status st ) const throw()
   }
 
 
-void Logbook::change_chunk_status( const Block & b, const Sblock::Status st ) throw()
+void Logbook::change_chunk_status( const Block & b, const Sblock::Status st )
   {
-  if( b.size() == 0 ) return;
-  if( b.size() < 0 )
-    internal_error( "can't change status of infinite size chunk" );
-  if( !_domain.includes( b ) || sblocks() == 0 || find_index( b.pos() ) < 0 ||
+  if( b.size() <= 0 ) return;
+  if( !_domain.includes( b ) || find_index( b.pos() ) < 0 ||
       !_domain.includes( sblock_vector[_index] ) )
     internal_error( "can't change status of chunk not in rescue domain" );
   if( !sblock_vector[_index].includes( b ) )
     internal_error( "can't change status of chunk spread over more than 1 block" );
-  if( st == sblock_vector[_index].status() ) return;
-  if( b.pos() > sblock_vector[_index].pos() )
+  if( sblock_vector[_index].status() == st ) return;
+  if( sblock_vector[_index].pos() < b.pos() )
     {
+    if( sblock_vector[_index].end() == b.end() &&
+        _index + 1 < sblocks() && sblock_vector[_index+1].status() == st &&
+        _domain.includes( sblock_vector[_index+1] ) )
+      {
+      sblock_vector[_index].inc_size( -b.size() );
+      sblock_vector[_index+1].pos( b.pos() );
+      sblock_vector[_index+1].inc_size( b.size() );
+      return;
+      }
     insert_sblock( _index, sblock_vector[_index].split( b.pos() ) );
     ++_index;
     }
-  if( sblock_vector[_index].size() < 0 || sblock_vector[_index].size() > b.size() )
-    insert_sblock( _index, sblock_vector[_index].split( b.end() ) );
-  sblock_vector[_index].status( st );
-  if( _index + 1 < sblocks() && sblock_vector[_index+1].status() == st &&
-      _domain.includes( sblock_vector[_index+1] ) )
+  if( sblock_vector[_index].size() > b.size() )
     {
-    if( sblock_vector[_index+1].size() < 0 ) sblock_vector[_index].size( -1 );
-    else sblock_vector[_index].inc_size( sblock_vector[_index+1].size() );
-    erase_sblock( _index + 1 );
+    sblock_vector[_index].pos( b.end() );
+    sblock_vector[_index].inc_size( -b.size() );
+    if( _index > 0 && sblock_vector[_index-1].status() == st &&
+        _domain.includes( sblock_vector[_index-1] ) )
+      sblock_vector[_index-1].inc_size( b.size() );
+    else
+      insert_sblock( _index, Sblock( b, st ) );
     }
-  if( _index > 0 && sblock_vector[_index-1].status() == st &&
-      _domain.includes( sblock_vector[_index-1] ) )
+  else
     {
-    if( sblock_vector[_index].size() < 0 ) sblock_vector[_index-1].size( -1 );
-    else sblock_vector[_index-1].inc_size( sblock_vector[_index].size() );
-    erase_sblock( _index ); --_index;
+    sblock_vector[_index].status( st );
+    if( _index > 0 && sblock_vector[_index-1].status() == st &&
+        _domain.includes( sblock_vector[_index-1] ) )
+      {
+      sblock_vector[_index-1].inc_size( sblock_vector[_index].size() );
+      erase_sblock( _index ); --_index;
+      }
+    if( _index + 1 < sblocks() && sblock_vector[_index+1].status() == st &&
+        _domain.includes( sblock_vector[_index+1] ) )
+      {
+      sblock_vector[_index].inc_size( sblock_vector[_index+1].size() );
+      erase_sblock( _index + 1 );
+      }
     }
   }

@@ -1,7 +1,7 @@
 Requirements
 ------------
 You will need a C++ compiler.
-I use gcc 4.3.1 and 3.3.6, but the code should compile with any
+I use gcc 4.3.3 and 3.3.6, but the code should compile with any
 standards compliant compiler.
 Gcc is available at http://gcc.gnu.org.
 
@@ -10,9 +10,9 @@ Procedure
 ---------
 1. Unpack the archive if you have not done so already:
 
-	bzip2 -cd ddrescue[version].tar.bz2 | tar -xf -
-or
 	lzip -cd ddrescue[version].tar.lz | tar -xf -
+or
+	gzip -cd ddrescue[version].tar.gz | tar -xf -
 
 This creates the directory ./ddrescue[version] containing the source from
 the main archive.
@@ -27,10 +27,12 @@ the main archive.
 
 	make
 
-4. Type `make install' to install the program and any data files and
+4. Optionally, type `make check' to run the tests that come with ddrescue.
+
+5. Type `make install' to install the program and any data files and
    documentation.
 
-5. Optionally, type `make install-man' to install the man page for the
+6. Optionally, type `make install-man' to install the man page for the
    program.
 
 

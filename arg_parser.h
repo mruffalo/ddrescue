@@ -1,5 +1,5 @@
 /*  Arg_parser - A POSIX/GNU command line argument parser.
-    Copyright (C) 2006, 2007, 2008 Antonio Diaz Diaz.
+    Copyright (C) 2006, 2007, 2008, 2009 Antonio Diaz Diaz.
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -55,7 +55,7 @@ private:
     {
     int code;
     std::string argument;
-    Record( const int c = 0 ) throw() : code( c ) {}
+    Record( const int c = 0 ) : code( c ) {}
     };
 
   std::string _error;
