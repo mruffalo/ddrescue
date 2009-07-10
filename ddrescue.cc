@@ -20,13 +20,13 @@
 #include <algorithm>
 #include <cerrno>
 #include <climits>
+#include <csignal>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
 #include <string>
 #include <vector>
-#include <signal.h>
 #include <unistd.h>
 
 #include "block.h"
@@ -37,6 +37,30 @@ namespace {
 
 bool volatile interrupted = false;		// user pressed Ctrl-C
 void sighandler( int ) throw() { interrupted = true; }
+
+
+bool block_is_zero( const char * buf, const int size ) throw()
+  {
+  for( int i = 0; i < size; ++i ) if( buf[i] != 0 ) return false;
+  return true;
+  }
+
+
+const char * format_time( long t ) throw()
+  {
+  static char buf[16];
+  int fraction = 0;
+  char unit = 's';
+
+  if( t >= 86400 ) { fraction = ( t % 86400 ) / 8640; t /= 86400; unit = 'd'; }
+  else if( t >= 3600 ) { fraction = ( t % 3600 ) / 360; t /= 3600; unit = 'h'; }
+  else if( t >= 60 ) { fraction = ( t % 60 ) / 6; t /= 60; unit = 'm'; }
+  if( fraction == 0 )
+    snprintf( buf, sizeof buf, "%ld %c", t, unit );
+  else
+    snprintf( buf, sizeof buf, "%ld.%d %c", t, fraction, unit );
+  return buf;
+  }
 
 
 // Returns the number of bytes really read.
@@ -77,13 +101,6 @@ int writeblock( const int fd, const char * buf, const int size, const long long 
   return ( rest > 0 ) ? size - rest : size;
   }
 
-
-bool block_is_zero( const char * buf, const int size ) throw()
-  {
-  for( int i = 0; i < size; ++i ) if( buf[i] != 0 ) return false;
-  return true;
-  }
-
 } // end namespace
 
 
@@ -96,8 +113,8 @@ int Fillbook::fill_block( const Block & b )
   if( b.size() <= 0 ) internal_error( "bad size filling a Block" );
   const int size = b.size();
 
-  if( writeblock( _odes, iobuf(), size, b.pos() + offset() ) != size ||
-      ( _synchronous && fsync( _odes ) < 0 ) )
+  if( writeblock( odes_, iobuf(), size, b.pos() + offset() ) != size ||
+      ( synchronous_ && fsync( odes_ ) < 0 ) )
     { final_msg( "write error" ); final_errno( errno ); return 1; }
   filled_size += size; remaining_size -= size;
   return 0;
@@ -107,17 +124,16 @@ int Fillbook::fill_block( const Block & b )
 void Fillbook::show_status( const long long ipos, bool force ) throw()
   {
   const char * const up = "\x1b[A";
-  static long long a_rate = 0, c_rate = 0, first_size = 0, last_size = 0;
-  static long long last_ipos = 0;
-  static time_t t0 = 0, t1 = 0;
   if( t0 == 0 )
     {
-    t0 = t1 = std::time( 0 ); first_size = last_size = filled_size; force = true;
+    t0 = t1 = std::time( 0 );
+    first_size = last_size = filled_size;
+    force = true;
     std::printf( "\n\n\n" );
     }
 
   if( ipos >= 0 ) last_ipos = ipos;
-  time_t t2 = std::time( 0 );
+  const long t2 = std::time( 0 );
   if( t2 > t1 || force )
     {
     if( t2 > t1 )
@@ -155,16 +171,16 @@ bool Fillbook::read_buffer( const int ides ) throw()
 bool Rescuebook::sync_sparse_file() throw()
   {
   bool done = true;
-  if( _sparse && sparse_size > 0 )
+  if( sparse_ && sparse_size > 0 )
     {
-    const long long size = lseek( _odes, 0, SEEK_END );
+    const long long size = lseek( odes_, 0, SEEK_END );
     if( size < 0 ) done = false;
     if( sparse_size > size )
       {
       const char zero = 0;
-      if( writeblock( _odes, &zero, 1, sparse_size - 1 ) != 1 )
+      if( writeblock( odes_, &zero, 1, sparse_size - 1 ) != 1 )
         done = false;
-      fsync( _odes );
+      fsync( odes_ );
       }
     }
   return done;
@@ -181,7 +197,7 @@ int Rescuebook::check_block( const Block & b, int & copied_size, int & error_siz
   copied_size = 0; error_size = 0;
   if( interrupted ) return -1;
   if( b.size() <= 0 ) internal_error( "bad size checking a Block" );
-  copied_size = readblock( _odes, iobuf(), b.size(), b.pos() + offset() );
+  copied_size = readblock( odes_, iobuf(), b.size(), b.pos() + offset() );
   if( errno ) error_size = b.size() - copied_size;
 
   for( int pos = 0; pos < copied_size; )
@@ -208,18 +224,18 @@ int Rescuebook::copy_block( const Block & b, int & copied_size, int & error_size
   copied_size = 0; error_size = 0;
   if( interrupted ) return -1;
   if( b.size() <= 0 ) internal_error( "bad size copying a Block" );
-  copied_size = readblock( _ides, iobuf(), b.size(), b.pos() );
+  copied_size = readblock( ides_, iobuf(), b.size(), b.pos() );
   if( errno ) error_size = b.size() - copied_size;
 
   if( copied_size > 0 )
     {
     const long long pos = b.pos() + offset();
     const long long end = pos + copied_size;
-    if( _sparse && block_is_zero( iobuf(), copied_size ) &&
-        lseek( _odes, end, SEEK_SET ) >= 0 )
+    if( sparse_ && block_is_zero( iobuf(), copied_size ) &&
+        lseek( odes_, end, SEEK_SET ) >= 0 )
       { if( end > sparse_size ) sparse_size = end; }
-    else if( writeblock( _odes, iobuf(), copied_size, pos ) != copied_size ||
-             ( _synchronous && fsync( _odes ) < 0 ) )
+    else if( writeblock( odes_, iobuf(), copied_size, pos ) != copied_size ||
+             ( synchronous_ && fsync( odes_ ) < 0 ) )
       {
       copied_size = 0; error_size = 0;
       final_msg( "write error" ); final_errno( errno );
@@ -234,25 +250,25 @@ void Rescuebook::show_status( const long long ipos, const char * msg,
                               bool force ) throw()
   {
   const char * const up = "\x1b[A";
-  static long long a_rate = 0, c_rate = 0, first_size = 0, last_size = 0;
-  static long long last_ipos = 0;
-  static time_t t0 = 0, t1 = 0;
-  static int oldlen = 0;
   if( t0 == 0 )
     {
-    t0 = t1 = std::time( 0 ); first_size = last_size = recsize; force = true;
+    t0 = t1 = ts = std::time( 0 );
+    first_size = last_size = recsize;
+    force = true;
     std::printf( "\n\n\n" );
     }
 
   if( ipos >= 0 ) last_ipos = ipos;
-  time_t t2 = std::time( 0 );
+  const long t2 = std::time( 0 );
   if( t2 > t1 || force )
     {
     if( t2 > t1 )
       {
       a_rate = ( recsize - first_size ) / ( t2 - t0 );
       c_rate = ( recsize - last_size ) / ( t2 - t1 );
-      t1 = t2; last_size = recsize;
+      if( recsize > last_size ) ts = t2;
+      t1 = t2;
+      last_size = recsize;
       }
     count_errors();
     std::printf( "\r%s%s%s", up, up, up );
@@ -262,7 +278,9 @@ void Rescuebook::show_status( const long long ipos, const char * msg,
     std::printf( "   ipos: %10sB,   errors: %7u,  ",
                  format_num( last_ipos ), errors );
     std::printf( "  average rate: %9sB/s\n", format_num( a_rate, 99999 ) );
-    std::printf( "   opos: %10sB\n", format_num( last_ipos + offset() ) );
+    std::printf( "   opos: %10sB,", format_num( last_ipos + offset() ) );
+    std::printf( "     time from last successful read: %9s\n",
+                 format_time( t2 - ts ) );
     int len = oldlen;
     if( msg ) { len = std::strlen( msg ); if( len ) std::printf( msg ); }
     for( int i = len; i < oldlen; ++i ) std::fputc( ' ', stdout );
@@ -297,10 +315,12 @@ const char * format_num( long long num, long long limit,
   }
 
 
-void set_handler() throw()
+void set_signals() throw()
   {
   interrupted = false;
   signal( SIGINT, sighandler );
   signal( SIGHUP, sighandler );
   signal( SIGTERM, sighandler );
+  signal( SIGUSR1, SIG_IGN );
+  signal( SIGUSR2, SIG_IGN );
   }

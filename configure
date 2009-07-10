@@ -5,13 +5,13 @@
 # This configure script is free software: you have unlimited permission
 # to copy, distribute and modify it.
 #
-# Date of this version: 2009-02-19
+# Date of this version: 2009-07-10
 
 invocation_name=$0
 args=
 no_create=
 progname=ddrescue
-progversion=1.10
+progversion=1.11
 srctrigger=ddrescue.h
 
 # clear some things potentially inherited from environment.
@@ -100,7 +100,7 @@ while [ x"$1" != x ] ; do
 	CXXFLAGS=*) CXXFLAGS=${optarg} ;;
 	LDFLAGS=*)  LDFLAGS=${optarg} ;;
 
-	--build=* | --enable-* | --with-* | --*dir=* | *=* | *-*-*) ;;
+	--* | *=* | *-*-*) ;;
 	*)
 		echo "configure: Unrecognized option: \"${option}\"; use --help for usage." 1>&2
 		exit 1 ;;

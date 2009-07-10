@@ -45,13 +45,13 @@ bool Arg_parser::parse_long_option( const char * const opt, const char * const a
 
   if( ambig && !exact )
     {
-    _error = "option `"; _error += opt; _error += "' is ambiguous";
+    error_ = "option `"; error_ += opt; error_ += "' is ambiguous";
     return false;
     }
 
   if( index < 0 )		// nothing found
     {
-    _error = "unrecognized option `"; _error += opt; _error += '\'';
+    error_ = "unrecognized option `"; error_ += opt; error_ += '\'';
     return false;
     }
 
@@ -62,14 +62,14 @@ bool Arg_parser::parse_long_option( const char * const opt, const char * const a
     {
     if( options[index].has_arg == no )
       {
-      _error = "option `--"; _error += options[index].name;
-      _error += "' doesn't allow an argument";
+      error_ = "option `--"; error_ += options[index].name;
+      error_ += "' doesn't allow an argument";
       return false;
       }
     if( options[index].has_arg == yes && !opt[len+3] )
       {
-      _error = "option `--"; _error += options[index].name;
-      _error += "' requires an argument";
+      error_ = "option `--"; error_ += options[index].name;
+      error_ += "' requires an argument";
       return false;
       }
     data.back().argument = &opt[len+3];
@@ -80,8 +80,8 @@ bool Arg_parser::parse_long_option( const char * const opt, const char * const a
     {
     if( !arg || !arg[0] )
       {
-      _error = "option `--"; _error += options[index].name;
-      _error += "' requires an argument";
+      error_ = "option `--"; error_ += options[index].name;
+      error_ += "' requires an argument";
       return false;
       }
     ++argind; data.back().argument = arg;
@@ -109,7 +109,7 @@ bool Arg_parser::parse_short_option( const char * const opt, const char * const 
 
     if( index < 0 )
       {
-      _error = "invalid option -- "; _error += c;
+      error_ = "invalid option -- "; error_ += c;
       return false;
       }
 
@@ -124,7 +124,7 @@ bool Arg_parser::parse_short_option( const char * const opt, const char * const 
       {
       if( !arg || !arg[0] )
         {
-        _error = "option requires an argument -- "; _error += c;
+        error_ = "option requires an argument -- "; error_ += c;
         return false;
         }
       data.back().argument = arg; ++argind; cind = 0;
@@ -164,7 +164,7 @@ Arg_parser::Arg_parser( const int argc, const char * const argv[],
       else { data.push_back( Record() ); data.back().argument = argv[argind++]; }
       }
     }
-  if( _error.size() ) data.clear();
+  if( error_.size() ) data.clear();
   else
     {
     for( unsigned int i = 0; i < non_options.size(); ++i )
@@ -187,7 +187,7 @@ Arg_parser::Arg_parser( const char * const opt, const char * const arg,
       { if( opt[2] ) parse_long_option( opt, arg, options, argind ); }
     else
       parse_short_option( opt, arg, options, argind );
-    if( _error.size() ) data.clear();
+    if( error_.size() ) data.clear();
     }
   else { data.push_back( Record() ); data.back().argument = opt; }
   }

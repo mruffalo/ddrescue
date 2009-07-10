@@ -23,17 +23,18 @@ public:
       filling = 'F', generating = 'G', finished = '+' };
 
 private:
-  const long long _offset;		// outfile offset (opos - ipos);
-  long long _current_pos;
-  Status _current_status;
-  Domain & _domain;			// rescue domain
-  char *iobuf_base, *_iobuf;		// iobuf is aligned to page and hardbs
-  const char * const _filename;
-  const int _hardbs, _softbs;
-  const char * _final_msg;
-  int _final_errno;
-  mutable int _index;			// cached index of last find or change
+  const long long offset_;		// outfile offset (opos - ipos);
+  long long current_pos_;
+  Status current_status_;
+  Domain & domain_;			// rescue domain
+  char *iobuf_base, *iobuf_;		// iobuf is aligned to page and hardbs
+  const char * const filename_;
+  const int hardbs_, softbs_;
+  const char * final_msg_;
+  int final_errno_;
+  mutable int index_;			// cached index of last find or change
   std::vector< Sblock > sblock_vector;	// note: blocks are consecutive
+  long ul_t1;				// variable for update_logfile
 
   void erase_sblock( const int i )
     { sblock_vector.erase( sblock_vector.begin() + i ); }
@@ -52,21 +53,21 @@ public:
   void compact_sblock_vector();
   bool update_logfile( const int odes = -1, const bool force = false );
 
-  long long current_pos() const throw() { return _current_pos; }
-  Status current_status() const throw() { return _current_status; }
-  const Domain & domain() const throw() { return _domain; }
-  const char *filename() const throw() { return _filename; }
-  char * iobuf() const throw() { return _iobuf; }
-  int hardbs() const throw() { return _hardbs; }
-  int softbs() const throw() { return _softbs; }
-  long long offset() const throw() { return _offset; }
-  const char * final_msg() const throw() { return _final_msg; }
-  int final_errno() const throw() { return _final_errno; }
+  long long current_pos() const throw() { return current_pos_; }
+  Status current_status() const throw() { return current_status_; }
+  const Domain & domain() const throw() { return domain_; }
+  const char *filename() const throw() { return filename_; }
+  char * iobuf() const throw() { return iobuf_; }
+  int hardbs() const throw() { return hardbs_; }
+  int softbs() const throw() { return softbs_; }
+  long long offset() const throw() { return offset_; }
+  const char * final_msg() const throw() { return final_msg_; }
+  int final_errno() const throw() { return final_errno_; }
 
-  void current_pos( const long long pos ) throw() { _current_pos = pos; }
-  void current_status( Status st ) throw() { _current_status = st; }
-  void final_msg( const char * const msg ) throw() { _final_msg = msg; }
-  void final_errno( const int e ) throw() { _final_errno = e; }
+  void current_pos( const long long pos ) throw() { current_pos_ = pos; }
+  void current_status( Status st ) throw() { current_status_ = st; }
+  void final_msg( const char * const msg ) throw() { final_msg_ = msg; }
+  void final_errno( const int e ) throw() { final_errno_ = e; }
 
   const Sblock & sblock( const int i ) const throw()
     { return sblock_vector[i]; }
@@ -93,8 +94,12 @@ class Fillbook : public Logbook
   long long remaining_size;		// size to be filled
   int filled_areas;			// areas already filled
   int remaining_areas;			// areas to be filled
-  int _odes;				// output file descriptor
-  const bool _synchronous;
+  int odes_;				// output file descriptor
+  const bool synchronous_;
+					// variables for show_status
+  long long a_rate, c_rate, first_size, last_size;
+  long long last_ipos;
+  long t0, t1;
 
   int fill_areas( const std::string & filltypes );
   int fill_block( const Block & b );
@@ -105,7 +110,10 @@ public:
             const char * name, const int cluster, const int hardbs,
             const bool synchronous )
     : Logbook( ipos, opos, dom, 0, name, cluster, hardbs, true ),
-      _synchronous( synchronous ) {}
+      synchronous_( synchronous ),
+      a_rate( 0 ), c_rate( 0 ), first_size( 0 ), last_size( 0 ),
+      last_ipos( 0 ), t0( 0 ), t1( 0 )
+      {}
 
   int do_fill( const int odes, const std::string & filltypes );
   bool read_buffer( const int ides ) throw();
@@ -116,19 +124,25 @@ class Rescuebook : public Logbook
   {
   long long sparse_size;		// end position of pending writes
   long long recsize, errsize;		// total recovered and error sizes
+  const char * const iname_;
   int errors;				// error areas found so far
-  int _ides, _odes;			// input and output file descriptors
-  const int _max_errors, _max_retries, _skipbs;
-  const bool _nosplit, _sparse, _synchronous;
+  int ides_, odes_;			// input and output file descriptors
+  const int max_errors_, max_retries_, skipbs_;
+  const bool nosplit_, sparse_, synchronous_;
+					// variables for show_status
+  long long a_rate, c_rate, first_size, last_size;
+  long long last_ipos;
+  long t0, t1, ts;
+  int oldlen;
 
-  int skipbs() const throw() { return _skipbs; }
+  int skipbs() const throw() { return skipbs_; }
   bool sync_sparse_file() throw();
   int check_block( const Block & b, int & copied_size, int & error_size );
   int copy_block( const Block & b, int & copied_size, int & error_size );
   int check_all();
   void count_errors() throw();
   bool too_many_errors() const throw()
-    { return ( _max_errors >= 0 && errors > _max_errors ); }
+    { return ( max_errors_ >= 0 && errors > max_errors_ ); }
   int copy_and_update( const Block & b, const Sblock::Status st,
                        int & copied_size, int & error_size,
                        const char * msg, bool & first_post );
@@ -140,8 +154,8 @@ class Rescuebook : public Logbook
                     bool force = false ) throw();
 public:
   Rescuebook( const long long ipos, const long long opos,
-              Domain & dom, const long long isize,
-              const char * name, const int cluster, const int hardbs,
+              Domain & dom, const long long isize, const char * iname,
+              const char * logname, const int cluster, const int hardbs,
               const int max_errors = -1, const int max_retries = 0,
               const bool complete_only = false, const bool nosplit = false,
               const bool retrim = false, const bool sparse = false,
@@ -156,7 +170,7 @@ public:
 //
 const char * format_num( long long num, long long limit = 999999,
                          const int set_prefix = 0 ) throw();
-void set_handler() throw();
+void set_signals() throw();
 
 
 // Defined in main.cc

@@ -53,30 +53,31 @@ void show_help( const int cluster, const int hardbs ) throw()
   std::printf( "Copies data from one file or block device to another,\n" );
   std::printf( "trying hard to rescue data in case of read errors.\n" );
   std::printf( "\nUsage: %s [options] infile outfile [logfile]\n", invocation_name );
-  std::printf( "Options:\n" );
-  std::printf( "  -h, --help                   display this help and exit\n" );
-  std::printf( "  -V, --version                output version information and exit\n" );
-  std::printf( "  -b, --block-size=<bytes>     hardware block size of input device [%d]\n", hardbs );
-  std::printf( "  -B, --binary-prefixes        show binary multipliers in numbers [default SI]\n" );
-  std::printf( "  -c, --cluster-size=<blocks>  hardware blocks to copy at a time [%d]\n", cluster );
-  std::printf( "  -C, --complete-only          do not read new data beyond logfile limits\n" );
-  std::printf( "  -d, --direct                 use direct disc access for input file\n" );
-  std::printf( "  -D, --synchronous            use synchronous writes for output file\n" );
-  std::printf( "  -e, --max-errors=<n>         maximum number of error areas allowed\n" );
-  std::printf( "  -F, --fill=<types>           fill given type areas with infile data (?*/-+)\n" );
-  std::printf( "  -g, --generate-logfile       generate approximate logfile from partial copy\n" );
-  std::printf( "  -i, --input-position=<pos>   starting position in input file [0]\n" );
-  std::printf( "  -m, --domain-logfile=<file>  restrict domain to areas marked finished in file\n" );
-  std::printf( "  -n, --no-split               do not try to split or retry error areas\n" );
-  std::printf( "  -o, --output-position=<pos>  starting position in output file [ipos]\n" );
-  std::printf( "  -q, --quiet                  suppress all messages\n" );
-  std::printf( "  -r, --max-retries=<n>        exit after given retries (-1=infinity) [0]\n" );
-  std::printf( "  -R, --retrim                 mark all error areas as non-trimmed\n" );
-  std::printf( "  -s, --max-size=<bytes>       maximum size of input data to be copied\n" );
-  std::printf( "  -S, --sparse                 use sparse writes for output file\n" );
-  std::printf( "  -t, --truncate               truncate output file to zero size\n" );
-  std::printf( "  -T, --try-again              mark non-split, non-trimmed areas as non-tried\n" );
-  std::printf( "  -v, --verbose                verbose operation\n" );
+  std::printf( "You should use a logfile unless you know what you are doing.\n" );
+  std::printf( "\nOptions:\n" );
+  std::printf( "  -h, --help                    display this help and exit\n" );
+  std::printf( "  -V, --version                 output version information and exit\n" );
+  std::printf( "  -b, --block-size=<bytes>      sector size of input device [default %d]\n", hardbs );
+  std::printf( "  -B, --binary-prefixes         show binary multipliers in numbers [SI]\n" );
+  std::printf( "  -c, --cluster-size=<sectors>  sectors to copy at a time [%d]\n", cluster );
+  std::printf( "  -C, --complete-only           do not read new data beyond logfile limits\n" );
+  std::printf( "  -d, --direct                  use direct disc access for input file\n" );
+  std::printf( "  -D, --synchronous             use synchronous writes for output file\n" );
+  std::printf( "  -e, --max-errors=<n>          maximum number of error areas allowed\n" );
+  std::printf( "  -F, --fill=<types>            fill given type blocks with infile data (?*/-+)\n" );
+  std::printf( "  -g, --generate-logfile        generate approximate logfile from partial copy\n" );
+  std::printf( "  -i, --input-position=<pos>    starting position in input file [0]\n" );
+  std::printf( "  -m, --domain-logfile=<file>   restrict domain to finished blocks in file\n" );
+  std::printf( "  -n, --no-split                do not try to split or retry failed blocks\n" );
+  std::printf( "  -o, --output-position=<pos>   starting position in output file [ipos]\n" );
+  std::printf( "  -q, --quiet                   suppress all messages\n" );
+  std::printf( "  -r, --max-retries=<n>         exit after given retries (-1=infinity) [0]\n" );
+  std::printf( "  -R, --retrim                  mark all failed blocks as non-trimmed\n" );
+  std::printf( "  -s, --max-size=<bytes>        maximum size of input data to be copied\n" );
+  std::printf( "  -S, --sparse                  use sparse writes for output file\n" );
+  std::printf( "  -t, --truncate                truncate output file to zero size\n" );
+  std::printf( "  -T, --try-again               mark non-split, non-trimmed blocks as non-tried\n" );
+  std::printf( "  -v, --verbose                 verbose operation\n" );
   std::printf( "Numbers may be followed by a multiplier: b = blocks, k = kB = 10^3 = 1000,\n" );
   std::printf( "Ki = KiB = 2^10 = 1024, M = 10^6, Mi = 2^20, G = 10^9, Gi = 2^30, etc...\n" );
   std::printf( "\nReport bugs to bug-ddrescue@gnu.org\n");
@@ -206,7 +207,7 @@ int do_fill( long long ipos, const long long opos, Domain & domain,
   if( verbosity >= 0 ) std::printf( "\n\n" );
   if( verbosity > 0 )
     {
-    std::printf( "About to fill with data from %s areas of %s marked %s\n",
+    std::printf( "About to fill with data from %s blocks of %s marked %s\n",
                  iname, oname, filltypes.c_str() );
     std::printf( "    Maximum size to fill: %sBytes\n",
                  format_num( fillbook.domain().size() ) );
@@ -215,7 +216,7 @@ int do_fill( long long ipos, const long long opos, Domain & domain,
     std::printf( ",  outfile = %sB\n",
                  format_num( fillbook.domain().pos() + fillbook.offset() ) );
     std::printf( "    Copy block size: %d hard blocks\n", cluster );
-    std::printf( "Hard block size: %d bytes\n", hardbs );
+    std::printf( "Hard block size: %s bytes\n", format_num( hardbs, 99999 ) );
     std::printf( "\n" );
     }
 
@@ -240,7 +241,7 @@ int do_generate( const long long ipos, const long long opos, Domain & domain,
   if( isize < 0 )
     { show_error( "input file is not seekable" ); return 1; }
 
-  Rescuebook genbook( ipos, opos, domain, isize, logname, cluster, hardbs );
+  Rescuebook genbook( ipos, opos, domain, isize, 0, logname, cluster, hardbs );
   if( genbook.domain().size() == 0 )
     { show_error( "Nothing to do" ); return 0; }
   if( !genbook.blank() && genbook.current_status() != Logbook::generating )
@@ -265,7 +266,7 @@ int do_generate( const long long ipos, const long long opos, Domain & domain,
     std::printf( ",  outfile = %sB\n",
                  format_num( genbook.domain().pos() + genbook.offset() ) );
     std::printf( "    Copy block size: %d hard blocks\n", cluster );
-    std::printf( "Hard block size: %d bytes\n", hardbs );
+    std::printf( "Hard block size: %s bytes\n", format_num( hardbs, 99999 ) );
     std::printf( "\n" );
     }
   return genbook.do_generate( odes );
@@ -288,8 +289,8 @@ int do_rescue( const long long ipos, const long long opos, Domain & domain,
   if( isize < 0 )
     { show_error( "input file is not seekable" ); return 1; }
 
-  Rescuebook rescuebook( ipos, opos, domain, isize, logname, cluster, hardbs,
-                         max_errors, max_retries, complete_only,
+  Rescuebook rescuebook( ipos, opos, domain, isize, iname, logname, cluster,
+                         hardbs, max_errors, max_retries, complete_only,
                          nosplit, retrim, sparse, synchronous, try_again );
   if( rescuebook.domain().size() == 0 )
     { show_error( "Nothing to do" ); return 0; }
@@ -304,6 +305,7 @@ int do_rescue( const long long ipos, const long long opos, Domain & domain,
     { show_error( "cannot open output file", errno ); return 1; }
   if( lseek( odes, 0, SEEK_SET ) )
     { show_error( "output file is not seekable" ); return 1; }
+  if( !rescuebook.update_logfile( -1, true ) ) return 1;
 
   if( verbosity >= 0 ) std::printf( "\n\n" );
   if( verbosity > 0 )
@@ -315,7 +317,7 @@ int do_rescue( const long long ipos, const long long opos, Domain & domain,
     std::printf( ",  outfile = %sB\n",
                  format_num( rescuebook.domain().pos() + rescuebook.offset() ) );
     std::printf( "    Copy block size: %d hard blocks\n", cluster );
-    std::printf( "Hard block size: %d bytes\n", hardbs );
+    std::printf( "Hard block size: %s bytes\n", format_num( hardbs, 99999 ) );
     bool nl = false;
     if( max_errors >= 0 )
       { nl = true; std::printf( "Max_errors: %d    ", max_errors ); }

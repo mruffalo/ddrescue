@@ -28,32 +28,32 @@
 
 class Block
   {
-  long long _pos, _size;		// pos + size <= LLONG_MAX
+  long long pos_, size_;		// pos + size <= LLONG_MAX
 
 public:
   Block( const long long p, const long long s ) throw()
-    : _pos( p ), _size( s ) {}
+    : pos_( p ), size_( s ) {}
 
-  long long pos() const throw() { return _pos; }
-  long long size() const throw() { return _size; }
-  long long end() const throw() { return _pos + _size; }
+  long long pos() const throw() { return pos_; }
+  long long size() const throw() { return size_; }
+  long long end() const throw() { return pos_ + size_; }
 
-  void pos( const long long p ) throw() { _pos = p; }
-  void size( const long long s ) throw() { _size = s; }
-  void fix_size() throw()	// limit _size to largest possible value
-    { if( _size < 0 || _size > LLONG_MAX - _pos ) _size = LLONG_MAX - _pos; }
+  void pos( const long long p ) throw() { pos_ = p; }
+  void size( const long long s ) throw() { size_ = s; }
+  void fix_size() throw()	// limit size_ to largest possible value
+    { if( size_ < 0 || size_ > LLONG_MAX - pos_ ) size_ = LLONG_MAX - pos_; }
   void end( const long long e ) throw()
-    { _pos = e - _size; if( _pos < 0 ) { _size += _pos; _pos = 0; } }
+    { pos_ = e - size_; if( pos_ < 0 ) { size_ += pos_; pos_ = 0; } }
   void align_pos( const int hardbs ) throw();
   void align_end( const int hardbs ) throw();
-  void inc_size( const long long delta ) throw() { _size += delta; }
+  void inc_size( const long long delta ) throw() { size_ += delta; }
 
   bool follows( const Block & b ) const throw()
-    { return ( _pos == b.end() ); }
+    { return ( pos_ == b.end() ); }
   bool includes( const Block & b ) const throw()
-    { return ( _pos <= b._pos && end() >= b.end() ); }
+    { return ( pos_ <= b.pos_ && end() >= b.end() ); }
   bool includes( const long long pos ) const throw()
-    { return ( _pos <= pos && end() > pos ); }
+    { return ( pos_ <= pos && end() > pos ); }
 
   void crop( const Block & b ) throw();
   bool join( const Block & b );
@@ -65,27 +65,27 @@ class Sblock : public Block
   {
 public:
   enum Status
-    { non_tried = '?', non_trimmed = '*', non_split = '/', bad_block = '-',
-      finished = '+' };
+    { non_tried = '?', non_trimmed = '*', non_split = '/',
+      bad_sector = '-', finished = '+' };
 private:
-  Status _status;
+  Status status_;
 
 public:
   Sblock( const Block & b, const Status st ) throw()
-    : Block( b ), _status( st ) {}
+    : Block( b ), status_( st ) {}
   Sblock( const long long p, const long long s, const Status st ) throw()
-    : Block( p, s ), _status( st ) {}
+    : Block( p, s ), status_( st ) {}
 
-  Status status() const throw() { return _status; }
-  void status( const Status st ) throw() { _status = st; }
+  Status status() const throw() { return status_; }
+  void status( const Status st ) throw() { status_ = st; }
 
   bool join( const Sblock & sb ) throw()
-    { if( _status == sb._status ) return Block::join( sb ); else return false; }
+    { if( status_ == sb.status_ ) return Block::join( sb ); else return false; }
   Sblock split( const long long pos, const int hardbs = 1 )
-    { return Sblock( Block::split( pos, hardbs ), _status ); }
+    { return Sblock( Block::split( pos, hardbs ), status_ ); }
   static bool isstatus( const int st ) throw()
     { return ( st == non_tried || st == non_trimmed || st == non_split ||
-               st == bad_block || st == finished ); }
+               st == bad_sector || st == finished ); }
   };
 
 

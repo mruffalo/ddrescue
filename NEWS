@@ -1,12 +1,24 @@
-Changes in version 1.10:
+Changes in version 1.11:
 
-The new option "--try-again" has been added.
+In case of error writing the logfile to disc, the user is now given the
+possibility of fixing the problem and continue.
 
-The size skipped when bad sectors are found has been made independent of
-"cluster-size".
+The splitting algorithm has been modified to read secuentially the areas
+smaller than a threshold size.
 
-Rescue speed has been improved for large logfiles.
+After every read error, ddrescue now verifies the input file has not
+disappeared.
 
-An overflow reading from devices of undefined size has been fixed.
+In rescue mode, ddrescue now shows the time elapsed from the last
+successful read.
 
-"make install-info" should now work on Debian and OS X.
+Signals SIGUSR1 and SIGUSR2 are now ignored by ddrescue.
+
+Descriptions of "--direct", "--synchronous" and "--sparse" in the manual
+have been made clearer.
+
+Description of rescue algorithm in the manual has been made clearer.
+
+"make check" now verifies that files are open in binary mode.
+
+A warning about logfile usage has been added to "ddrescue --help" output.

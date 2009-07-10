@@ -47,9 +47,9 @@ void Block::align_pos( const int hardbs ) throw()
   {
   if( hardbs > 1 )
     {
-    const int disp = hardbs - ( _pos % hardbs );
-    if( disp < hardbs && _size > disp )
-      { _pos += disp; _size -= disp; }
+    const int disp = hardbs - ( pos_ % hardbs );
+    if( disp < hardbs && size_ > disp )
+      { pos_ += disp; size_ -= disp; }
     }
   }
 
@@ -58,28 +58,28 @@ void Block::align_pos( const int hardbs ) throw()
 //
 void Block::align_end( const int hardbs ) throw()
   {
-  if( hardbs > 1 && _size > 0 )
+  if( hardbs > 1 && size_ > 0 )
     {
     const long long new_end = end() - ( end() % hardbs );
-    if( _pos < new_end ) _size = new_end - _pos;
+    if( pos_ < new_end ) size_ = new_end - pos_;
     }
   }
 
 
 void Block::crop( const Block & b ) throw()
   {
-  const long long p = std::max( _pos, b._pos );
+  const long long p = std::max( pos_, b.pos_ );
   const long long s = std::max( 0LL, std::min( end(), b.end() ) - p );
-  _pos = p; _size = s;
+  pos_ = p; size_ = s;
   }
 
 
 bool Block::join( const Block & b )
   {
-  if( this->follows( b ) ) _pos = b._pos;
+  if( this->follows( b ) ) pos_ = b.pos_;
   else if( !b.follows( *this ) ) return false;
-  _size += b._size;
-  if( _size < 0 || _size > LLONG_MAX - _pos )
+  size_ += b.size_;
+  if( size_ < 0 || size_ > LLONG_MAX - pos_ )
     internal_error( "size overflow joining two Blocks" );
   return true;
   }
@@ -88,10 +88,10 @@ bool Block::join( const Block & b )
 Block Block::split( long long pos, const int hardbs )
   {
   if( hardbs > 1 ) pos -= pos % hardbs;
-  if( _pos < pos && end() > pos )
+  if( pos_ < pos && end() > pos )
     {
-    const Block b( _pos, pos - _pos );
-    _pos = pos; _size -= b._size;
+    const Block b( pos_, pos - pos_ );
+    pos_ = pos; size_ -= b.size_;
     return b;
     }
   return Block( 0, 0 );

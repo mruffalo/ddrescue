@@ -12,11 +12,12 @@ File: ddrescue.info,  Node: Top,  Next: Introduction,  Up: (dir)
 GNU ddrescue
 ************
 
-This manual is for GNU ddrescue (version 1.10, 19 February 2009).
+This manual is for GNU ddrescue (version 1.11, 10 July 2009).
 
 * Menu:
 
 * Introduction::	Purpose and features of GNU ddrescue
+* Basic concepts::	Blocks, clusters, devices, files, sectors, etc
 * Algorithm::		How ddrescue recovers the data
 * Invoking ddrescue::	Command line interface
 * Logfile Structure::	Detailed format of the logfile
@@ -34,7 +35,7 @@ This manual is for GNU ddrescue (version 1.10, 19 February 2009).
 copy, distribute and modify it.
 
 
-File: ddrescue.info,  Node: Introduction,  Next: Algorithm,  Prev: Top,  Up: Top
+File: ddrescue.info,  Node: Introduction,  Next: Basic concepts,  Prev: Top,  Up: Top
 
 1 Introduction
 **************
@@ -80,9 +81,39 @@ wiping data, marking bad areas or even, in some cases, "repair" damaged
 sectors.
 
 
-File: ddrescue.info,  Node: Algorithm,  Next: Invoking ddrescue,  Prev: Introduction,  Up: Top
+File: ddrescue.info,  Node: Basic concepts,  Next: Algorithm,  Prev: Introduction,  Up: Top
 
-2 Algorithm
+2 Basic concepts
+****************
+
+Block
+     Any amount of data. A block is described by its starting position
+     and its size.
+
+Cluster
+     Group of consecutive sectors read or written in one go.
+
+Device
+     Piece of hardware containing data. Hard disc drives, cdrom drives,
+     USB pendrives, are devices. /dev/hda, /dev/sdb, are device names.
+
+File
+     Files are named units of data which are stored by the operating
+     system for you to retrieve later by name. Devices are accessed by
+     means of their associated file names.
+
+Partition
+     Every part in which a device is divided. A partition normally
+     contains a filesystem. /dev/hda1, /dev/sdb3, are partition names.
+
+Sector
+     Hardware block. Smallest accessible amount of data on a device.
+
+
+
+File: ddrescue.info,  Node: Algorithm,  Next: Invoking ddrescue,  Prev: Basic concepts,  Up: Top
+
+3 Algorithm
 ***********
 
 GNU ddrescue manages efficiently the status of the rescue in progress
@@ -108,20 +139,26 @@ for a long time until the kernel gives up)
 previously interrupted rescue. If no logfile is specified or is empty or
 does not exist, mark all the rescue domain as non-tried.
 
-   2) Read the non-tried parts of the input file, marking the damaged
-areas as non-trimmed and skipping beyond them, until all the rescue
-domain is tried.
+   2) Read the non-tried parts of the input file, marking the failed
+blocks as non-trimmed and skipping beyond them, until all the rescue
+domain is tried. Only non-tried areas are read in large blocks.
+Trimming, splitting and retrying are done sector by sector. Each sector
+is tried at most two times; the first in this step as part of a large
+block read, the second in one of the steps below as a single sector
+read.
 
-   3) Read backwards the damaged areas marked as non-trimmed until an
-error is found, and mark the rest of the area as non-split.
+   3) Read backwards one sector at a time the non-trimmed blocks, until
+a bad sector is found. For each non-trimmed block, mark the bad sector
+found as bad-sector and mark the rest of that block as non-split.
 
-   4) Try to read the damaged areas marked as non-split, splitting them
-into smaller pieces and reading the non-damaged pieces, until the
-hardware block size is reached. Mark the pieces that can't be read as
-bad hardware blocks.
+   4) Read forwards one sector at a time the non-split blocks, marking
+the bad sectors found as bad-sector. After a number of consecutive bad
+sectors is found in a block larger enough, the block is split by half
+and the reading continues on the second half. This recursively splits
+the largest failed blocks without producing a logfile too large.
 
-   5) Try to read the bad hardware blocks until the specified number of
-retries is reached.
+   5) Optionally try to read again the bad sectors until the specified
+number of retries is reached.
 
    6) Optionally write a logfile for later use.
 
@@ -131,8 +168,8 @@ finishes or is interrupted. So in case of a crash you can resume the
 rescue with little recopying.
 
    Also, the same logfile can be used for multiple commands that copy
-different areas of the file, and for multiple recovery attempts over
-different subsets. See this example:
+different areas of the input file, and for multiple recovery attempts
+over different subsets. See this example:
 
 Rescue the most important part of the disc first.
      ddrescue -i0 -s50M /dev/hdc hdimage logfile
@@ -149,7 +186,7 @@ Now rescue the rest (does not recopy what is already done).
 
 File: ddrescue.info,  Node: Invoking ddrescue,  Next: Logfile Structure,  Prev: Algorithm,  Up: Top
 
-3 Invoking ddrescue
+4 Invoking ddrescue
 *******************
 
 The format for running ddrescue is:
@@ -169,9 +206,9 @@ The format for running ddrescue is:
 
 `--block-size=BYTES'
 `-b BYTES'
-     Hardware block size of input device in bytes (usually 512 for hard
-     discs and 3.5" floppies, 1024 for 5.25" floppies, and 2048 for
-     cdroms).  Defaults to 512.
+     Hardware block (sector) size of input device in bytes (usually 512
+     for hard discs and 3.5" floppies, 1024 for 5.25" floppies, and
+     2048 for cdroms). Defaults to 512.
 
 `--binary-prefixes'
 `-B'
@@ -179,30 +216,34 @@ The format for running ddrescue is:
      SI prefixes (powers of 1000) are used by default. (See table
      below).
 
-`--cluster-size=BLOCKS'
-`-c BLOCKS'
-     Number of hardware blocks (sectors) to copy at a time. Defaults to
-     64KiB / hardware_block_size. Try smaller values for slow drives.
-     The number of sectors per track (18 or 9) is a good value for
-     floppies.
+`--cluster-size=SECTORS'
+`-c SECTORS'
+     Number of sectors to copy at a time. Defaults to
+     64KiB / sector_size.  Try smaller values for slow drives. The
+     number of sectors per track (18 or 9) is a good value for floppies.
 
 `--complete-only'
 `-C'
-     Limit rescue domain to the blocks of finite size read from
-     logfile. Do not read new data beyond logfile limits. This is
-     useful when reading from devices of undefined size, like raw
-     devices.
+     Limit rescue domain to the blocks listed in the logfile. Do not
+     read new data beyond logfile limits. This is useful when reading
+     from devices of undefined size, like raw devices.
 
 `--direct'
 `-d'
      Use direct disc access to read the input file, bypassing the kernel
-     cache. Hardware block size must be correctly set for this to work.
-     Not all systems support this.
+     cache. (Open the file with the O_DIRECT flag). Use it only on
+     devices or partitions, not on regular files. Sector size must be
+     correctly set for this to work. Not all systems support this.
+
+     If your system does not support direct disc access, ddrescue will
+     warn you. If the sector size is not correctly set, all reads will
+     result in errors, and no data will be rescued.
 
 `--synchronous'
 `-D'
-     Use synchronous writes for output file. May be useful when forcing
-     the drive to remap its bad sectors.
+     Use synchronous writes for output file. (Issue a fsync call after
+     every write). May be useful when forcing the drive to remap its
+     bad sectors.
 
 `--max-errors=N'
 `-e N'
@@ -211,7 +252,7 @@ The format for running ddrescue is:
 
 `--fill=TYPES'
 `-F TYPES'
-     Fill the output file areas specified as any of TYPES in the
+     Fill the output file blocks specified as any of TYPES in the
      logfile, with data read from the input file. TYPES contains one or
      more of the status characters defined in the chapter Logfile
      Structure (*note Logfile Structure::). See the chapter Fill Mode
@@ -232,15 +273,15 @@ The format for running ddrescue is:
 
 `--domain-logfile=FILE'
 `-m FILE'
-     Restrict the rescue domain to the areas marked as finished in the
+     Restrict the rescue domain to the blocks marked as finished in the
      logfile FILE. This is useful if the destination drive fails during
      the rescue.
 
 `--no-split'
 `-n'
-     Do not try to split or retry error areas. Allows a fast recovery
-     of the non-damaged part of the file. This option overrides the
-     `--max-retries' option.
+     Stop after the trimming pass. Avoids spending a lot of time trying
+     to rescue the most difficult parts of the file. This option
+     overrides the `--max-retries' option.
 
 `--output-position=POS'
 `-o POS'
@@ -254,17 +295,17 @@ The format for running ddrescue is:
 
 `--max-retries=N'
 `-r N'
-     Exit after given number of retry passes. -1 means infinity.
-     Defaults to 0. Every bad sector is tried only one time per pass.
-     To retry error areas detected on a previous run, you must specify
-     a non-zero number of retries.
+     Exit after given number of retry passes. Defaults to 0. -1 means
+     infinity. Every bad sector is tried only one time per pass. To
+     retry bad sectors detected on a previous run, you must specify a
+     non-zero number of retries.
 
 `--retrim'
 `-R'
-     Mark all error areas inside the rescue domain as non-trimmed before
-     beginning the rescue. The effect is similar to `--max-retries=1',
-     but the bad sectors are tried in a different order, making perhaps
-     possible to rescue some of them.
+     Mark all failed blocks inside the rescue domain as non-trimmed
+     before beginning the rescue. The effect is similar to
+     `--max-retries=1', but the bad sectors are tried in a different
+     order, making perhaps possible to rescue some of them.
 
 `--max-size=BYTES'
 `-s BYTES'
@@ -278,8 +319,9 @@ The format for running ddrescue is:
 
 `--sparse'
 `-S'
-     Use sparse writes for output file. May save a lot of disc space in
-     some cases. Not all systems support this.
+     Use sparse writes for output file. (The blocks of zeros are not
+     actually allocated on disc). May save a lot of disc space in some
+     cases. Not all systems support this.
 
 `--truncate'
 `-t'
@@ -288,11 +330,11 @@ The format for running ddrescue is:
 
 `--try-again'
 `-T'
-     Mark all non-split and non-trimmed areas inside the rescue domain
+     Mark all non-split and non-trimmed blocks inside the rescue domain
      as non-tried before beginning the rescue. Try this if the drive
-     stops responding and ddrescue immediately starts splitting error
-     areas when restarted. If `--retrim' is also specified, mark all
-     error areas inside the rescue domain as non-tried.
+     stops responding and ddrescue immediately starts splitting failed
+     blocks when restarted. If `--retrim' is also specified, mark all
+     failed blocks inside the rescue domain as non-tried.
 
 `--verbose'
 `-v'
@@ -319,7 +361,7 @@ Y        yottabyte (10^24)         |   Yi       yobibyte (2^80)
 
 File: ddrescue.info,  Node: Logfile Structure,  Next: Examples,  Prev: Invoking ddrescue,  Up: Top
 
-4 Logfile Structure
+5 Logfile Structure
 *******************
 
 The logfile is a text file easy to read and edit. It is formed of two
@@ -335,29 +377,30 @@ non-negative integer and a status character. The integer is the position
 being tried in the input file. The status character is one of these:
 
 Character   Meaning
-'?'         copying data
-'*'         trimming bad areas
-'/'         splitting bad areas
-'-'         retrying bad hardware blocks
-'F'         filling specified areas
+'?'         copying non-tried blocks
+'*'         trimming non-trimmed blocks
+'/'         splitting non-split blocks
+'-'         retrying bad sectors
+'F'         filling specified blocks
 'G'         generating approximate logfile
 '+'         finished
 
-   Every line in the list of data blocks describes a block of data, and
+   Every line in the list of data blocks describes a block of data. It
 contains 2 non-negative integers and a status character. The first
-integer is a position in the input file, the second is the size (in
-bytes) of the data to be copied. The status character is one of these:
+integer is the starting position of the block in the input file, the
+second integer is the size (in bytes) of the block. The status character
+is one of these:
 
 Character   Meaning
-'?'         non-tried
-'*'         bad area non-trimmed
-'/'         bad area non-split
-'-'         bad hardware block(s)
-'+'         finished
+'?'         non-tried block
+'*'         failed block non-trimmed
+'/'         failed block non-split
+'-'         failed block bad-sector(s)
+'+'         finished block
 
 And here is an example logfile:
 
-# Rescue Logfile. Created by GNU ddrescue version 1.10
+# Rescue Logfile. Created by GNU ddrescue version 1.11
 # current_pos  current_status
 0x00120000     ?
 #      pos         size   status
@@ -376,7 +419,7 @@ values, using the same syntax that integer constants in C++.
 
 File: ddrescue.info,  Node: Examples,  Next: Direct Disc Access,  Prev: Logfile Structure,  Up: Top
 
-5 A small tutorial with examples
+6 A small tutorial with examples
 ********************************
 
 Ddrescue is like any other power tool. You need to understand what it
@@ -468,33 +511,33 @@ stops responding and disappears from /dev
 
 File: ddrescue.info,  Node: Direct Disc Access,  Next: Fill Mode,  Prev: Examples,  Up: Top
 
-6 Direct Disc Access
+7 Direct Disc Access
 ********************
 
 If you notice that the sizes and offsets in the log file are ALWAYS
-multiples of the hardware block size, maybe your kernel is caching the
-disc accesses and grouping them. In this case you may want to use direct
-disc access or a raw device to bypass the kernel cache and rescue more
-of your data.
+multiples of the sector size, maybe your kernel is caching the disc
+accesses and grouping them. In this case you may want to use direct disc
+access or a raw device to bypass the kernel cache and rescue more of
+your data.
 
-   NOTE! Hardware block size must be correctly set with the
-`--block-size' option for this to work. Try the `--direct' option
-first. If direct disc access is not available in your system, try raw
-devices. Read your system documentation to find how to bind a raw
-device to a regular block device.
+   NOTE! Sector size must be correctly set with the `--block-size'
+option for this to work. Try the `--direct' option first. If direct
+disc access is not available in your system, try raw devices. Read your
+system documentation to find how to bind a raw device to a regular block
+device.
 
-   Ddrescue aligns its I/O buffer to the hardware block size so that it
-can be used for direct disc access or to read from raw devices. For
-efficiency reasons, also aligns it to the memory page size if page size
-is a multiple of hardware block size. Ddrescue can't determine the size
-of a raw device, so a explicit `--max-size' or `--complete-only' option
-is needed.
+   Ddrescue aligns its I/O buffer to the sector size so that it can be
+used for direct disc access or to read from raw devices. For efficiency
+reasons, also aligns it to the memory page size if page size is a
+multiple of sector size. Ddrescue can't determine the size of a raw
+device, so a explicit `--max-size' or `--complete-only' option is
+needed.
 
    Using direct disc access, or reading from a raw device, may be slower
 than normal cached reading for hard discs (but faster for floppies). In
 this case you may want to make a first pass using normal cached reads,
 and use direct disc access, or a raw device, only to recover the good
-sectors inside the error areas.
+sectors inside the failed blocks.
 
 
 Example 1: using direct disc access
@@ -517,13 +560,13 @@ Example 2: using a raw device
 
 File: ddrescue.info,  Node: Fill Mode,  Next: Generate Mode,  Prev: Direct Disc Access,  Up: Top
 
-7 Fill Mode
+8 Fill Mode
 ***********
 
 When ddrescue is invoked with the `--fill' option it operates in "fill
 mode", which is different from the default "rescue mode". That is, if
 you use the `--fill' option, ddrescue does not rescue anything.  It
-only fills with data read from the input file the areas of the output
+only fills with data read from the input file the blocks of the output
 file whose status character from the logfile coincides with one of the
 type characters specified as argument to the `--fill' option.
 
@@ -554,10 +597,10 @@ The fill mode has a number of uses. See the following examples:
 
 Example 1: Mark parts of the rescued copy to allow finding them when
 examined in an hex editor. For example, the following command line fills
-all areas marked as `-' (bad hardware blocks) with copies of the string
-`BAD BLOCK ':
+all blocks marked as `-' (bad-sector) with copies of the string
+`BAD SECTOR ':
 
-     echo -n "BAD BLOCK " > tmpfile
+     echo -n "BAD SECTOR " > tmpfile
      ddrescue --fill=- tmpfile outfile logfile
 
 Example 2: Wipe only the good sectors, leaving the bad sectors alone.
@@ -582,27 +625,27 @@ system used, what files are partially or entirely in the bad areas of
 the disc. Just follow these steps:
 
    1) Copy the damaged drive with ddrescue until finished. Do not use
-sparse writes. This yields a logfile with only finished (`+') and bad
-(`-') areas.
+sparse writes. This yields a logfile with only finished (`+') and
+bad-sector (`-') blocks.
 
    2) Mount the copied drive (or the image file, via loopback device).
 
    3) Compute a md5sum or other checksum for every file. Build a list of
 all the files and their checksums.
 
-   4) Fill the bad areas of the copied drive or image file with a byte
-value different from zero.
+   4) Fill the bad-sector blocks of the copied drive or image file with
+a byte value different from zero.
 
    5) Verify the checksums. Those files which have different checksums
-this time reside (at least partially) in damaged disk areas.
+this time reside (at least partially) in damaged disc areas.
 
-   6) Optionally fill the bad areas of the copied drive or image file
-with zeros to restore the disk image.
+   6) Optionally fill the bad-sector blocks of the copied drive or image
+file with zeros to restore the disc image.
 
 
 File: ddrescue.info,  Node: Generate Mode,  Next: Problems,  Prev: Fill Mode,  Up: Top
 
-8 Generate-logfile Mode
+9 Generate-logfile Mode
 ***********************
 
 So you didn't read the tutorial and started ddrescue without a logfile.
@@ -618,7 +661,7 @@ conversion argument.
    Don't despair (yet). Ddrescue can in some cases generate an
 approximate logfile, from the input file and the (partial) copy, that
 is almost as good as an exact logfile. It makes this by simply assuming
-that sectors containng all zeros were not rescued.
+that sectors containing all zeros were not rescued.
 
    However, if the destination of the copy was a drive or a partition,
 (or an existing regular file and truncation was not requested), most
@@ -638,8 +681,8 @@ thus non-tried but non-zero.
 
 File: ddrescue.info,  Node: Problems,  Next: Concept Index,  Prev: Generate Mode,  Up: Top
 
-9 Reporting Bugs
-****************
+10 Reporting Bugs
+*****************
 
 There are probably bugs in ddrescue. There are certainly errors and
 omissions in this manual. If you report them, they will get fixed. If
@@ -660,6 +703,7 @@ Concept Index
 * Menu:
 
 * algorithm:                             Algorithm.             (line 6)
+* basic concepts:                        Basic concepts.        (line 6)
 * bugs:                                  Problems.              (line 6)
 * direct disc access:                    Direct Disc Access.    (line 6)
 * examples:                              Examples.              (line 6)
@@ -678,15 +722,16 @@ Concept Index
 
 Tag Table:
 Node: Top203
-Node: Introduction1017
-Node: Algorithm3053
-Node: Invoking ddrescue5734
-Node: Logfile Structure11535
-Node: Examples13465
-Node: Direct Disc Access16913
-Node: Fill Mode18793
-Node: Generate Mode22387
-Node: Problems23929
-Node: Concept Index24477
+Node: Introduction1079
+Node: Basic concepts3120
+Node: Algorithm3984
+Node: Invoking ddrescue7142
+Node: Logfile Structure13329
+Node: Examples15324
+Node: Direct Disc Access18772
+Node: Fill Mode20622
+Node: Generate Mode24235
+Node: Problems25778
+Node: Concept Index26328
 
 End Tag Table

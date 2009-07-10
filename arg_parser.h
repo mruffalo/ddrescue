@@ -58,7 +58,7 @@ private:
     Record( const int c = 0 ) : code( c ) {}
     };
 
-  std::string _error;
+  std::string error_;
   std::vector< Record > data;
 
   bool parse_long_option( const char * const opt, const char * const arg,
@@ -74,7 +74,7 @@ public:
   Arg_parser( const char * const opt, const char * const arg,
               const Option options[] );
 
-  const std::string & error() const throw() { return _error; }
+  const std::string & error() const throw() { return error_; }
 
       // The number of arguments parsed (may be different from argc)
   int arguments() const throw() { return data.size(); }
@@ -90,6 +90,6 @@ public:
   const std::string & argument( const int i ) const throw()
     {
     if( i >= 0 && i < arguments() ) return data[i].argument;
-    else return _error;
+    else return error_;
     }
   };

@@ -26,6 +26,8 @@
 #include "ddrescue.h"
 
 
+// Return values: 1 write error, 0 OK, -1 interrupted, -2 logfile error.
+//
 int Fillbook::fill_areas( const std::string & filltypes )
   {
   bool first_post = true;
@@ -46,7 +48,7 @@ int Fillbook::fill_areas( const std::string & filltypes )
         { show_status( b.pos(), first_post ); first_post = false; }
       const int retval = fill_block( b );
       if( retval ) return retval;
-      if( !update_logfile( _odes ) ) return 1;
+      if( !update_logfile( odes_ ) ) return -2;
       b.pos( b.end() );
       if( b.end() > sb.end() ) b.crop( sb );
       }
@@ -56,11 +58,13 @@ int Fillbook::fill_areas( const std::string & filltypes )
   }
 
 
+// Return values: 1 write error, 0 OK.
+//
 int Fillbook::do_fill( const int odes, const std::string & filltypes )
   {
   filled_size = 0, remaining_size = 0;
   filled_areas = 0, remaining_areas = 0;
-  _odes = odes;
+  odes_ = odes;
   if( current_status() != filling || !domain().includes( current_pos() ) )
     current_pos( 0 );
 
@@ -77,7 +81,7 @@ int Fillbook::do_fill( const int odes, const std::string & filltypes )
       }
     else { ++remaining_areas; remaining_size += sb.size(); }
     }
-  set_handler();
+  set_signals();
   if( verbosity >= 0 )
     {
     std::printf( "Press Ctrl-C to interrupt\n" );
@@ -96,13 +100,18 @@ int Fillbook::do_fill( const int odes, const std::string & filltypes )
     {
     show_status( -1, true );
     if( retval == 0 ) std::printf( "Finished" );
+    else if( retval == -2 ) std::printf( "Logfile error" );
     else if( retval < 0 ) std::printf( "Interrupted by user" );
     std::fputc( '\n', stdout );
     }
-  if( retval == 0 ) current_status( finished );
-  else if( retval < 0 ) retval = 0;		// interrupted by user
-  compact_sblock_vector();
-  if( !update_logfile( _odes, true ) && retval == 0 ) retval = 1;
+  if( retval == -2 ) retval = 1;		// logfile error
+  else
+    {
+    if( retval == 0 ) current_status( finished );
+    else if( retval < 0 ) retval = 0;		// interrupted by user
+    compact_sblock_vector();
+    if( !update_logfile( odes_, true ) && retval == 0 ) retval = 1;
+    }
   if( final_msg() ) show_error( final_msg(), final_errno() );
   return retval;
   }

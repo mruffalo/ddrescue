@@ -146,8 +146,8 @@ bool read_logfile( const char * name, std::vector< Sblock > & sblock_vector,
       if( !line ) break;
       long long pos, size;
       n = std::sscanf( line, "%lli %lli %c\n", &pos, &size, &ch );
-      if( n == 3 && pos >= 0 && ( size > 0 || size == -1 ) &&
-          Sblock::isstatus( ch ) )
+      if( n == 3 && pos >= 0 && Sblock::isstatus( ch ) &&
+          ( size > 0 || size == -1 || ( size == 0 && pos == 0 ) ) )
         {
         Sblock::Status st = Sblock::Status( ch );
         Sblock sb( pos, size, st ); sb.fix_size();
@@ -195,7 +195,7 @@ void Logbook::split_domain_border_sblocks()
   for( unsigned int i = 0; i < sblock_vector.size(); ++i )
     {
     Sblock & sb = sblock_vector[i];
-    const long long pos = _domain.breaks_block_by( sb );
+    const long long pos = domain_.breaks_block_by( sb );
     if( pos > 0 )
       {
       const Sblock head( sb.split( pos ) );
@@ -210,34 +210,35 @@ Logbook::Logbook( const long long ipos, const long long opos, Domain & dom,
                   const long long isize,
                   const char * name, const int cluster, const int hardbs,
                   const bool complete_only )
-  : _offset( opos - ipos ), _current_pos( 0 ), _current_status( copying ),
-    _domain( dom ), _filename( name ),
-    _hardbs( hardbs ), _softbs( cluster * hardbs ),
-    _final_msg( 0 ), _final_errno( 0 ), _index( 0 )
+  : offset_( opos - ipos ), current_pos_( 0 ), current_status_( copying ),
+    domain_( dom ), filename_( name ),
+    hardbs_( hardbs ), softbs_( cluster * hardbs ),
+    final_msg_( 0 ), final_errno_( 0 ), index_( 0 ),
+    ul_t1( std::time( 0 ) )
   {
   int alignment = sysconf( _SC_PAGESIZE );
-  if( alignment < _hardbs || alignment % _hardbs ) alignment = _hardbs;
+  if( alignment < hardbs_ || alignment % hardbs_ ) alignment = hardbs_;
   if( alignment < 2 || alignment > 65536 ) alignment = 0;
-  _iobuf = iobuf_base = new char[ _softbs + alignment ];
+  iobuf_ = iobuf_base = new char[ softbs_ + alignment ];
   if( alignment > 1 )		// align iobuf for use with raw devices
     {
-    const int disp = alignment - ( reinterpret_cast<long> (_iobuf) % alignment );
-    if( disp > 0 && disp < alignment ) _iobuf += disp;
+    const int disp = alignment - ( reinterpret_cast<long> (iobuf_) % alignment );
+    if( disp > 0 && disp < alignment ) iobuf_ += disp;
     }
 
-  if( !_domain.crop_by_file_size( isize ) ) std::exit( 1 );
-  if( _filename )
-    read_logfile( _filename, sblock_vector, _current_pos, _current_status );
+  if( !domain_.crop_by_file_size( isize ) ) std::exit( 1 );
+  if( filename_ )
+    read_logfile( filename_, sblock_vector, current_pos_, current_status_ );
   if( !complete_only ) extend_sblock_vector( sblock_vector, isize );
   else if( sblock_vector.size() )  // limit domain to blocks read from logfile
     {
     const Block b( sblock_vector.front().pos(),
                    sblock_vector.back().end() - sblock_vector.front().pos() );
-    _domain.crop( b );
+    domain_.crop( b );
     }
   compact_sblock_vector();
   split_domain_border_sblocks();
-  if( sblock_vector.size() == 0 ) _domain.clear();
+  if( sblock_vector.size() == 0 ) domain_.clear();
   }
 
 
@@ -263,43 +264,52 @@ void Logbook::compact_sblock_vector()
 //
 bool Logbook::update_logfile( const int odes, const bool force )
   {
-  static time_t t1 = std::time( 0 );
-
-  if( !_filename ) return true;
+  if( !filename_ ) return true;
   const int interval = 30 + std::min( 270, sblocks() / 40 );
-  const time_t t2 = std::time( 0 );
-  if( !force && t2 - t1 < interval ) return true;
-  t1 = t2;
+  const long t2 = std::time( 0 );
+  if( !force && t2 - ul_t1 < interval ) return true;
+  ul_t1 = t2;
   if( odes >= 0 ) fsync( odes );
 
   errno = 0;
-  FILE *f = std::fopen( _filename, "w" );
-  if( !f )
+  FILE *f = std::fopen( filename_, "w" );
+  if( f )
     {
-    char buf[80];
-    snprintf( buf, sizeof buf, "error opening logfile %s for writing", _filename );
-    show_error( buf, errno );
-    return false;
+    write_logfile_header( f );
+    std::fprintf( f, "# current_pos  current_status\n" );
+    std::fprintf( f, "0x%08llX     %c\n", current_pos_, current_status_ );
+    std::fprintf( f, "#      pos        size  status\n" );
+    for( unsigned int i = 0; i < sblock_vector.size(); ++i )
+      {
+      const Sblock & sb = sblock_vector[i];
+      std::fprintf( f, "0x%08llX  0x%08llX  %c\n", sb.pos(), sb.size(), sb.status() );
+      }
+    if( std::fclose( f ) == 0 ) return true;
     }
 
-  write_logfile_header( f );
-  std::fprintf( f, "# current_pos  current_status\n" );
-  std::fprintf( f, "0x%08llX     %c\n", _current_pos, _current_status );
-  std::fprintf( f, "#      pos        size  status\n" );
-  for( unsigned int i = 0; i < sblock_vector.size(); ++i )
-    {
-    const Sblock & sb = sblock_vector[i];
-    std::fprintf( f, "0x%08llX  0x%08llX  %c\n", sb.pos(), sb.size(), sb.status() );
-    }
-
-  if( std::fclose( f ) )
+  if( verbosity >= 0 )
     {
     char buf[80];
-    snprintf( buf, sizeof buf, "error writing logfile %s", _filename );
+    const char * const s =
+      f ? "error writing logfile %s" : "error opening logfile %s for writing";
+    snprintf( buf, sizeof buf, s, filename_ );
+    std::fprintf( stderr, "\n" );
     show_error( buf, errno );
-    return false;
+    std::fprintf( stderr, "Fix the problem and press ENTER to retry, or Q+ENTER to abort. " );
+    std::fflush( stderr );
+    while( true )
+      {
+      const char c = std::tolower( std::fgetc( stdin ) );
+      if( c == '\r' || c == '\n' )
+        {
+        std::fprintf( stderr, "\n\n\n\n" );
+        return update_logfile( -1, true );
+        }
+      if( c == 'q' ) break;
+      }
+    std::fprintf( stderr, "\n\n\n\n" );
     }
-  return true;
+  return false;
   }
 
 
@@ -310,7 +320,7 @@ void Logbook::truncate_vector( const long long pos )
   if( i < 0 )
     {
     sblock_vector.clear();
-    sblock_vector.push_back( Sblock( pos, 0, Sblock::finished ) );
+    sblock_vector.push_back( Sblock( pos, 0, Sblock::non_tried ) );
     }
   else
     {
@@ -323,13 +333,13 @@ void Logbook::truncate_vector( const long long pos )
 
 int Logbook::find_index( const long long pos ) const throw()
   {
-  if( _index < 0 || _index >= sblocks() ) _index = sblocks() / 2;
-  while( _index + 1 < sblocks() && pos >= sblock_vector[_index].end() )
-    ++_index;
-  while( _index > 0 && pos < sblock_vector[_index].pos() )
-    --_index;
-  if( !sblock_vector[_index].includes( pos ) ) _index = -1;
-  return _index;
+  if( index_ < 0 || index_ >= sblocks() ) index_ = sblocks() / 2;
+  while( index_ + 1 < sblocks() && pos >= sblock_vector[index_].end() )
+    ++index_;
+  while( index_ > 0 && pos < sblock_vector[index_].pos() )
+    --index_;
+  if( !sblock_vector[index_].includes( pos ) ) index_ = -1;
+  return index_;
   }
 
 
@@ -343,18 +353,18 @@ void Logbook::find_chunk( Block & b, const Sblock::Status st ) const
     b.pos( sblock_vector.front().pos() );
   if( find_index( b.pos() ) < 0 ) { b.size( 0 ); return; }
   int i;
-  for( i = _index; i < sblocks(); ++i )
+  for( i = index_; i < sblocks(); ++i )
     if( sblock_vector[i].status() == st &&
-        _domain.includes( sblock_vector[i] ) )
-      { _index = i; break; }
+        domain_.includes( sblock_vector[i] ) )
+      { index_ = i; break; }
   if( i >= sblocks() ) { b.size( 0 ); return; }
-  if( b.pos() < sblock_vector[_index].pos() )
-    b.pos( sblock_vector[_index].pos() );
+  if( b.pos() < sblock_vector[index_].pos() )
+    b.pos( sblock_vector[index_].pos() );
   b.fix_size();
-  if( !sblock_vector[_index].includes( b ) )
-    b.crop( sblock_vector[_index] );
-  if( b.end() != sblock_vector[_index].end() )
-    b.align_end( _hardbs );
+  if( !sblock_vector[index_].includes( b ) )
+    b.crop( sblock_vector[index_] );
+  if( b.end() != sblock_vector[index_].end() )
+    b.align_end( hardbs_ );
   }
 
 
@@ -368,67 +378,67 @@ void Logbook::rfind_chunk( Block & b, const Sblock::Status st ) const
   if( sblock_vector.back().end() < b.end() )
     b.end( sblock_vector.back().end() );
   find_index( b.end() - 1 );
-  for( ; _index >= 0; --_index )
-    if( sblock_vector[_index].status() == st &&
-        _domain.includes( sblock_vector[_index] ) )
+  for( ; index_ >= 0; --index_ )
+    if( sblock_vector[index_].status() == st &&
+        domain_.includes( sblock_vector[index_] ) )
       break;
-  if( _index < 0 ) { b.size( 0 ); return; }
-  if( b.end() > sblock_vector[_index].end() )
-    b.end( sblock_vector[_index].end() );
-  if( !sblock_vector[_index].includes( b ) )
-    b.crop( sblock_vector[_index] );
-  if( b.pos() != sblock_vector[_index].pos() )
-    b.align_pos( _hardbs );
+  if( index_ < 0 ) { b.size( 0 ); return; }
+  if( b.end() > sblock_vector[index_].end() )
+    b.end( sblock_vector[index_].end() );
+  if( !sblock_vector[index_].includes( b ) )
+    b.crop( sblock_vector[index_] );
+  if( b.pos() != sblock_vector[index_].pos() )
+    b.align_pos( hardbs_ );
   }
 
 
 void Logbook::change_chunk_status( const Block & b, const Sblock::Status st )
   {
   if( b.size() <= 0 ) return;
-  if( !_domain.includes( b ) || find_index( b.pos() ) < 0 ||
-      !_domain.includes( sblock_vector[_index] ) )
+  if( !domain_.includes( b ) || find_index( b.pos() ) < 0 ||
+      !domain_.includes( sblock_vector[index_] ) )
     internal_error( "can't change status of chunk not in rescue domain" );
-  if( !sblock_vector[_index].includes( b ) )
+  if( !sblock_vector[index_].includes( b ) )
     internal_error( "can't change status of chunk spread over more than 1 block" );
-  if( sblock_vector[_index].status() == st ) return;
-  if( sblock_vector[_index].pos() < b.pos() )
+  if( sblock_vector[index_].status() == st ) return;
+  if( sblock_vector[index_].pos() < b.pos() )
     {
-    if( sblock_vector[_index].end() == b.end() &&
-        _index + 1 < sblocks() && sblock_vector[_index+1].status() == st &&
-        _domain.includes( sblock_vector[_index+1] ) )
+    if( sblock_vector[index_].end() == b.end() &&
+        index_ + 1 < sblocks() && sblock_vector[index_+1].status() == st &&
+        domain_.includes( sblock_vector[index_+1] ) )
       {
-      sblock_vector[_index].inc_size( -b.size() );
-      sblock_vector[_index+1].pos( b.pos() );
-      sblock_vector[_index+1].inc_size( b.size() );
+      sblock_vector[index_].inc_size( -b.size() );
+      sblock_vector[index_+1].pos( b.pos() );
+      sblock_vector[index_+1].inc_size( b.size() );
       return;
       }
-    insert_sblock( _index, sblock_vector[_index].split( b.pos() ) );
-    ++_index;
+    insert_sblock( index_, sblock_vector[index_].split( b.pos() ) );
+    ++index_;
     }
-  if( sblock_vector[_index].size() > b.size() )
+  if( sblock_vector[index_].size() > b.size() )
     {
-    sblock_vector[_index].pos( b.end() );
-    sblock_vector[_index].inc_size( -b.size() );
-    if( _index > 0 && sblock_vector[_index-1].status() == st &&
-        _domain.includes( sblock_vector[_index-1] ) )
-      sblock_vector[_index-1].inc_size( b.size() );
+    sblock_vector[index_].pos( b.end() );
+    sblock_vector[index_].inc_size( -b.size() );
+    if( index_ > 0 && sblock_vector[index_-1].status() == st &&
+        domain_.includes( sblock_vector[index_-1] ) )
+      sblock_vector[index_-1].inc_size( b.size() );
     else
-      insert_sblock( _index, Sblock( b, st ) );
+      insert_sblock( index_, Sblock( b, st ) );
     }
   else
     {
-    sblock_vector[_index].status( st );
-    if( _index > 0 && sblock_vector[_index-1].status() == st &&
-        _domain.includes( sblock_vector[_index-1] ) )
+    sblock_vector[index_].status( st );
+    if( index_ > 0 && sblock_vector[index_-1].status() == st &&
+        domain_.includes( sblock_vector[index_-1] ) )
       {
-      sblock_vector[_index-1].inc_size( sblock_vector[_index].size() );
-      erase_sblock( _index ); --_index;
+      sblock_vector[index_-1].inc_size( sblock_vector[index_].size() );
+      erase_sblock( index_ ); --index_;
       }
-    if( _index + 1 < sblocks() && sblock_vector[_index+1].status() == st &&
-        _domain.includes( sblock_vector[_index+1] ) )
+    if( index_ + 1 < sblocks() && sblock_vector[index_+1].status() == st &&
+        domain_.includes( sblock_vector[index_+1] ) )
       {
-      sblock_vector[_index].inc_size( sblock_vector[_index+1].size() );
-      erase_sblock( _index + 1 );
+      sblock_vector[index_].inc_size( sblock_vector[index_+1].size() );
+      erase_sblock( index_ + 1 );
       }
     }
   }

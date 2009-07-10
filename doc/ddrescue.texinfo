@@ -5,8 +5,8 @@
 @finalout
 @c %**end of header
 
-@set UPDATED 19 February 2009
-@set VERSION 1.10
+@set UPDATED 10 July 2009
+@set VERSION 1.11
 
 @dircategory GNU Packages
 @direntry
@@ -33,6 +33,7 @@ This manual is for GNU ddrescue (version @value{VERSION}, @value{UPDATED}).
 
 @menu
 * Introduction::	Purpose and features of GNU ddrescue
+* Basic concepts::	Blocks, clusters, devices, files, sectors, etc
 * Algorithm::		How ddrescue recovers the data
 * Invoking ddrescue::	Command line interface
 * Logfile Structure::	Detailed format of the logfile
@@ -97,6 +98,37 @@ data, marking bad areas or even, in some cases, "repair" damaged
 sectors.
 
 
+@node Basic concepts
+@chapter Basic concepts
+@cindex basic concepts
+
+@table @asis
+@item Block
+Any amount of data. A block is described by its starting position and
+its size.
+
+@item Cluster
+Group of consecutive sectors read or written in one go.
+
+@item Device
+Piece of hardware containing data. Hard disc drives, cdrom drives, USB
+pendrives, are devices. /dev/hda, /dev/sdb, are device names.
+
+@item File
+Files are named units of data which are stored by the operating system
+for you to retrieve later by name. Devices are accessed by means of
+their associated file names.
+
+@item Partition
+Every part in which a device is divided. A partition normally contains a
+filesystem. /dev/hda1, /dev/sdb3, are partition names.
+
+@item Sector
+Hardware block. Smallest accessible amount of data on a device.
+
+@end table
+
+
 @node Algorithm
 @chapter Algorithm
 @cindex algorithm
@@ -123,20 +155,25 @@ for a long time until the kernel gives up)
 previously interrupted rescue. If no logfile is specified or is empty or
 does not exist, mark all the rescue domain as non-tried.
 
-2) Read the non-tried parts of the input file, marking the damaged areas
+2) Read the non-tried parts of the input file, marking the failed blocks
 as non-trimmed and skipping beyond them, until all the rescue domain is
-tried.
+tried. Only non-tried areas are read in large blocks. Trimming,
+splitting and retrying are done sector by sector. Each sector is tried
+at most two times; the first in this step as part of a large block read,
+the second in one of the steps below as a single sector read.
 
-3) Read backwards the damaged areas marked as non-trimmed until an error
-is found, and mark the rest of the area as non-split.
+3) Read backwards one sector at a time the non-trimmed blocks, until a
+bad sector is found. For each non-trimmed block, mark the bad sector
+found as bad-sector and mark the rest of that block as non-split.
 
-4) Try to read the damaged areas marked as non-split, splitting them
-into smaller pieces and reading the non-damaged pieces, until the
-hardware block size is reached. Mark the pieces that can't be read as
-bad hardware blocks.
+4) Read forwards one sector at a time the non-split blocks, marking the
+bad sectors found as bad-sector. After a number of consecutive bad
+sectors is found in a block larger enough, the block is split by half
+and the reading continues on the second half. This recursively splits
+the largest failed blocks without producing a logfile too large.
 
-5) Try to read the bad hardware blocks until the specified number of
-retries is reached.
+5) Optionally try to read again the bad sectors until the specified
+number of retries is reached.
 
 6) Optionally write a logfile for later use.
 
@@ -146,8 +183,8 @@ finishes or is interrupted. So in case of a crash you can resume the
 rescue with little recopying.
 
 Also, the same logfile can be used for multiple commands that copy
-different areas of the file, and for multiple recovery attempts over
-different subsets. See this example:
+different areas of the input file, and for multiple recovery attempts
+over different subsets. See this example:
 
 @noindent
 Rescue the most important part of the disc first.
@@ -197,37 +234,42 @@ Print the version number of ddrescue on the standard output and exit.
 
 @item --block-size=@var{bytes}
 @itemx -b @var{bytes}
-Hardware block size of input device in bytes (usually 512 for hard discs
-and 3.5" floppies, 1024 for 5.25" floppies, and 2048 for cdroms).
-Defaults to 512.
+Hardware block (sector) size of input device in bytes (usually 512 for
+hard discs and 3.5" floppies, 1024 for 5.25" floppies, and 2048 for
+cdroms). Defaults to 512.
 
 @item --binary-prefixes
 @itemx -B
 Show units with binary prefixes (powers of 1024).@*
 SI prefixes (powers of 1000) are used by default. (See table below).
 
-@item --cluster-size=@var{blocks}
-@itemx -c @var{blocks}
-Number of hardware blocks (sectors) to copy at a time. Defaults to
-@w{64KiB / hardware_block_size}. Try smaller values for slow drives. The
-number of sectors per track (18 or 9) is a good value for floppies.
+@item --cluster-size=@var{sectors}
+@itemx -c @var{sectors}
+Number of sectors to copy at a time. Defaults to @w{64KiB / sector_size}.
+Try smaller values for slow drives. The number of sectors per track (18
+or 9) is a good value for floppies.
 
 @item --complete-only
 @itemx -C
-Limit rescue domain to the blocks of finite size read from logfile. Do
-not read new data beyond logfile limits. This is useful when reading
-from devices of undefined size, like raw devices.
+Limit rescue domain to the blocks listed in the logfile. Do not read new
+data beyond logfile limits. This is useful when reading from devices of
+undefined size, like raw devices.
 
 @item --direct
 @itemx -d
 Use direct disc access to read the input file, bypassing the kernel
-cache. Hardware block size must be correctly set for this to work. Not
-all systems support this.
+cache. (Open the file with the O_DIRECT flag). Use it only on devices or
+partitions, not on regular files. Sector size must be correctly set for
+this to work. Not all systems support this.
+
+If your system does not support direct disc access, ddrescue will warn
+you. If the sector size is not correctly set, all reads will result in
+errors, and no data will be rescued.
 
 @item --synchronous
 @itemx -D
-Use synchronous writes for output file. May be useful when forcing the
-drive to remap its bad sectors.
+Use synchronous writes for output file. (Issue a fsync call after every
+write). May be useful when forcing the drive to remap its bad sectors.
 
 @item --max-errors=@var{n}
 @itemx -e @var{n}
@@ -235,7 +277,7 @@ Maximum number of error areas allowed before giving up. Defaults to infinity.
 
 @item --fill=@var{types}
 @itemx -F @var{types}
-Fill the output file areas specified as any of @var{types} in the
+Fill the output file blocks specified as any of @var{types} in the
 logfile, with data read from the input file. @var{types} contains one or
 more of the status characters defined in the chapter Logfile Structure
 (@pxref{Logfile Structure}). See the chapter Fill Mode (@pxref{Fill
@@ -256,14 +298,14 @@ it refers to the original input file. See the chapter Fill Mode
 
 @item --domain-logfile=@var{file}
 @itemx -m @var{file}
-Restrict the rescue domain to the areas marked as finished in the
+Restrict the rescue domain to the blocks marked as finished in the
 logfile @var{file}. This is useful if the destination drive fails during
 the rescue.
 
 @item --no-split
 @itemx -n
-Do not try to split or retry error areas. Allows a fast recovery of the
-non-damaged part of the file. This option overrides the
+Stop after the trimming pass. Avoids spending a lot of time trying to
+rescue the most difficult parts of the file. This option overrides the
 @samp{--max-retries} option.
 
 @item --output-position=@var{pos}
@@ -278,14 +320,14 @@ Quiet operation.
 
 @item --max-retries=@var{n}
 @itemx -r @var{n}
-Exit after given number of retry passes. -1 means infinity. Defaults to
-0. Every bad sector is tried only one time per pass. To retry error
-areas detected on a previous run, you must specify a non-zero number of
-retries.
+Exit after given number of retry passes. Defaults to 0. -1 means
+infinity. Every bad sector is tried only one time per pass. To retry bad
+sectors detected on a previous run, you must specify a non-zero number
+of retries.
 
 @item --retrim
 @itemx -R
-Mark all error areas inside the rescue domain as non-trimmed before
+Mark all failed blocks inside the rescue domain as non-trimmed before
 beginning the rescue. The effect is similar to @samp{--max-retries=1},
 but the bad sectors are tried in a different order, making perhaps
 possible to rescue some of them.
@@ -304,8 +346,9 @@ ddrescue -i 100 -s 200 infile outfile logfile
 
 @item --sparse
 @itemx -S
-Use sparse writes for output file. May save a lot of disc space in some
-cases. Not all systems support this.
+Use sparse writes for output file. (The blocks of zeros are not actually
+allocated on disc). May save a lot of disc space in some cases. Not all
+systems support this.
 
 @item --truncate
 @itemx -t
@@ -314,10 +357,10 @@ regular files, not for drives or partitions.
 
 @item --try-again
 @itemx -T
-Mark all non-split and non-trimmed areas inside the rescue domain as
+Mark all non-split and non-trimmed blocks inside the rescue domain as
 non-tried before beginning the rescue. Try this if the drive stops
-responding and ddrescue immediately starts splitting error areas when
-restarted. If @samp{--retrim} is also specified, mark all error areas
+responding and ddrescue immediately starts splitting failed blocks when
+restarted. If @samp{--retrim} is also specified, mark all failed blocks
 inside the rescue domain as non-tried.
 
 @item --verbose
@@ -364,27 +407,28 @@ being tried in the input file. The status character is one of these:
 
 @multitable {Character} {generating approximate logfile}
 @item Character @tab Meaning
-@item '?'       @tab copying data
-@item '*'       @tab trimming bad areas
-@item '/'       @tab splitting bad areas
-@item '-'       @tab retrying bad hardware blocks
-@item 'F'       @tab filling specified areas
+@item '?'       @tab copying non-tried blocks
+@item '*'       @tab trimming non-trimmed blocks
+@item '/'       @tab splitting non-split blocks
+@item '-'       @tab retrying bad sectors
+@item 'F'       @tab filling specified blocks
 @item 'G'       @tab generating approximate logfile
 @item '+'       @tab finished
 @end multitable
 
-Every line in the list of data blocks describes a block of data, and
+Every line in the list of data blocks describes a block of data. It
 contains 2 non-negative integers and a status character. The first
-integer is a position in the input file, the second is the size (in
-bytes) of the data to be copied. The status character is one of these:
+integer is the starting position of the block in the input file, the
+second integer is the size (in bytes) of the block. The status character
+is one of these:
 
-@multitable {Character} {bad hardware block(s)}
+@multitable {Character} {failed block bad-sector(s)}
 @item Character @tab Meaning
-@item '?'       @tab non-tried
-@item '*'       @tab bad area non-trimmed
-@item '/'       @tab bad area non-split
-@item '-'       @tab bad hardware block(s)
-@item '+'       @tab finished
+@item '?'       @tab non-tried block
+@item '*'       @tab failed block non-trimmed
+@item '/'       @tab failed block non-split
+@item '-'       @tab failed block bad-sector(s)
+@item '+'       @tab finished block
 @end multitable
 
 @noindent
@@ -521,29 +565,29 @@ ddrescue -dr3 /dev/hda /dev/hdb logfile
 @cindex raw devices
 
 If you notice that the sizes and offsets in the log file are ALWAYS
-multiples of the hardware block size, maybe your kernel is caching the
-disc accesses and grouping them. In this case you may want to use direct
-disc access or a raw device to bypass the kernel cache and rescue more
-of your data.
+multiples of the sector size, maybe your kernel is caching the disc
+accesses and grouping them. In this case you may want to use direct disc
+access or a raw device to bypass the kernel cache and rescue more of
+your data.
 
-NOTE! Hardware block size must be correctly set with the
-@samp{--block-size} option for this to work. Try the @samp{--direct}
-option first. If direct disc access is not available in your system, try
-raw devices. Read your system documentation to find how to bind a raw
-device to a regular block device.
+NOTE! Sector size must be correctly set with the @samp{--block-size}
+option for this to work. Try the @samp{--direct} option first. If direct
+disc access is not available in your system, try raw devices. Read your
+system documentation to find how to bind a raw device to a regular block
+device.
 
-Ddrescue aligns its I/O buffer to the hardware block size so that it can
-be used for direct disc access or to read from raw devices. For
-efficiency reasons, also aligns it to the memory page size if page size
-is a multiple of hardware block size. Ddrescue can't determine the size
-of a raw device, so a explicit @samp{--max-size} or
-@samp{--complete-only} option is needed.
+Ddrescue aligns its I/O buffer to the sector size so that it can be used
+for direct disc access or to read from raw devices. For efficiency
+reasons, also aligns it to the memory page size if page size is a
+multiple of sector size. Ddrescue can't determine the size of a raw
+device, so a explicit @samp{--max-size} or @samp{--complete-only} option
+is needed.
 
 Using direct disc access, or reading from a raw device, may be slower
 than normal cached reading for hard discs (but faster for floppies). In
 this case you may want to make a first pass using normal cached reads,
 and use direct disc access, or a raw device, only to recover the good
-sectors inside the error areas.
+sectors inside the failed blocks.
 
 @sp 1
 @noindent
@@ -577,9 +621,10 @@ mount -t ext2 -o ro /dev/hdc1 /mnt
 When ddrescue is invoked with the @samp{--fill} option it operates in
 "fill mode", which is different from the default "rescue mode". That is,
 if you use the @samp{--fill} option, ddrescue does not rescue anything.
-It only fills with data read from the input file the areas of the output
-file whose status character from the logfile coincides with one of the
-type characters specified as argument to the @samp{--fill} option.
+It only fills with data read from the input file the blocks of the
+output file whose status character from the logfile coincides with one
+of the type characters specified as argument to the @samp{--fill}
+option.
 
 In fill mode the input file may have any size. If it is too small, the
 data will be duplicated as many times as necessary to fill the input
@@ -610,11 +655,11 @@ The fill mode has a number of uses. See the following examples:
 @noindent
 Example 1: Mark parts of the rescued copy to allow finding them when
 examined in an hex editor. For example, the following command line fills
-all areas marked as @samp{-} (bad hardware blocks) with copies of the
-string @w{@samp{BAD BLOCK }}:
+all blocks marked as @samp{-} (bad-sector) with copies of the string
+@w{@samp{BAD SECTOR }}:
 
 @example
-echo -n "BAD BLOCK " > tmpfile
+echo -n "BAD SECTOR " > tmpfile
 ddrescue --fill=- tmpfile outfile logfile
 @end example
 
@@ -648,22 +693,21 @@ the disc. Just follow these steps:
 
 1) Copy the damaged drive with ddrescue until finished. Do not use
 sparse writes. This yields a logfile with only finished (@samp{+}) and
-bad (@samp{-}) areas.
+bad-sector (@samp{-}) blocks.
 
 2) Mount the copied drive (or the image file, via loopback device).
 
 3) Compute a md5sum or other checksum for every file. Build a list of
 all the files and their checksums.
 
-4) Fill the bad areas of the copied drive or image file with a byte
-value different from zero.
+4) Fill the bad-sector blocks of the copied drive or image file with a
+byte value different from zero.
 
 5) Verify the checksums. Those files which have different checksums this
-time reside (at least partially) in damaged disk areas.
+time reside (at least partially) in damaged disc areas.
 
-6) Optionally fill the bad areas of the copied drive or image file with
-zeros to restore the disk image.
-
+6) Optionally fill the bad-sector blocks of the copied drive or image
+file with zeros to restore the disc image.
 
 
 @node Generate Mode
@@ -683,7 +727,7 @@ invoked with the @samp{sync} conversion argument.
 Don't despair (yet). Ddrescue can in some cases generate an approximate
 logfile, from the input file and the (partial) copy, that is almost as
 good as an exact logfile. It makes this by simply assuming that sectors
-containng all zeros were not rescued.
+containing all zeros were not rescued.
 
 However, if the destination of the copy was a drive or a partition, (or
 an existing regular file and truncation was not requested), most
