@@ -1,5 +1,6 @@
 /*  GNU ddrescue - Data recovery tool
-    Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009 Antonio Diaz Diaz.
+    Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010
+    Antonio Diaz Diaz.
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -21,6 +22,7 @@
 #include <climits>
 #include <cstdio>
 #include <cstring>
+#include <ctime>
 #include <string>
 #include <vector>
 #include <unistd.h>
@@ -86,7 +88,7 @@ void Rescuebook::count_errors() throw()
 //
 int Rescuebook::copy_and_update( const Block & b, const Sblock::Status st,
                                  int & copied_size, int & error_size,
-                                 const char * msg, bool & first_post )
+                                 const char * const msg, bool & first_post )
   {
   if( verbosity >= 0 )
     { show_status( b.pos(), msg, first_post ); first_post = false; }
@@ -286,8 +288,8 @@ int Rescuebook::copy_errors()
 
 
 Rescuebook::Rescuebook( const long long ipos, const long long opos,
-                        Domain & dom, const long long isize, const char * iname,
-                        const char * logname, const int cluster, const int hardbs,
+                        Domain & dom, const long long isize, const char * const iname,
+                        const char * const logname, const int cluster, const int hardbs,
                         const int max_errors, const int max_retries,
                         const bool complete_only, const bool nosplit,
                         const bool retrim, const bool sparse,

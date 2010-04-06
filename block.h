@@ -1,5 +1,6 @@
 /*  GNU ddrescue - Data recovery tool
-    Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009 Antonio Diaz Diaz.
+    Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010
+    Antonio Diaz Diaz.
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -94,7 +95,7 @@ class Domain
   std::vector< Block > block_vector;	// blocks are ordered and don't overlap
 
 public:
-  Domain( const char * name, const long long p, const long long s );
+  Domain( const char * const name, const long long p, const long long s );
 
   long long pos() const throw()
     { if( block_vector.size() ) return block_vector[0].pos(); else return 0; }

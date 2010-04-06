@@ -1,5 +1,6 @@
 /*  GNU ddrescue - Data recovery tool
-    Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009 Antonio Diaz Diaz.
+    Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010
+    Antonio Diaz Diaz.
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -28,6 +29,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <ctime>
 #include <string>
 #include <vector>
 #include <fcntl.h>
@@ -44,7 +46,15 @@ namespace {
 const char * invocation_name = 0;
 const char * const Program_name    = "GNU ddrescue";
 const char * const program_name    = "ddrescue";
-const char * const program_year    = "2009";
+const char * const program_year    = "2010";
+
+#ifdef O_BINARY
+const int o_binary = O_BINARY;
+#else
+const int o_binary = 0;
+#endif
+
+const mode_t outmode = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH;
 
 
 void show_help( const int cluster, const int hardbs ) throw()
@@ -96,7 +106,7 @@ void show_version() throw()
   }
 
 
-long long getnum( const char * ptr, const int bs,
+long long getnum( const char * const ptr, const int bs,
                   const long long min = LLONG_MIN + 1,
                   const long long max = LLONG_MAX ) throw()
   {
@@ -168,7 +178,7 @@ void check_fill_types( const std::string filltypes ) throw()
   }
 
 
-bool check_identical( const char * name1, const char * name2 ) throw()
+bool check_identical( const char * const name1, const char * const name2 ) throw()
   {
   if( !std::strcmp( name1, name2 ) ) return true;
   struct stat stat1, stat2;
@@ -192,13 +202,13 @@ int do_fill( long long ipos, const long long opos, Domain & domain,
   if( fillbook.domain().size() == 0 )
     { show_error( "Nothing to do" ); return 0; }
 
-  const int ides = open( iname, O_RDONLY );
+  const int ides = open( iname, O_RDONLY | o_binary );
   if( ides < 0 )
     { show_error( "cannot open input file", errno ); return 1; }
   if( !fillbook.read_buffer( ides ) )
     { show_error( "error reading fill data from input file" ); return 1; }
 
-  const int odes = open( oname, O_WRONLY | O_CREAT, 0644 );
+  const int odes = open( oname, O_CREAT | O_WRONLY | o_binary, outmode );
   if( odes < 0 )
     { show_error( "cannot open output file", errno ); return 1; }
   if( lseek( odes, 0, SEEK_SET ) )
@@ -234,7 +244,7 @@ int do_generate( const long long ipos, const long long opos, Domain & domain,
     return 1;
     }
 
-  const int ides = open( iname, O_RDONLY );
+  const int ides = open( iname, O_RDONLY | o_binary );
   if( ides < 0 )
     { show_error( "cannot open input file", errno ); return 1; }
   const long long isize = lseek( ides, 0, SEEK_END );
@@ -250,7 +260,7 @@ int do_generate( const long long ipos, const long long opos, Domain & domain,
     return 1;
     }
 
-  const int odes = open( oname, O_RDONLY );
+  const int odes = open( oname, O_RDONLY | o_binary );
   if( odes < 0 )
     { show_error( "cannot open output file", errno ); return 1; }
   if( lseek( odes, 0, SEEK_SET ) )
@@ -282,7 +292,7 @@ int do_rescue( const long long ipos, const long long opos, Domain & domain,
                const bool retrim, const bool sparse,
                const bool synchronous, const bool try_again )
   {
-  const int ides = open( iname, O_RDONLY | o_direct );
+  const int ides = open( iname, O_RDONLY | o_direct | o_binary );
   if( ides < 0 )
     { show_error( "cannot open input file", errno ); return 1; }
   const long long isize = lseek( ides, 0, SEEK_END );
@@ -300,7 +310,8 @@ int do_rescue( const long long ipos, const long long opos, Domain & domain,
     return 1;
     }
 
-  const int odes = open( oname, O_WRONLY | O_CREAT | o_trunc, 0644 );
+  const int odes = open( oname, O_CREAT | O_WRONLY | o_trunc | o_binary,
+                         outmode );
   if( odes < 0 )
     { show_error( "cannot open output file", errno ); return 1; }
   if( lseek( odes, 0, SEEK_SET ) )
@@ -340,7 +351,7 @@ int do_rescue( const long long ipos, const long long opos, Domain & domain,
 int verbosity = 0;
 
 
-void show_error( const char * msg, const int errcode, const bool help ) throw()
+void show_error( const char * const msg, const int errcode, const bool help ) throw()
   {
   if( verbosity >= 0 )
     {
@@ -356,7 +367,7 @@ void show_error( const char * msg, const int errcode, const bool help ) throw()
   }
 
 
-void internal_error( const char * msg )
+void internal_error( const char * const msg )
   {
   std::string s( "internal error: " ); s += msg;
   show_error( s.c_str() );
@@ -364,14 +375,14 @@ void internal_error( const char * msg )
   }
 
 
-void write_logfile_header( FILE * f ) throw()
+void write_logfile_header( FILE * const f ) throw()
   {
   std::fprintf( f, "# Rescue Logfile. Created by %s version %s\n",
                 Program_name, PROGVERSION );
   }
 
 
-int main( const int argc, const char * argv[] )
+int main( const int argc, const char * const argv[] )
   {
   long long ipos = 0, opos = -1, max_size = -1;
   const char * domain_logfile_name = 0;
@@ -416,12 +427,12 @@ int main( const int argc, const char * argv[] )
   if( parser.error().size() )				// bad option
     { show_error( parser.error().c_str(), 0, true ); return 1; }
 
-  int argind;
-  for( argind = 0; argind < parser.arguments(); ++argind )
+  int argind = 0;
+  for( ; argind < parser.arguments(); ++argind )
     {
     const int code = parser.code( argind );
     if( !code ) break;					// no more options
-    const char * arg = parser.argument( argind ).c_str();
+    const char * const arg = parser.argument( argind ).c_str();
     switch( code )
       {
       case 'b': hardbs = getnum( arg, 0, 1, INT_MAX ); break;
@@ -439,7 +450,8 @@ int main( const int argc, const char * argv[] )
       case 'e': max_errors = getnum( arg, 0, -1, INT_MAX ); break;
       case 'F': filltypes = arg; check_fill_types( filltypes ); break;
       case 'g': generate = true; break;
-      case 'h': show_help( cluster_bytes / default_hardbs, default_hardbs ); return 0;
+      case 'h': show_help( cluster_bytes / default_hardbs, default_hardbs );
+                return 0;
       case 'i': ipos = getnum( arg, hardbs, 0 ); break;
       case 'm': domain_logfile_name = arg; break;
       case 'n': nosplit = true; break;
@@ -487,7 +499,8 @@ int main( const int argc, const char * argv[] )
     if( max_errors >= 0 || max_retries || o_direct || o_trunc ||
         complete_only || generate || nosplit || retrim || sparse ||
         synchronous || try_again )
-      show_error( "warning: options -C -d -D -e -g -n -r -R -S -t and -T are ignored in fill mode" );
+      show_error( "warning: options -C -d -D -e -g -n -r -R -S -t and -T "
+                  "are ignored in fill mode" );
 
     return do_fill( ipos, opos, domain, iname, oname, logname, cluster,
                     hardbs, filltypes, synchronous );
@@ -497,9 +510,11 @@ int main( const int argc, const char * argv[] )
     if( max_errors >= 0 || max_retries || o_direct || o_trunc ||
         complete_only || nosplit || retrim || sparse || synchronous ||
         try_again )
-      show_error( "warning: options -C -d -D -e -n -r -R -S -t and -T are ignored in generate-logfile mode" );
+      show_error( "warning: options -C -d -D -e -n -r -R -S -t and -T "
+                  "are ignored in generate-logfile mode" );
 
-    return do_generate( ipos, opos, domain, iname, oname, logname, cluster, hardbs );
+    return do_generate( ipos, opos, domain, iname, oname, logname,
+                        cluster, hardbs );
     }
   return do_rescue( ipos, opos, domain, iname, oname, logname, cluster,
                     hardbs, max_errors, max_retries, o_direct, o_trunc,

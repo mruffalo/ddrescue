@@ -1,5 +1,5 @@
 
-DISTNAME = $(progname)-$(progversion)
+DISTNAME = $(pkgname)-$(pkgversion)
 INSTALL = install
 INSTALL_PROGRAM = $(INSTALL) -p -m 755
 INSTALL_DATA = $(INSTALL) -p -m 644
@@ -25,7 +25,7 @@ static_$(progname) : $(objs)
 	$(CXX) $(LDFLAGS) -static -o static_$(progname) $(objs)
 
 main.o : main.cc
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -DPROGVERSION=\"$(progversion)\" -c -o $@ $<
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -DPROGVERSION=\"$(pkgversion)\" -c -o $@ $<
 
 %.o : %.cc
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c -o $@ $<
@@ -37,49 +37,50 @@ main.o       : arg_parser.h
 
 doc : info man
 
-info : $(VPATH)/doc/$(progname).info
+info : $(VPATH)/doc/$(pkgname).info
 
-$(VPATH)/doc/$(progname).info : $(VPATH)/doc/$(progname).texinfo
-	cd $(VPATH)/doc && makeinfo $(progname).texinfo
+$(VPATH)/doc/$(pkgname).info : $(VPATH)/doc/$(pkgname).texinfo
+	cd $(VPATH)/doc && makeinfo $(pkgname).texinfo
 
 man : $(VPATH)/doc/$(progname).1
 
 $(VPATH)/doc/$(progname).1 : $(progname)
-	help2man -o $(VPATH)/doc/$(progname).1 ./$(progname)
+	help2man -n 'data recovery tool' \
+	  -o $(VPATH)/doc/$(progname).1 ./$(progname)
 
 Makefile : $(VPATH)/configure $(VPATH)/Makefile.in
 	./config.status
 
-check : all $(VPATH)/testsuite/check.sh
+check : all
 	@$(VPATH)/testsuite/check.sh $(VPATH)/testsuite
 
 install : all install-info install-man
-	if test ! -d $(DESTDIR)$(bindir) ; then $(INSTALL_DIR) $(DESTDIR)$(bindir) ; fi
-	$(INSTALL_PROGRAM) ./$(progname) $(DESTDIR)$(bindir)/$(progname)
+	if [ ! -d "$(DESTDIR)$(bindir)" ] ; then $(INSTALL_DIR) "$(DESTDIR)$(bindir)" ; fi
+	$(INSTALL_PROGRAM) ./$(progname) "$(DESTDIR)$(bindir)/$(progname)"
 
 install-info :
-	if test ! -d $(DESTDIR)$(infodir) ; then $(INSTALL_DIR) $(DESTDIR)$(infodir) ; fi
-	$(INSTALL_DATA) $(VPATH)/doc/$(progname).info $(DESTDIR)$(infodir)/$(progname).info
-	-install-info --info-dir=$(DESTDIR)$(infodir) $(DESTDIR)$(infodir)/$(progname).info
+	if [ ! -d "$(DESTDIR)$(infodir)" ] ; then $(INSTALL_DIR) "$(DESTDIR)$(infodir)" ; fi
+	$(INSTALL_DATA) $(VPATH)/doc/$(pkgname).info "$(DESTDIR)$(infodir)/$(pkgname).info"
+	-install-info --info-dir="$(DESTDIR)$(infodir)" $(DESTDIR)$(infodir)/$(pkgname).info
 
 install-man :
-	if test ! -d $(DESTDIR)$(mandir)/man1 ; then $(INSTALL_DIR) $(DESTDIR)$(mandir)/man1 ; fi
-	$(INSTALL_DATA) $(VPATH)/doc/$(progname).1 $(DESTDIR)$(mandir)/man1/$(progname).1
+	if [ ! -d "$(DESTDIR)$(mandir)/man1" ] ; then $(INSTALL_DIR) "$(DESTDIR)$(mandir)/man1" ; fi
+	$(INSTALL_DATA) $(VPATH)/doc/$(progname).1 "$(DESTDIR)$(mandir)/man1/$(progname).1"
 
 install-strip : all
 	$(MAKE) INSTALL_PROGRAM='$(INSTALL_PROGRAM) -s' install
 
 uninstall : uninstall-info uninstall-man
-	-rm -f $(DESTDIR)$(bindir)/$(progname)
+	-rm -f "$(DESTDIR)$(bindir)/$(progname)"
 
 uninstall-info :
-	-install-info --remove $(DESTDIR)$(infodir)/$(progname).info $(DESTDIR)$(infodir)/dir
-	-rm -f $(DESTDIR)$(infodir)/$(progname).info
+	-install-info --info-dir="$(DESTDIR)$(infodir)" --remove "$(DESTDIR)$(infodir)/$(pkgname).info"
+	-rm -f "$(DESTDIR)$(infodir)/$(pkgname).info"
 
 uninstall-man :
-	-rm -f $(DESTDIR)$(mandir)/man1/$(progname).1
+	-rm -f "$(DESTDIR)$(mandir)/man1/$(progname).1"
 
-dist :
+dist : doc
 	ln -sf $(VPATH) $(DISTNAME)
 	tar -cvf $(DISTNAME).tar \
 	  $(DISTNAME)/AUTHORS \
@@ -91,11 +92,12 @@ dist :
 	  $(DISTNAME)/README \
 	  $(DISTNAME)/configure \
 	  $(DISTNAME)/doc/$(progname).1 \
-	  $(DISTNAME)/doc/$(progname).info \
-	  $(DISTNAME)/doc/$(progname).texinfo \
+	  $(DISTNAME)/doc/$(pkgname).info \
+	  $(DISTNAME)/doc/$(pkgname).texinfo \
 	  $(DISTNAME)/testsuite/check.sh \
 	  $(DISTNAME)/testsuite/logfile1 \
 	  $(DISTNAME)/testsuite/logfile2 \
+	  $(DISTNAME)/testsuite/test1 \
 	  $(DISTNAME)/*.h \
 	  $(DISTNAME)/*.cc
 	rm -f $(DISTNAME)

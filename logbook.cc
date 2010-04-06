@@ -1,5 +1,6 @@
 /*  GNU ddrescue - Data recovery tool
-    Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009 Antonio Diaz Diaz.
+    Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010
+    Antonio Diaz Diaz.
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -34,7 +35,7 @@
 
 namespace {
 
-int my_fgetc( FILE * f ) throw()
+int my_fgetc( FILE * const f ) throw()
   {
   int ch;
   bool comment = false;
@@ -49,7 +50,9 @@ int my_fgetc( FILE * f ) throw()
   }
 
 
-const char * my_fgets( FILE * f, int & linenum ) throw()
+// Read a line discarding comments, leading whitespace and blank lines.
+//
+const char * my_fgets( FILE * const f, int & linenum ) throw()
   {
   const int maxlen = 127;
   static char buf[maxlen+1];
@@ -110,7 +113,7 @@ void extend_sblock_vector( std::vector< Sblock > & sblock_vector,
   }
 
 
-void show_logfile_error( const char * filename, const int linenum )
+void show_logfile_error( const char * const filename, const int linenum )
   {
   char buf[80];
   snprintf( buf, sizeof buf, "error in logfile %s, line %d", filename, linenum );
@@ -118,10 +121,10 @@ void show_logfile_error( const char * filename, const int linenum )
   }
 
 
-bool read_logfile( const char * name, std::vector< Sblock > & sblock_vector,
+bool read_logfile( const char * const name, std::vector< Sblock > & sblock_vector,
                    long long & current_pos, Logbook::Status & current_status )
   {
-  FILE *f = std::fopen( name, "r" );
+  FILE * const f = std::fopen( name, "r" );
   if( !f ) return false;
   int linenum = 0;
   sblock_vector.clear();
@@ -166,7 +169,7 @@ bool read_logfile( const char * name, std::vector< Sblock > & sblock_vector,
 } // end namespace
 
 
-Domain::Domain( const char * name, const long long p, const long long s )
+Domain::Domain( const char * const name, const long long p, const long long s )
   {
   Block b( p, s ); b.fix_size();
   if( !name ) { block_vector.push_back( b ); return; }
@@ -207,9 +210,8 @@ void Logbook::split_domain_border_sblocks()
 
 
 Logbook::Logbook( const long long ipos, const long long opos, Domain & dom,
-                  const long long isize,
-                  const char * name, const int cluster, const int hardbs,
-                  const bool complete_only )
+                  const long long isize, const char * const name,
+                  const int cluster, const int hardbs, const bool complete_only )
   : offset_( opos - ipos ), current_pos_( 0 ), current_status_( copying ),
     domain_( dom ), filename_( name ),
     hardbs_( hardbs ), softbs_( cluster * hardbs ),
@@ -253,9 +255,12 @@ bool Logbook::blank() const throw()
 
 void Logbook::compact_sblock_vector()
   {
-  for( unsigned int i = sblock_vector.size(); i >= 2; --i )
-    if( sblock_vector[i-2].join( sblock_vector[i-1] ) )
-      sblock_vector.erase( sblock_vector.begin() + i - 1 );
+  for( unsigned int i = sblock_vector.size(); i >= 2; )
+    {
+    --i;
+    if( sblock_vector[i-1].join( sblock_vector[i] ) )
+      sblock_vector.erase( sblock_vector.begin() + i );
+    }
   }
 
 
@@ -266,13 +271,13 @@ bool Logbook::update_logfile( const int odes, const bool force )
   {
   if( !filename_ ) return true;
   const int interval = 30 + std::min( 270, sblocks() / 40 );
-  const long t2 = std::time( 0 );
+  const time_t t2 = std::time( 0 );
   if( !force && t2 - ul_t1 < interval ) return true;
   ul_t1 = t2;
   if( odes >= 0 ) fsync( odes );
 
   errno = 0;
-  FILE *f = std::fopen( filename_, "w" );
+  FILE * const f = std::fopen( filename_, "w" );
   if( f )
     {
     write_logfile_header( f );

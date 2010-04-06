@@ -20,6 +20,9 @@ areas at the same places on different input files is very low. Using
 the logfile, only the needed blocks are read from the second and
 successive copies.
 
+Ddrescue recommends lzip for compression of backups, because of its
+reliability and data recovery capabilities.
+
 Recordable CD and DVD media keep their data only for a finite time
 (typically for many years). After that time, data loss develops slowly
 with read errors growing from the outer media region towards the inside.
@@ -53,7 +56,8 @@ which has a number of interesting uses like wiping data, marking bad
 areas or even, in some cases, "repair" damaged sectors.
 
 
-Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009 Antonio Diaz Diaz.
+Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010
+Antonio Diaz Diaz.
 
 This file is free documentation: you have unlimited permission to copy,
 distribute and modify it.

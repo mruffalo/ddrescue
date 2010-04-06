@@ -1,12 +1,12 @@
 \input texinfo @c -*-texinfo-*-
 @c %**start of header
 @setfilename ddrescue.info
-@settitle GNU ddrescue
+@settitle GNU ddrescue Manual
 @finalout
 @c %**end of header
 
-@set UPDATED 10 July 2009
-@set VERSION 1.11
+@set UPDATED 6 April 2010
+@set VERSION 1.12
 
 @dircategory GNU Packages
 @direntry
@@ -46,7 +46,7 @@ This manual is for GNU ddrescue (version @value{VERSION}, @value{UPDATED}).
 @end menu
 
 @sp 1
-Copyright @copyright{} 2004, 2005, 2006, 2007, 2008, 2009
+Copyright @copyright{} 2004, 2005, 2006, 2007, 2008, 2009, 2010
 Antonio Diaz Diaz.
 
 This manual is free documentation: you have unlimited permission
@@ -76,6 +76,9 @@ error-free file. This is so because the probability of having damaged
 areas at the same places on different input files is very low. Using
 the logfile, only the needed blocks are read from the second and
 successive copies.
+
+Ddrescue recommends lzip for compression of backups, because of its
+reliability and data recovery capabilities.
 
 Recordable CD and DVD media keep their data only for a finite time
 (typically for many years). After that time, data loss develops slowly
@@ -147,9 +150,9 @@ damaging the surface, the heads and the drive mechanics, instead of
 getting out of them as fast as possible. This behavior reduces the
 chances of rescuing the remaining good data.
 
-The algorithm of ddrescue is as follows: (the user may interrupt the
+The algorithm of ddrescue is as follows (the user may interrupt the
 process at any point, but be aware that a bad drive can block ddrescue
-for a long time until the kernel gives up)
+for a long time until the kernel gives up):
 
 1) Optionally read a logfile describing the status of a multi-part or
 previously interrupted rescue. If no logfile is specified or is empty or
@@ -178,6 +181,9 @@ number of retries is reached.
 6) Optionally write a logfile for later use.
 
 @sp 1
+Note that as ddrescue splits the failed blocks, making them smaller, the
+total error size may diminish while the number of errors increases.
+
 The logfile is periodically saved to disc, as well as when ddrescue
 finishes or is interrupted. So in case of a crash you can resume the
 rescue with little recopying.
@@ -340,6 +346,7 @@ this option. Note that this option specifies the size of the input data
 to be copied, not the size of the output file. So, for example, the
 following command creates an output file 300 bytes long, but only writes
 data on the last 200 bytes:
+
 @example
 ddrescue -i 100 -s 200 infile outfile logfile
 @end example
@@ -464,7 +471,9 @@ those things to, in order to use it safely.
 
 A failing drive tends to develop more and more errors as time passes.
 Because of this, you should rescue the data from a drive as soon as you
-notice the first error.
+notice the first error. Be diligent because every time a physicaly
+damaged drive powers up and is able to output some data, it may be the
+very last time that it ever will.
 
 IMPORTANT! Always use a logfile unless you know you won't need it.
 Without a logfile, ddrescue can't resume a rescue, only reinitiate it.
@@ -536,7 +545,18 @@ write cdimage to a blank CD-ROM
 
 @sp 1
 @noindent
-Example 4: While rescuing the whole drive /dev/hda to /dev/hdb, /dev/hdb
+Example 4: Rescue a lzip compressed backup from two copies
+
+@example
+ddrescue copy1.tar.lz rescued.tar.lz logfile
+ddrescue -r1 copy2.tar.lz rescued.tar.lz logfile
+test the integrity of the rescued file with @w{@samp{lzip -t}} and use
+@samp{lziprecover} if needed.
+@end example
+
+@sp 1
+@noindent
+Example 5: While rescuing the whole drive /dev/hda to /dev/hdb, /dev/hdb
 fails and you have to rescue data to a third drive, /dev/hdc
 
 @example
@@ -548,7 +568,7 @@ ddrescue -dr3 /dev/hda /dev/hdc logfile2
 
 @sp 1
 @noindent
-Example 5: While rescuing the whole drive /dev/hda to /dev/hdb, /dev/hda
+Example 6: While rescuing the whole drive /dev/hda to /dev/hdb, /dev/hda
 stops responding and disappears from /dev
 
 @example

@@ -1,5 +1,6 @@
 /*  GNU ddrescue - Data recovery tool
-    Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009 Antonio Diaz Diaz.
+    Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010
+    Antonio Diaz Diaz.
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -20,6 +21,7 @@
 #include <algorithm>
 #include <climits>
 #include <cstdio>
+#include <ctime>
 #include <string>
 #include <vector>
 
@@ -100,8 +102,9 @@ Block Block::split( long long pos, const int hardbs )
 
 void Domain::crop( const Block & b )
   {
-  for( int i = block_vector.size() - 1; i >= 0; --i )
+  for( unsigned int i = block_vector.size(); i > 0; )
     {
+    --i;
     block_vector[i].crop( b );
     if( block_vector[i].size() <= 0 )
       block_vector.erase( block_vector.begin() + i );

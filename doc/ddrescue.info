@@ -9,10 +9,10 @@ END-INFO-DIR-ENTRY
 
 File: ddrescue.info,  Node: Top,  Next: Introduction,  Up: (dir)
 
-GNU ddrescue
-************
+GNU ddrescue Manual
+*******************
 
-This manual is for GNU ddrescue (version 1.11, 10 July 2009).
+This manual is for GNU ddrescue (version 1.12, 6 April 2010).
 
 * Menu:
 
@@ -29,7 +29,8 @@ This manual is for GNU ddrescue (version 1.11, 10 July 2009).
 * Concept Index::	Index of concepts
 
 
-   Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009 Antonio Diaz Diaz.
+   Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010 Antonio Diaz
+Diaz.
 
    This manual is free documentation: you have unlimited permission to
 copy, distribute and modify it.
@@ -59,6 +60,9 @@ error-free file. This is so because the probability of having damaged
 areas at the same places on different input files is very low. Using
 the logfile, only the needed blocks are read from the second and
 successive copies.
+
+   Ddrescue recommends lzip for compression of backups, because of its
+reliability and data recovery capabilities.
 
    Recordable CD and DVD media keep their data only for a finite time
 (typically for many years). After that time, data loss develops slowly
@@ -131,9 +135,9 @@ damaging the surface, the heads and the drive mechanics, instead of
 getting out of them as fast as possible. This behavior reduces the
 chances of rescuing the remaining good data.
 
-   The algorithm of ddrescue is as follows: (the user may interrupt the
+   The algorithm of ddrescue is as follows (the user may interrupt the
 process at any point, but be aware that a bad drive can block ddrescue
-for a long time until the kernel gives up)
+for a long time until the kernel gives up):
 
    1) Optionally read a logfile describing the status of a multi-part or
 previously interrupted rescue. If no logfile is specified or is empty or
@@ -162,6 +166,9 @@ number of retries is reached.
 
    6) Optionally write a logfile for later use.
 
+
+   Note that as ddrescue splits the failed blocks, making them smaller,
+the total error size may diminish while the number of errors increases.
 
    The logfile is periodically saved to disc, as well as when ddrescue
 finishes or is interrupted. So in case of a crash you can resume the
@@ -315,6 +322,7 @@ The format for running ddrescue is:
      size of the input data to be copied, not the size of the output
      file. So, for example, the following command creates an output
      file 300 bytes long, but only writes data on the last 200 bytes:
+
           ddrescue -i 100 -s 200 infile outfile logfile
 
 `--sparse'
@@ -400,7 +408,7 @@ Character   Meaning
 
 And here is an example logfile:
 
-# Rescue Logfile. Created by GNU ddrescue version 1.11
+# Rescue Logfile. Created by GNU ddrescue version 1.12
 # current_pos  current_status
 0x00120000     ?
 #      pos         size   status
@@ -428,7 +436,9 @@ those things to, in order to use it safely.
 
    A failing drive tends to develop more and more errors as time passes.
 Because of this, you should rescue the data from a drive as soon as you
-notice the first error.
+notice the first error. Be diligent because every time a physicaly
+damaged drive powers up and is able to output some data, it may be the
+very last time that it ever will.
 
    IMPORTANT! Always use a logfile unless you know you won't need it.
 Without a logfile, ddrescue can't resume a rescue, only reinitiate it.
@@ -491,7 +501,15 @@ Example 3: Rescue a CD-ROM in /dev/cdrom
      write cdimage to a blank CD-ROM
 
 
-Example 4: While rescuing the whole drive /dev/hda to /dev/hdb, /dev/hdb
+Example 4: Rescue a lzip compressed backup from two copies
+
+     ddrescue copy1.tar.lz rescued.tar.lz logfile
+     ddrescue -r1 copy2.tar.lz rescued.tar.lz logfile
+     test the integrity of the rescued file with `lzip -t' and use
+     `lziprecover' if needed.
+
+
+Example 5: While rescuing the whole drive /dev/hda to /dev/hdb, /dev/hdb
 fails and you have to rescue data to a third drive, /dev/hdc
 
      ddrescue -n /dev/hda /dev/hdb logfile1     <-- /dev/hdb fails here
@@ -500,7 +518,7 @@ fails and you have to rescue data to a third drive, /dev/hdc
      ddrescue -dr3 /dev/hda /dev/hdc logfile2
 
 
-Example 5: While rescuing the whole drive /dev/hda to /dev/hdb, /dev/hda
+Example 6: While rescuing the whole drive /dev/hda to /dev/hdb, /dev/hda
 stops responding and disappears from /dev
 
      ddrescue -n /dev/hda /dev/hdb logfile      <-- /dev/hda fails here
@@ -722,16 +740,16 @@ Concept Index
 
 Tag Table:
 Node: Top203
-Node: Introduction1079
-Node: Basic concepts3120
-Node: Algorithm3984
-Node: Invoking ddrescue7142
-Node: Logfile Structure13329
-Node: Examples15324
-Node: Direct Disc Access18772
-Node: Fill Mode20622
-Node: Generate Mode24235
-Node: Problems25778
-Node: Concept Index26328
+Node: Introduction1099
+Node: Basic concepts3256
+Node: Algorithm4120
+Node: Invoking ddrescue7423
+Node: Logfile Structure13611
+Node: Examples15606
+Node: Direct Disc Access19465
+Node: Fill Mode21315
+Node: Generate Mode24928
+Node: Problems26471
+Node: Concept Index27021
 
 End Tag Table

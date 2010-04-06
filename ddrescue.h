@@ -1,5 +1,6 @@
 /*  GNU ddrescue - Data recovery tool
-    Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009 Antonio Diaz Diaz.
+    Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010
+    Antonio Diaz Diaz.
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -34,7 +35,7 @@ private:
   int final_errno_;
   mutable int index_;			// cached index of last find or change
   std::vector< Sblock > sblock_vector;	// note: blocks are consecutive
-  long ul_t1;				// variable for update_logfile
+  time_t ul_t1;				// variable for update_logfile
 
   void erase_sblock( const int i )
     { sblock_vector.erase( sblock_vector.begin() + i ); }
@@ -44,9 +45,8 @@ private:
 
 public:
   Logbook( const long long ipos, const long long opos, Domain & dom,
-           const long long isize,
-           const char * name, const int cluster, const int hardbs,
-           const bool complete_only );
+           const long long isize, const char * const name,
+           const int cluster, const int hardbs, const bool complete_only );
   ~Logbook() { delete[] iobuf_base; }
 
   bool blank() const throw();
@@ -71,7 +71,7 @@ public:
 
   const Sblock & sblock( const int i ) const throw()
     { return sblock_vector[i]; }
-  int sblocks() const throw() { return sblock_vector.size(); }
+  int sblocks() const throw() { return (int)sblock_vector.size(); }
   void change_sblock_status( const int i, const Sblock::Status st ) throw()
     { sblock_vector[i].status( st ); }
   void truncate_vector( const long long pos );
@@ -99,7 +99,7 @@ class Fillbook : public Logbook
 					// variables for show_status
   long long a_rate, c_rate, first_size, last_size;
   long long last_ipos;
-  long t0, t1;
+  time_t t0, t1;
 
   int fill_areas( const std::string & filltypes );
   int fill_block( const Block & b );
@@ -107,7 +107,7 @@ class Fillbook : public Logbook
 
 public:
   Fillbook( const long long ipos, const long long opos, Domain & dom,
-            const char * name, const int cluster, const int hardbs,
+            const char * const name, const int cluster, const int hardbs,
             const bool synchronous )
     : Logbook( ipos, opos, dom, 0, name, cluster, hardbs, true ),
       synchronous_( synchronous ),
@@ -132,7 +132,7 @@ class Rescuebook : public Logbook
 					// variables for show_status
   long long a_rate, c_rate, first_size, last_size;
   long long last_ipos;
-  long t0, t1, ts;
+  time_t t0, t1, ts;
   int oldlen;
 
   int skipbs() const throw() { return skipbs_; }
@@ -145,17 +145,17 @@ class Rescuebook : public Logbook
     { return ( max_errors_ >= 0 && errors > max_errors_ ); }
   int copy_and_update( const Block & b, const Sblock::Status st,
                        int & copied_size, int & error_size,
-                       const char * msg, bool & first_post );
+                       const char * const msg, bool & first_post );
   int copy_non_tried();
   int trim_errors();
   int split_errors();
   int copy_errors();
-  void show_status( const long long ipos, const char * msg = 0,
+  void show_status( const long long ipos, const char * const msg = 0,
                     bool force = false ) throw();
 public:
   Rescuebook( const long long ipos, const long long opos,
-              Domain & dom, const long long isize, const char * iname,
-              const char * logname, const int cluster, const int hardbs,
+              Domain & dom, const long long isize, const char * const iname,
+              const char * const logname, const int cluster, const int hardbs,
               const int max_errors = -1, const int max_retries = 0,
               const bool complete_only = false, const bool nosplit = false,
               const bool retrim = false, const bool sparse = false,
@@ -176,7 +176,7 @@ void set_signals() throw();
 // Defined in main.cc
 //
 extern int verbosity;
-void internal_error( const char * msg ) __attribute__ ((noreturn));
-void show_error( const char * msg,
+void internal_error( const char * const msg ) __attribute__ ((noreturn));
+void show_error( const char * const msg,
                  const int errcode = 0, const bool help = false ) throw();
-void write_logfile_header( FILE * f ) throw();
+void write_logfile_header( FILE * const f ) throw();

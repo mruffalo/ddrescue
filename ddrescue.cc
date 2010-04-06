@@ -1,5 +1,6 @@
 /*  GNU ddrescue - Data recovery tool
-    Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009 Antonio Diaz Diaz.
+    Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010
+    Antonio Diaz Diaz.
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -36,17 +37,17 @@
 namespace {
 
 bool volatile interrupted = false;		// user pressed Ctrl-C
-void sighandler( int ) throw() { interrupted = true; }
+extern "C" void sighandler( int ) throw() { interrupted = true; }
 
 
-bool block_is_zero( const char * buf, const int size ) throw()
+bool block_is_zero( const char * const buf, const int size ) throw()
   {
   for( int i = 0; i < size; ++i ) if( buf[i] != 0 ) return false;
   return true;
   }
 
 
-const char * format_time( long t ) throw()
+const char * format_time( time_t t ) throw()
   {
   static char buf[16];
   int fraction = 0;
@@ -66,7 +67,8 @@ const char * format_time( long t ) throw()
 // Returns the number of bytes really read.
 // If (returned value < size) and (errno == 0), means EOF was reached.
 //
-int readblock( const int fd, char * buf, const int size, const long long pos ) throw()
+int readblock( const int fd, char * const buf, const int size,
+               const long long pos ) throw()
   {
   int rest = size;
   errno = 0;
@@ -86,7 +88,8 @@ int readblock( const int fd, char * buf, const int size, const long long pos ) t
 // Returns the number of bytes really written.
 // If (returned value < size), it is always an error.
 //
-int writeblock( const int fd, const char * buf, const int size, const long long pos ) throw()
+int writeblock( const int fd, const char * const buf, const int size,
+                const long long pos ) throw()
   {
   int rest = size;
   errno = 0;
@@ -133,7 +136,7 @@ void Fillbook::show_status( const long long ipos, bool force ) throw()
     }
 
   if( ipos >= 0 ) last_ipos = ipos;
-  const long t2 = std::time( 0 );
+  const time_t t2 = std::time( 0 );
   if( t2 > t1 || force )
     {
     if( t2 > t1 )
@@ -246,7 +249,7 @@ int Rescuebook::copy_block( const Block & b, int & copied_size, int & error_size
   }
 
 
-void Rescuebook::show_status( const long long ipos, const char * msg,
+void Rescuebook::show_status( const long long ipos, const char * const msg,
                               bool force ) throw()
   {
   const char * const up = "\x1b[A";
@@ -259,7 +262,7 @@ void Rescuebook::show_status( const long long ipos, const char * msg,
     }
 
   if( ipos >= 0 ) last_ipos = ipos;
-  const long t2 = std::time( 0 );
+  const time_t t2 = std::time( 0 );
   if( t2 > t1 || force )
     {
     if( t2 > t1 )
@@ -318,9 +321,9 @@ const char * format_num( long long num, long long limit,
 void set_signals() throw()
   {
   interrupted = false;
-  signal( SIGINT, sighandler );
-  signal( SIGHUP, sighandler );
-  signal( SIGTERM, sighandler );
-  signal( SIGUSR1, SIG_IGN );
-  signal( SIGUSR2, SIG_IGN );
+  std::signal( SIGINT, sighandler );
+  std::signal( SIGHUP, sighandler );
+  std::signal( SIGTERM, sighandler );
+  std::signal( SIGUSR1, SIG_IGN );
+  std::signal( SIGUSR2, SIG_IGN );
   }
