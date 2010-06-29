@@ -35,7 +35,7 @@ private:
   int final_errno_;
   mutable int index_;			// cached index of last find or change
   std::vector< Sblock > sblock_vector;	// note: blocks are consecutive
-  time_t ul_t1;				// variable for update_logfile
+  long ul_t1;				// variable for update_logfile
 
   void erase_sblock( const int i )
     { sblock_vector.erase( sblock_vector.begin() + i ); }
@@ -99,7 +99,7 @@ class Fillbook : public Logbook
 					// variables for show_status
   long long a_rate, c_rate, first_size, last_size;
   long long last_ipos;
-  time_t t0, t1;
+  long t0, t1;
 
   int fill_areas( const std::string & filltypes );
   int fill_block( const Block & b );
@@ -132,7 +132,7 @@ class Rescuebook : public Logbook
 					// variables for show_status
   long long a_rate, c_rate, first_size, last_size;
   long long last_ipos;
-  time_t t0, t1, ts;
+  long t0, t1, ts;
   int oldlen;
 
   int skipbs() const throw() { return skipbs_; }

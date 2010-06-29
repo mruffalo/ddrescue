@@ -47,7 +47,7 @@ bool block_is_zero( const char * const buf, const int size ) throw()
   }
 
 
-const char * format_time( time_t t ) throw()
+const char * format_time( long t ) throw()
   {
   static char buf[16];
   int fraction = 0;
@@ -136,7 +136,7 @@ void Fillbook::show_status( const long long ipos, bool force ) throw()
     }
 
   if( ipos >= 0 ) last_ipos = ipos;
-  const time_t t2 = std::time( 0 );
+  const long t2 = std::time( 0 );
   if( t2 > t1 || force )
     {
     if( t2 > t1 )
@@ -262,7 +262,7 @@ void Rescuebook::show_status( const long long ipos, const char * const msg,
     }
 
   if( ipos >= 0 ) last_ipos = ipos;
-  const time_t t2 = std::time( 0 );
+  const long t2 = std::time( 0 );
   if( t2 > t1 || force )
     {
     if( t2 > t1 )
@@ -285,7 +285,7 @@ void Rescuebook::show_status( const long long ipos, const char * const msg,
     std::printf( "     time from last successful read: %9s\n",
                  format_time( t2 - ts ) );
     int len = oldlen;
-    if( msg ) { len = std::strlen( msg ); if( len ) std::printf( msg ); }
+    if( msg ) { len = std::strlen( msg ); if( len ) std::printf( "%s", msg ); }
     for( int i = len; i < oldlen; ++i ) std::fputc( ' ', stdout );
     if( len || oldlen ) std::fputc( '\r', stdout );
     oldlen = len;

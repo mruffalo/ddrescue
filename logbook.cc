@@ -271,7 +271,7 @@ bool Logbook::update_logfile( const int odes, const bool force )
   {
   if( !filename_ ) return true;
   const int interval = 30 + std::min( 270, sblocks() / 40 );
-  const time_t t2 = std::time( 0 );
+  const long t2 = std::time( 0 );
   if( !force && t2 - ul_t1 < interval ) return true;
   ul_t1 = t2;
   if( odes >= 0 ) fsync( odes );

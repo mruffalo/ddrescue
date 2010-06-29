@@ -108,6 +108,10 @@ public:
     return s;
     }
 
+  long long end() const throw()
+    { if( block_vector.size() ) return block_vector.back().end();
+      else return 0; }
+
   bool operator<( const Block & b ) const throw()
     { return ( block_vector.size() && block_vector.back().end() <= b.pos() ); }
 

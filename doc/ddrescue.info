@@ -12,7 +12,7 @@ File: ddrescue.info,  Node: Top,  Next: Introduction,  Up: (dir)
 GNU ddrescue Manual
 *******************
 
-This manual is for GNU ddrescue (version 1.12, 6 April 2010).
+This manual is for GNU ddrescue (version 1.13-rc1, 29 June 2010).
 
 * Menu:
 
@@ -180,7 +180,7 @@ over different subsets. See this example:
 
 Rescue the most important part of the disc first.
      ddrescue -i0 -s50M /dev/hdc hdimage logfile
-     ddrescue -i0 -s1M -r3 -d /dev/hdc hdimage logfile
+     ddrescue -i0 -s1M -d -r3 /dev/hdc hdimage logfile
 
 Then rescue some key disc areas.
      ddrescue -i30G -s10G /dev/hdc hdimage logfile
@@ -188,7 +188,7 @@ Then rescue some key disc areas.
 
 Now rescue the rest (does not recopy what is already done).
      ddrescue /dev/hdc hdimage logfile
-     ddrescue -r3 -d /dev/hdc hdimage logfile
+     ddrescue -d -r3 /dev/hdc hdimage logfile
 
 
 File: ddrescue.info,  Node: Invoking ddrescue,  Next: Logfile Structure,  Prev: Algorithm,  Up: Top
@@ -257,6 +257,11 @@ The format for running ddrescue is:
      Maximum number of error areas allowed before giving up. Defaults
      to infinity.
 
+`--force'
+`-f'
+     Force overwrite of output file. Needed when the output file is not
+     a regular file, but a device or partition.
+
 `--fill=TYPES'
 `-F TYPES'
      Fill the output file blocks specified as any of TYPES in the
@@ -295,6 +300,15 @@ The format for running ddrescue is:
      Starting position in output file, in bytes. Defaults to
      `--input-position'. The bytes below POS aren't touched if they
      exist and truncation is not requested. Else they are set to 0.
+
+`--preallocate'
+`-p'
+     Preallocates space on disc for output file. Only space for regular
+     files can be preallocated. If preallocation succeeds, rescue will
+     not fail due to lack of free space on disc. If ddrescue can't
+     determine the size to preallocate, you may need to specify it with
+     some combination of the `--input-position', `--max-size', and
+     `--domain-logfile' options.
 
 `--quiet'
 `-q'
@@ -408,7 +422,7 @@ Character   Meaning
 
 And here is an example logfile:
 
-# Rescue Logfile. Created by GNU ddrescue version 1.12
+# Rescue Logfile. Created by GNU ddrescue version 1.13-rc1
 # current_pos  current_status
 0x00120000     ?
 #      pos         size   status
@@ -440,16 +454,24 @@ notice the first error. Be diligent because every time a physicaly
 damaged drive powers up and is able to output some data, it may be the
 very last time that it ever will.
 
+   You should make a copy of the failing drive with ddrescue, and then
+try to repair the copy. If your data is really important, use the first
+copy as a master for a second copy, and try to repair the second copy.
+If something goes wrong, you have the master intact to try again.
+
    IMPORTANT! Always use a logfile unless you know you won't need it.
 Without a logfile, ddrescue can't resume a rescue, only reinitiate it.
 
    IMPORTANT! Never try to rescue a r/w mounted partition. The resulting
 copy may be useless.
 
-   You should make a copy of the failing drive with ddrescue, and then
-try to repair the copy. If your data is really important, use the first
-copy as a master for a second copy, and try to repair the second copy.
-If something goes wrong, you have the master intact to try again.
+   IMPORTANT! If you use a device or a partition as destination, any
+data stored there will be overwritten.
+
+   IMPORTANT! If you interrupt the rescue and then reboot, any partially
+copied partitions should be hidden before allowing them to be touched by
+any operating system that tries to mount and "fix" the partitions it
+sees.
 
    IMPORTANT! Never try to repair a file system on a drive with I/O
 errors; you will probably lose even more data.
@@ -474,10 +496,12 @@ it.  At least not with ddrescue.
 
 Example 1: Rescue a whole disc with two ext2 partitions in /dev/hda to
 /dev/hdb
-Note: you do not need to partition /dev/hdb beforehand.
+Note: you do not need to partition /dev/hdb beforehand, but if the
+partition table on /dev/hda is damaged, you'll need to recreate it
+somehow on /dev/hdb.
 
-     ddrescue -n /dev/hda /dev/hdb logfile
-     ddrescue -dr3 /dev/hda /dev/hdb logfile
+     ddrescue -f -n /dev/hda /dev/hdb logfile
+     ddrescue -d -f -r3 /dev/hda /dev/hdb logfile
      fdisk /dev/hdb
      e2fsck -v -f /dev/hdb1
      e2fsck -v -f /dev/hdb2
@@ -487,8 +511,8 @@ Example 2: Rescue an ext2 partition in /dev/hda2 to /dev/hdb2
 Note: you need to create the hdb2 partition with fdisk first. hdb2
 should be of appropiate type and size.
 
-     ddrescue -n /dev/hda2 /dev/hdb2 logfile
-     ddrescue -d -r3 /dev/hda2 /dev/hdb2 logfile
+     ddrescue -f -n /dev/hda2 /dev/hdb2 logfile
+     ddrescue -d -f -r3 /dev/hda2 /dev/hdb2 logfile
      e2fsck -v -f /dev/hdb2
      mount -t ext2 -o ro /dev/hdb2 /mnt
      read files from /mnt
@@ -512,19 +536,19 @@ Example 4: Rescue a lzip compressed backup from two copies
 Example 5: While rescuing the whole drive /dev/hda to /dev/hdb, /dev/hdb
 fails and you have to rescue data to a third drive, /dev/hdc
 
-     ddrescue -n /dev/hda /dev/hdb logfile1     <-- /dev/hdb fails here
-     ddrescue -m logfile1 /dev/hdb /dev/hdc logfile2
-     ddrescue -n /dev/hda /dev/hdc logfile2
-     ddrescue -dr3 /dev/hda /dev/hdc logfile2
+     ddrescue -f -n /dev/hda /dev/hdb logfile1     <-- /dev/hdb fails here
+     ddrescue -f -m logfile1 /dev/hdb /dev/hdc logfile2
+     ddrescue -f -n /dev/hda /dev/hdc logfile2
+     ddrescue -d -f -r3 /dev/hda /dev/hdc logfile2
 
 
 Example 6: While rescuing the whole drive /dev/hda to /dev/hdb, /dev/hda
 stops responding and disappears from /dev
 
-     ddrescue -n /dev/hda /dev/hdb logfile      <-- /dev/hda fails here
+     ddrescue -f -n /dev/hda /dev/hdb logfile      <-- /dev/hda fails here
        (restart /dev/hda or reboot computer as many times as needed)
-     ddrescue -nT /dev/hda /dev/hdb logfile
-     ddrescue -dr3 /dev/hda /dev/hdb logfile
+     ddrescue -f -n -T /dev/hda /dev/hdb logfile
+     ddrescue -d -f -r3 /dev/hda /dev/hdb logfile
 
 
 File: ddrescue.info,  Node: Direct Disc Access,  Next: Fill Mode,  Prev: Examples,  Up: Top
@@ -560,8 +584,8 @@ sectors inside the failed blocks.
 
 Example 1: using direct disc access
 
-     ddrescue -n /dev/hdb1 /dev/hdc1 logfile
-     ddrescue -d -r3 /dev/hdb1 /dev/hdc1 logfile
+     ddrescue -f -n /dev/hdb1 /dev/hdc1 logfile
+     ddrescue -d -f -r3 /dev/hdb1 /dev/hdc1 logfile
      e2fsck -v -f /dev/hdc1
      mount -t ext2 -o ro /dev/hdc1 /mnt
 
@@ -569,8 +593,8 @@ Example 1: using direct disc access
 Example 2: using a raw device
 
      raw /dev/raw/raw1 /dev/hdb1
-     ddrescue -n /dev/hdb1 /dev/hdc1 logfile
-     ddrescue -r3 -C /dev/raw/raw1 /dev/hdc1 logfile
+     ddrescue -f -n /dev/hdb1 /dev/hdc1 logfile
+     ddrescue -C -f -r3 /dev/raw/raw1 /dev/hdc1 logfile
      raw /dev/raw/raw1 0 0
      e2fsck -v -f /dev/hdc1
      mount -t ext2 -o ro /dev/hdc1 /mnt
@@ -627,7 +651,7 @@ This is the fastest way of wiping a failing drive, and is specially
 useful when sending the drive back to the manufacturer for warranty
 replacement.
 
-     ddrescue --fill=+ /dev/zero bad_drive logfile
+     ddrescue --fill=+ --force /dev/zero bad_drive logfile
 
 Example 3: Force the drive to remap the bad sectors, making it usable
 again. If the drive has only a few bad sectors, and they are not caused
@@ -635,7 +659,7 @@ by drive age, you can probably just rewrite those sectors, and the drive
 will reallocate them automatically to new "spare" sectors that it keeps
 for just this purpose. WARNING! This may not work on your drive.
 
-     ddrescue --fill=- --synchronous /dev/zero bad_drive logfile
+     ddrescue --fill=- --force --synchronous /dev/zero bad_drive logfile
 
 
 Fill mode can also help you to figure out, independently of the file
@@ -740,16 +764,16 @@ Concept Index
 
 Tag Table:
 Node: Top203
-Node: Introduction1099
-Node: Basic concepts3256
-Node: Algorithm4120
-Node: Invoking ddrescue7423
-Node: Logfile Structure13611
-Node: Examples15606
-Node: Direct Disc Access19465
-Node: Fill Mode21315
-Node: Generate Mode24928
-Node: Problems26471
-Node: Concept Index27021
+Node: Introduction1103
+Node: Basic concepts3260
+Node: Algorithm4124
+Node: Invoking ddrescue7427
+Node: Logfile Structure14155
+Node: Examples16154
+Node: Direct Disc Access20484
+Node: Fill Mode22346
+Node: Generate Mode25975
+Node: Problems27518
+Node: Concept Index28068
 
 End Tag Table

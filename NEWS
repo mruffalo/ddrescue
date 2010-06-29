@@ -1,11 +1,15 @@
-Changes in version 1.12:
+Changes in version 1.13:
 
-The destination file is now created with write permission for all if
-umask allows it.
+Non-regular output files are no more overwritten by default.
 
-Files are now open in binary mode in non-POSIX platforms defining the
-O_BINARY macro.
+The option "--force", which forces overwriting of non-regular output
+files has been added.
 
-Lintian warnings in Debian about man pages have been fixed.
+The option "--preallocate", which preallocates space on disc for output
+file has been added.
 
-The "COPYING" file is no more used as data for testing.
+Even more warnings have been added to the tutorial in the manual.
+
+Revert to use "long" instead of "time_t" for time variables. Ddrescue
+only needs counting seconds and "time_t" causes warnings on some
+systems.

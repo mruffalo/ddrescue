@@ -29,7 +29,6 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <ctime>
 #include <string>
 #include <vector>
 #include <fcntl.h>
@@ -74,12 +73,14 @@ void show_help( const int cluster, const int hardbs ) throw()
   std::printf( "  -d, --direct                  use direct disc access for input file\n" );
   std::printf( "  -D, --synchronous             use synchronous writes for output file\n" );
   std::printf( "  -e, --max-errors=<n>          maximum number of error areas allowed\n" );
+  std::printf( "  -f, --force                   overwrite output device or partition\n" );
   std::printf( "  -F, --fill=<types>            fill given type blocks with infile data (?*/-+)\n" );
   std::printf( "  -g, --generate-logfile        generate approximate logfile from partial copy\n" );
   std::printf( "  -i, --input-position=<pos>    starting position in input file [0]\n" );
   std::printf( "  -m, --domain-logfile=<file>   restrict domain to finished blocks in file\n" );
   std::printf( "  -n, --no-split                do not try to split or retry failed blocks\n" );
   std::printf( "  -o, --output-position=<pos>   starting position in output file [ipos]\n" );
+  std::printf( "  -p, --preallocate             preallocate space on disc for output file\n" );
   std::printf( "  -q, --quiet                   suppress all messages\n" );
   std::printf( "  -r, --max-retries=<n>         exit after given retries (-1=infinity) [0]\n" );
   std::printf( "  -R, --retrim                  mark all failed blocks as non-trimmed\n" );
@@ -115,7 +116,7 @@ long long getnum( const char * const ptr, const int bs,
   long long result = strtoll( ptr, &tail, 0 );
   if( tail == ptr )
     {
-    show_error( "bad or missing numerical argument", 0, true );
+    show_error( "bad or missing numerical argument.", 0, true );
     std::exit( 1 );
     }
 
@@ -145,7 +146,7 @@ long long getnum( const char * const ptr, const int bs,
       }
     if( bad_multiplier )
       {
-      show_error( "bad multiplier in numerical argument", 0, true );
+      show_error( "bad multiplier in numerical argument.", 0, true );
       std::exit( 1 );
       }
     for( int i = 0; i < exponent; ++i )
@@ -157,7 +158,7 @@ long long getnum( const char * const ptr, const int bs,
   if( !errno && ( result < min || result > max ) ) errno = ERANGE;
   if( errno )
     {
-    show_error( "numerical argument out of limits" );
+    show_error( "numerical argument out of limits." );
     std::exit( 1 );
     }
   return result;
@@ -172,7 +173,7 @@ void check_fill_types( const std::string filltypes ) throw()
       { error = true; break; }
   if( !filltypes.size() || error )
     {
-    show_error( "invalid type for `fill' option" );
+    show_error( "invalid type for `fill' option." );
     std::exit( 1 );
     }
   }
@@ -182,8 +183,38 @@ bool check_identical( const char * const name1, const char * const name2 ) throw
   {
   if( !std::strcmp( name1, name2 ) ) return true;
   struct stat stat1, stat2;
-  if( stat( name1, &stat1) || stat( name2, &stat2) ) return false;
+  if( stat( name1, &stat1 ) || stat( name2, &stat2 ) ) return false;
   return ( stat1.st_ino == stat2.st_ino && stat1.st_dev == stat2.st_dev );
+  }
+
+
+bool check_files( const char * const iname, const char * const oname,
+                  const bool force, const bool preallocate ) throw()
+  {
+  if( !iname || !oname )
+    {
+    show_error( "both input and output files must be specified.", 0, true );
+    return false;
+    }
+  if( check_identical( iname, oname ) )
+    { show_error( "infile and outfile are the same." ); return false; }
+  if( !force || preallocate )
+    {
+    struct stat st;
+    if( stat( oname, &st ) == 0 && !S_ISREG( st.st_mode ) )
+      {
+      show_error( "output file exists and is not a regular file." );
+      if( !force )
+        {
+        show_error( "Use `--force' if you really want to overwrite it, but be" );
+        show_error( "aware that all existing data in output file will be lost.", 0, true );
+        }
+      else if( preallocate )
+        show_error( "Only regular files can be preallocated.", 0, true );
+      return false;
+      }
+    }
+  return true;
   }
 
 
@@ -194,25 +225,25 @@ int do_fill( long long ipos, const long long opos, Domain & domain,
   {
   if( !logname )
     {
-    show_error( "logfile required in fill mode", 0, true );
+    show_error( "logfile required in fill mode.", 0, true );
     return 1;
     }
 
   Fillbook fillbook( ipos, opos, domain, logname, cluster, hardbs, synchronous );
   if( fillbook.domain().size() == 0 )
-    { show_error( "Nothing to do" ); return 0; }
+    { show_error( "Nothing to do." ); return 0; }
 
   const int ides = open( iname, O_RDONLY | o_binary );
   if( ides < 0 )
     { show_error( "cannot open input file", errno ); return 1; }
   if( !fillbook.read_buffer( ides ) )
-    { show_error( "error reading fill data from input file" ); return 1; }
+    { show_error( "error reading fill data from input file." ); return 1; }
 
   const int odes = open( oname, O_CREAT | O_WRONLY | o_binary, outmode );
   if( odes < 0 )
     { show_error( "cannot open output file", errno ); return 1; }
   if( lseek( odes, 0, SEEK_SET ) )
-    { show_error( "output file is not seekable" ); return 1; }
+    { show_error( "output file is not seekable." ); return 1; }
 
   if( verbosity >= 0 ) std::printf( "\n\n" );
   if( verbosity > 0 )
@@ -240,7 +271,7 @@ int do_generate( const long long ipos, const long long opos, Domain & domain,
   {
   if( !logname )
     {
-    show_error( "logfile must be specified in generate-logfile mode", 0, true );
+    show_error( "logfile must be specified in generate-logfile mode.", 0, true );
     return 1;
     }
 
@@ -249,14 +280,14 @@ int do_generate( const long long ipos, const long long opos, Domain & domain,
     { show_error( "cannot open input file", errno ); return 1; }
   const long long isize = lseek( ides, 0, SEEK_END );
   if( isize < 0 )
-    { show_error( "input file is not seekable" ); return 1; }
+    { show_error( "input file is not seekable." ); return 1; }
 
   Rescuebook genbook( ipos, opos, domain, isize, 0, logname, cluster, hardbs );
   if( genbook.domain().size() == 0 )
-    { show_error( "Nothing to do" ); return 0; }
+    { show_error( "Nothing to do." ); return 0; }
   if( !genbook.blank() && genbook.current_status() != Logbook::generating )
     {
-    show_error( "logfile alredy exists and is non-empty", 0, true );
+    show_error( "logfile alredy exists and is non-empty.", 0, true );
     return 1;
     }
 
@@ -264,7 +295,7 @@ int do_generate( const long long ipos, const long long opos, Domain & domain,
   if( odes < 0 )
     { show_error( "cannot open output file", errno ); return 1; }
   if( lseek( odes, 0, SEEK_SET ) )
-    { show_error( "output file is not seekable" ); return 1; }
+    { show_error( "output file is not seekable." ); return 1; }
 
   if( verbosity >= 0 ) std::printf( "\n\n" );
   if( verbosity > 0 )
@@ -289,7 +320,7 @@ int do_rescue( const long long ipos, const long long opos, Domain & domain,
                const int max_errors, const int max_retries,
                const int o_direct, const int o_trunc,
                const bool complete_only, const bool nosplit,
-               const bool retrim, const bool sparse,
+               const bool preallocate, const bool retrim, const bool sparse,
                const bool synchronous, const bool try_again )
   {
   const int ides = open( iname, O_RDONLY | o_direct | o_binary );
@@ -297,16 +328,16 @@ int do_rescue( const long long ipos, const long long opos, Domain & domain,
     { show_error( "cannot open input file", errno ); return 1; }
   const long long isize = lseek( ides, 0, SEEK_END );
   if( isize < 0 )
-    { show_error( "input file is not seekable" ); return 1; }
+    { show_error( "input file is not seekable." ); return 1; }
 
   Rescuebook rescuebook( ipos, opos, domain, isize, iname, logname, cluster,
                          hardbs, max_errors, max_retries, complete_only,
                          nosplit, retrim, sparse, synchronous, try_again );
   if( rescuebook.domain().size() == 0 )
-    { show_error( "Nothing to do" ); return 0; }
+    { show_error( "Nothing to do." ); return 0; }
   if( o_trunc && !rescuebook.blank() )
     {
-    show_error( "outfile truncation and logfile input are incompatible", 0, true );
+    show_error( "outfile truncation and logfile input are incompatible.", 0, true );
     return 1;
     }
 
@@ -315,7 +346,14 @@ int do_rescue( const long long ipos, const long long opos, Domain & domain,
   if( odes < 0 )
     { show_error( "cannot open output file", errno ); return 1; }
   if( lseek( odes, 0, SEEK_SET ) )
-    { show_error( "output file is not seekable" ); return 1; }
+    { show_error( "output file is not seekable." ); return 1; }
+  while( preallocate )
+    {
+    if( posix_fallocate( odes, 0, rescuebook.domain().end() ) == 0 ) break;
+    if( errno != EINTR )
+      { show_error( "cannot preallocate output file", errno ); return 1; }
+    }
+
   if( !rescuebook.update_logfile( -1, true ) ) return 1;
 
   if( verbosity >= 0 ) std::printf( "\n\n" );
@@ -384,14 +422,26 @@ void write_logfile_header( FILE * const f ) throw()
 
 int main( const int argc, const char * const argv[] )
   {
-  long long ipos = 0, opos = -1, max_size = -1;
+  long long ipos = 0;
+  long long opos = -1;
+  long long max_size = -1;
   const char * domain_logfile_name = 0;
-  const int cluster_bytes = 65536, default_hardbs = 512;
-  int cluster = 0, hardbs = 512;
-  int max_errors = -1, max_retries = 0;
-  int o_direct = 0, o_trunc = 0;
-  bool complete_only = false, generate = false, nosplit = false;
-  bool retrim = false, sparse = false, synchronous = false;
+  const int cluster_bytes = 65536;
+  const int default_hardbs = 512;
+  int cluster = 0;
+  int hardbs = 512;
+  int max_errors = -1;
+  int max_retries = 0;
+  int o_direct = 0;
+  int o_trunc = 0;
+  bool complete_only = false;
+  bool force = false;
+  bool generate = false;
+  bool nosplit = false;
+  bool preallocate = false;
+  bool retrim = false;
+  bool sparse = false;
+  bool synchronous = false;
   bool try_again = false;
   std::string filltypes;
   invocation_name = argv[0];
@@ -405,6 +455,7 @@ int main( const int argc, const char * const argv[] )
     { 'd', "direct",           Arg_parser::no  },
     { 'D', "synchronous",      Arg_parser::no  },
     { 'e', "max-errors",       Arg_parser::yes },
+    { 'f', "force",            Arg_parser::no  },
     { 'F', "fill",             Arg_parser::yes },
     { 'g', "generate-logfile", Arg_parser::no  },
     { 'h', "help",             Arg_parser::no  },
@@ -412,6 +463,7 @@ int main( const int argc, const char * const argv[] )
     { 'm', "domain-logfile",   Arg_parser::yes },
     { 'n', "no-split",         Arg_parser::no  },
     { 'o', "output-position",  Arg_parser::yes },
+    { 'p', "preallocate",      Arg_parser::no  },
     { 'q', "quiet",            Arg_parser::no  },
     { 'r', "max-retries",      Arg_parser::yes },
     { 'R', "retrim",           Arg_parser::no  },
@@ -444,10 +496,11 @@ int main( const int argc, const char * const argv[] )
                 o_direct = O_DIRECT;
 #endif
                 if( !o_direct )
-                  { show_error( "direct disc access not available" ); return 1; }
+                  { show_error( "direct disc access not available." ); return 1; }
                 break;
       case 'D': synchronous = true; break;
       case 'e': max_errors = getnum( arg, 0, -1, INT_MAX ); break;
+      case 'f': force = true; break;
       case 'F': filltypes = arg; check_fill_types( filltypes ); break;
       case 'g': generate = true; break;
       case 'h': show_help( cluster_bytes / default_hardbs, default_hardbs );
@@ -456,6 +509,7 @@ int main( const int argc, const char * const argv[] )
       case 'm': domain_logfile_name = arg; break;
       case 'n': nosplit = true; break;
       case 'o': opos = getnum( arg, hardbs, 0 ); break;
+      case 'p': preallocate = true; break;
       case 'q': verbosity = -1; break;
       case 'r': max_retries = getnum( arg, 0, -1, INT_MAX ); break;
       case 'R': retrim = true; break;
@@ -480,27 +534,21 @@ int main( const int argc, const char * const argv[] )
   if( argind < parser.arguments() ) oname = parser.argument( argind++ ).c_str();
   if( argind < parser.arguments() ) logname = parser.argument( argind++ ).c_str();
   if( argind < parser.arguments() )
-    { show_error( "too many files", 0, true ); return 1; }
+    { show_error( "too many files.", 0, true ); return 1; }
 
   // end scan arguments
 
-  if( !iname || !oname )
-    {
-    show_error( "both input and output files must be specified", 0, true );
-    return 1;
-    }
-  if( check_identical ( iname, oname ) )
-    { show_error( "infile and outfile are the same" ); return 1; }
+  if( !check_files( iname, oname, force, preallocate ) ) return 1;
 
   Domain domain( domain_logfile_name, ipos, max_size );
 
   if( filltypes.size() )
     {
     if( max_errors >= 0 || max_retries || o_direct || o_trunc ||
-        complete_only || generate || nosplit || retrim || sparse ||
-        synchronous || try_again )
-      show_error( "warning: options -C -d -D -e -g -n -r -R -S -t and -T "
-                  "are ignored in fill mode" );
+        complete_only || generate || nosplit || preallocate || retrim ||
+        sparse || synchronous || try_again )
+      show_error( "warning: options -C -d -D -e -g -n -p -r -R -S -t and -T" );
+      show_error( "are ignored in fill mode." );
 
     return do_fill( ipos, opos, domain, iname, oname, logname, cluster,
                     hardbs, filltypes, synchronous );
@@ -508,16 +556,16 @@ int main( const int argc, const char * const argv[] )
   if( generate )
     {
     if( max_errors >= 0 || max_retries || o_direct || o_trunc ||
-        complete_only || nosplit || retrim || sparse || synchronous ||
-        try_again )
-      show_error( "warning: options -C -d -D -e -n -r -R -S -t and -T "
-                  "are ignored in generate-logfile mode" );
+        complete_only || nosplit || preallocate || retrim ||
+        sparse || synchronous || try_again )
+      show_error( "warning: options -C -d -D -e -n -p -r -R -S -t and -T" );
+      show_error( "are ignored in generate-logfile mode." );
 
     return do_generate( ipos, opos, domain, iname, oname, logname,
                         cluster, hardbs );
     }
   return do_rescue( ipos, opos, domain, iname, oname, logname, cluster,
                     hardbs, max_errors, max_retries, o_direct, o_trunc,
-                    complete_only, nosplit, retrim, sparse, synchronous,
-                    try_again );
+                    complete_only, nosplit, preallocate, retrim, sparse,
+                    synchronous, try_again );
   }
