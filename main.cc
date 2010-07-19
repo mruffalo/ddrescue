@@ -46,6 +46,7 @@ const char * invocation_name = 0;
 const char * const Program_name    = "GNU ddrescue";
 const char * const program_name    = "ddrescue";
 const char * const program_year    = "2010";
+std::string command_line;
 
 #ifdef O_BINARY
 const int o_binary = O_BINARY;
@@ -347,12 +348,16 @@ int do_rescue( const long long ipos, const long long opos, Domain & domain,
     { show_error( "cannot open output file", errno ); return 1; }
   if( lseek( odes, 0, SEEK_SET ) )
     { show_error( "output file is not seekable." ); return 1; }
+#if defined _POSIX_ADVISORY_INFO && _POSIX_ADVISORY_INFO > 0
   while( preallocate )
     {
     if( posix_fallocate( odes, 0, rescuebook.domain().end() ) == 0 ) break;
     if( errno != EINTR )
       { show_error( "cannot preallocate output file", errno ); return 1; }
     }
+#else
+    show_error( "warning: preallocation not available." );
+#endif
 
   if( !rescuebook.update_logfile( -1, true ) ) return 1;
 
@@ -393,13 +398,13 @@ void show_error( const char * const msg, const int errcode, const bool help ) th
   {
   if( verbosity >= 0 )
     {
-    if( msg && msg[0] != 0 )
+    if( msg && msg[0] )
       {
       std::fprintf( stderr, "%s: %s", program_name, msg );
-      if( errcode > 0 ) std::fprintf( stderr, ": %s", strerror( errcode ) );
+      if( errcode > 0 ) std::fprintf( stderr, ": %s", std::strerror( errcode ) );
       std::fprintf( stderr, "\n" );
       }
-    if( help && invocation_name && invocation_name[0] != 0 )
+    if( help && invocation_name && invocation_name[0] )
       std::fprintf( stderr, "Try `%s --help' for more information.\n", invocation_name );
     }
   }
@@ -407,8 +412,7 @@ void show_error( const char * const msg, const int errcode, const bool help ) th
 
 void internal_error( const char * const msg )
   {
-  std::string s( "internal error: " ); s += msg;
-  show_error( s.c_str() );
+  std::fprintf( stderr, "%s: internal error: %s.\n", program_name, msg );
   std::exit( 3 );
   }
 
@@ -417,6 +421,7 @@ void write_logfile_header( FILE * const f ) throw()
   {
   std::fprintf( f, "# Rescue Logfile. Created by %s version %s\n",
                 Program_name, PROGVERSION );
+  std::fprintf( f, "# Command line: %s\n", command_line.c_str() );
   }
 
 
@@ -445,6 +450,9 @@ int main( const int argc, const char * const argv[] )
   bool try_again = false;
   std::string filltypes;
   invocation_name = argv[0];
+  command_line = argv[0];
+  for( int i = 1; i < argc; ++i )
+    { command_line += ' '; command_line += argv[i]; }
 
   const Arg_parser::Option options[] =
     {

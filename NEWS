@@ -8,6 +8,9 @@ files has been added.
 The option "--preallocate", which preallocates space on disc for output
 file has been added.
 
+The command line used is now written to the logfile as information for
+the user.
+
 Even more warnings have been added to the tutorial in the manual.
 
 Revert to use "long" instead of "time_t" for time variables. Ddrescue
