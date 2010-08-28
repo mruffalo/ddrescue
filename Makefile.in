@@ -52,7 +52,7 @@ Makefile : $(VPATH)/configure $(VPATH)/Makefile.in
 	./config.status
 
 check : all
-	@$(VPATH)/testsuite/check.sh $(VPATH)/testsuite
+	@$(VPATH)/testsuite/check.sh $(VPATH)/testsuite $(pkgversion)
 
 install : all install-info install-man
 	if [ ! -d "$(DESTDIR)$(bindir)" ] ; then $(INSTALL_DIR) "$(DESTDIR)$(bindir)" ; fi
@@ -97,7 +97,7 @@ dist : doc
 	  $(DISTNAME)/testsuite/check.sh \
 	  $(DISTNAME)/testsuite/logfile1 \
 	  $(DISTNAME)/testsuite/logfile2 \
-	  $(DISTNAME)/testsuite/test1 \
+	  $(DISTNAME)/testsuite/test.txt \
 	  $(DISTNAME)/*.h \
 	  $(DISTNAME)/*.cc
 	rm -f $(DISTNAME)

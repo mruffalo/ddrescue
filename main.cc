@@ -117,7 +117,7 @@ long long getnum( const char * const ptr, const int bs,
   long long result = strtoll( ptr, &tail, 0 );
   if( tail == ptr )
     {
-    show_error( "bad or missing numerical argument.", 0, true );
+    show_error( "Bad or missing numerical argument.", 0, true );
     std::exit( 1 );
     }
 
@@ -147,7 +147,7 @@ long long getnum( const char * const ptr, const int bs,
       }
     if( bad_multiplier )
       {
-      show_error( "bad multiplier in numerical argument.", 0, true );
+      show_error( "Bad multiplier in numerical argument.", 0, true );
       std::exit( 1 );
       }
     for( int i = 0; i < exponent; ++i )
@@ -159,7 +159,7 @@ long long getnum( const char * const ptr, const int bs,
   if( !errno && ( result < min || result > max ) ) errno = ERANGE;
   if( errno )
     {
-    show_error( "numerical argument out of limits." );
+    show_error( "Numerical argument out of limits." );
     std::exit( 1 );
     }
   return result;
@@ -174,7 +174,7 @@ void check_fill_types( const std::string filltypes ) throw()
       { error = true; break; }
   if( !filltypes.size() || error )
     {
-    show_error( "invalid type for `fill' option." );
+    show_error( "Invalid type for `fill' option." );
     std::exit( 1 );
     }
   }
@@ -194,17 +194,17 @@ bool check_files( const char * const iname, const char * const oname,
   {
   if( !iname || !oname )
     {
-    show_error( "both input and output files must be specified.", 0, true );
+    show_error( "Both input and output files must be specified.", 0, true );
     return false;
     }
   if( check_identical( iname, oname ) )
-    { show_error( "infile and outfile are the same." ); return false; }
+    { show_error( "Infile and outfile are the same." ); return false; }
   if( !force || preallocate )
     {
     struct stat st;
     if( stat( oname, &st ) == 0 && !S_ISREG( st.st_mode ) )
       {
-      show_error( "output file exists and is not a regular file." );
+      show_error( "Output file exists and is not a regular file." );
       if( !force )
         {
         show_error( "Use `--force' if you really want to overwrite it, but be" );
@@ -226,25 +226,25 @@ int do_fill( long long ipos, const long long opos, Domain & domain,
   {
   if( !logname )
     {
-    show_error( "logfile required in fill mode.", 0, true );
+    show_error( "Logfile required in fill mode.", 0, true );
     return 1;
     }
 
   Fillbook fillbook( ipos, opos, domain, logname, cluster, hardbs, synchronous );
-  if( fillbook.domain().size() == 0 )
+  if( fillbook.domain().in_size() == 0 )
     { show_error( "Nothing to do." ); return 0; }
 
   const int ides = open( iname, O_RDONLY | o_binary );
   if( ides < 0 )
-    { show_error( "cannot open input file", errno ); return 1; }
+    { show_error( "Can't open input file", errno ); return 1; }
   if( !fillbook.read_buffer( ides ) )
-    { show_error( "error reading fill data from input file." ); return 1; }
+    { show_error( "Error reading fill data from input file." ); return 1; }
 
   const int odes = open( oname, O_CREAT | O_WRONLY | o_binary, outmode );
   if( odes < 0 )
-    { show_error( "cannot open output file", errno ); return 1; }
+    { show_error( "Can't open output file", errno ); return 1; }
   if( lseek( odes, 0, SEEK_SET ) )
-    { show_error( "output file is not seekable." ); return 1; }
+    { show_error( "Output file is not seekable." ); return 1; }
 
   if( verbosity >= 0 ) std::printf( "\n\n" );
   if( verbosity > 0 )
@@ -252,7 +252,7 @@ int do_fill( long long ipos, const long long opos, Domain & domain,
     std::printf( "About to fill with data from %s blocks of %s marked %s\n",
                  iname, oname, filltypes.c_str() );
     std::printf( "    Maximum size to fill: %sBytes\n",
-                 format_num( fillbook.domain().size() ) );
+                 format_num( fillbook.domain().in_size() ) );
     std::printf( "    Starting positions: infile = %sB",
                  format_num( fillbook.domain().pos() ) );
     std::printf( ",  outfile = %sB\n",
@@ -272,31 +272,31 @@ int do_generate( const long long ipos, const long long opos, Domain & domain,
   {
   if( !logname )
     {
-    show_error( "logfile must be specified in generate-logfile mode.", 0, true );
+    show_error( "Logfile must be specified in generate-logfile mode.", 0, true );
     return 1;
     }
 
   const int ides = open( iname, O_RDONLY | o_binary );
   if( ides < 0 )
-    { show_error( "cannot open input file", errno ); return 1; }
+    { show_error( "Can't open input file", errno ); return 1; }
   const long long isize = lseek( ides, 0, SEEK_END );
   if( isize < 0 )
-    { show_error( "input file is not seekable." ); return 1; }
+    { show_error( "Input file is not seekable." ); return 1; }
 
   Rescuebook genbook( ipos, opos, domain, isize, 0, logname, cluster, hardbs );
-  if( genbook.domain().size() == 0 )
+  if( genbook.domain().in_size() == 0 )
     { show_error( "Nothing to do." ); return 0; }
   if( !genbook.blank() && genbook.current_status() != Logbook::generating )
     {
-    show_error( "logfile alredy exists and is non-empty.", 0, true );
+    show_error( "Logfile alredy exists and is non-empty.", 0, true );
     return 1;
     }
 
   const int odes = open( oname, O_RDONLY | o_binary );
   if( odes < 0 )
-    { show_error( "cannot open output file", errno ); return 1; }
+    { show_error( "Can't open output file", errno ); return 1; }
   if( lseek( odes, 0, SEEK_SET ) )
-    { show_error( "output file is not seekable." ); return 1; }
+    { show_error( "Output file is not seekable." ); return 1; }
 
   if( verbosity >= 0 ) std::printf( "\n\n" );
   if( verbosity > 0 )
@@ -326,37 +326,37 @@ int do_rescue( const long long ipos, const long long opos, Domain & domain,
   {
   const int ides = open( iname, O_RDONLY | o_direct | o_binary );
   if( ides < 0 )
-    { show_error( "cannot open input file", errno ); return 1; }
+    { show_error( "Can't open input file", errno ); return 1; }
   const long long isize = lseek( ides, 0, SEEK_END );
   if( isize < 0 )
-    { show_error( "input file is not seekable." ); return 1; }
+    { show_error( "Input file is not seekable." ); return 1; }
 
   Rescuebook rescuebook( ipos, opos, domain, isize, iname, logname, cluster,
                          hardbs, max_errors, max_retries, complete_only,
                          nosplit, retrim, sparse, synchronous, try_again );
-  if( rescuebook.domain().size() == 0 )
+  if( rescuebook.domain().in_size() == 0 )
     { show_error( "Nothing to do." ); return 0; }
   if( o_trunc && !rescuebook.blank() )
     {
-    show_error( "outfile truncation and logfile input are incompatible.", 0, true );
+    show_error( "Outfile truncation and logfile input are incompatible.", 0, true );
     return 1;
     }
 
   const int odes = open( oname, O_CREAT | O_WRONLY | o_trunc | o_binary,
                          outmode );
   if( odes < 0 )
-    { show_error( "cannot open output file", errno ); return 1; }
+    { show_error( "Can't open output file", errno ); return 1; }
   if( lseek( odes, 0, SEEK_SET ) )
-    { show_error( "output file is not seekable." ); return 1; }
+    { show_error( "Output file is not seekable." ); return 1; }
 #if defined _POSIX_ADVISORY_INFO && _POSIX_ADVISORY_INFO > 0
   while( preallocate )
     {
-    if( posix_fallocate( odes, 0, rescuebook.domain().end() ) == 0 ) break;
+    if( posix_fallocate( odes, opos, rescuebook.domain().size() ) == 0 ) break;
     if( errno != EINTR )
-      { show_error( "cannot preallocate output file", errno ); return 1; }
+      { show_error( "Can't preallocate output file", errno ); return 1; }
     }
 #else
-    show_error( "warning: preallocation not available." );
+    show_error( "warning: Preallocation not available." );
 #endif
 
   if( !rescuebook.update_logfile( -1, true ) ) return 1;
@@ -365,7 +365,7 @@ int do_rescue( const long long ipos, const long long opos, Domain & domain,
   if( verbosity > 0 )
     {
     std::printf( "About to copy %sBytes from %s to %s\n",
-                 format_num( rescuebook.domain().size() ), iname, oname );
+                 format_num( rescuebook.domain().in_size() ), iname, oname );
     std::printf( "    Starting positions: infile = %sB",
                  format_num( rescuebook.domain().pos() ) );
     std::printf( ",  outfile = %sB\n",
@@ -401,11 +401,13 @@ void show_error( const char * const msg, const int errcode, const bool help ) th
     if( msg && msg[0] )
       {
       std::fprintf( stderr, "%s: %s", program_name, msg );
-      if( errcode > 0 ) std::fprintf( stderr, ": %s", std::strerror( errcode ) );
+      if( errcode > 0 )
+        std::fprintf( stderr, ": %s", std::strerror( errcode ) );
       std::fprintf( stderr, "\n" );
       }
     if( help && invocation_name && invocation_name[0] )
-      std::fprintf( stderr, "Try `%s --help' for more information.\n", invocation_name );
+      std::fprintf( stderr, "Try `%s --help' for more information.\n",
+                    invocation_name );
     }
   }
 
@@ -504,7 +506,7 @@ int main( const int argc, const char * const argv[] )
                 o_direct = O_DIRECT;
 #endif
                 if( !o_direct )
-                  { show_error( "direct disc access not available." ); return 1; }
+                  { show_error( "Direct disc access not available." ); return 1; }
                 break;
       case 'D': synchronous = true; break;
       case 'e': max_errors = getnum( arg, 0, -1, INT_MAX ); break;
@@ -542,7 +544,7 @@ int main( const int argc, const char * const argv[] )
   if( argind < parser.arguments() ) oname = parser.argument( argind++ ).c_str();
   if( argind < parser.arguments() ) logname = parser.argument( argind++ ).c_str();
   if( argind < parser.arguments() )
-    { show_error( "too many files.", 0, true ); return 1; }
+    { show_error( "Too many files.", 0, true ); return 1; }
 
   // end scan arguments
 
@@ -555,8 +557,10 @@ int main( const int argc, const char * const argv[] )
     if( max_errors >= 0 || max_retries || o_direct || o_trunc ||
         complete_only || generate || nosplit || preallocate || retrim ||
         sparse || synchronous || try_again )
-      show_error( "warning: options -C -d -D -e -g -n -p -r -R -S -t and -T" );
+      {
+      show_error( "warning: Options -C -d -D -e -g -n -p -r -R -S -t and -T" );
       show_error( "are ignored in fill mode." );
+      }
 
     return do_fill( ipos, opos, domain, iname, oname, logname, cluster,
                     hardbs, filltypes, synchronous );
@@ -566,8 +570,10 @@ int main( const int argc, const char * const argv[] )
     if( max_errors >= 0 || max_retries || o_direct || o_trunc ||
         complete_only || nosplit || preallocate || retrim ||
         sparse || synchronous || try_again )
-      show_error( "warning: options -C -d -D -e -n -p -r -R -S -t and -T" );
+      {
+      show_error( "warning: Options -C -d -D -e -n -p -r -R -S -t and -T" );
       show_error( "are ignored in generate-logfile mode." );
+      }
 
     return do_generate( ipos, opos, domain, iname, oname, logname,
                         cluster, hardbs );

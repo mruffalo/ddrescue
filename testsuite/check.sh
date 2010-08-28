@@ -19,22 +19,22 @@ fi
 
 if [ -d tmp ] ; then rm -rf tmp ; fi
 mkdir tmp
-printf "testing ddrescue..."
+printf "testing ddrescue-%s..." "$2"
 cd "${objdir}"/tmp
 
-cat "${testdir}"/test1 > in || framework_failure
+cat "${testdir}"/test.txt > in || framework_failure
 fail=0
 
-"${DDRESCUE}" -q -t -p -i15000 in out1 logfile2a || fail=1
-"${DDRESCUE}" -q -D -f -s15000 in out1 logfile2a || fail=1
-"${DDRESCUE}" -q -F+ -o15000 in out2a logfile2a || fail=1
-"${DDRESCUE}" -q -S -i15000 -o0 out2a out2 || fail=1
-"${DDRESCUE}" -q -t -m "${testdir}"/logfile1 in out3 || fail=1
-"${DDRESCUE}" -q -m "${testdir}"/logfile2 in out3 || fail=1
+"${DDRESCUE}" -t -p -i15000 in out1 logfile2a > /dev/null || fail=1
+"${DDRESCUE}" -D -f -s15000 in out1 logfile2a > /dev/null || fail=1
+"${DDRESCUE}" -F+ -o15000 in out2a logfile2a > /dev/null || fail=1
+"${DDRESCUE}" -S -i15000 -o0 out2a out2 > /dev/null || fail=1
+"${DDRESCUE}" -t -m "${testdir}"/logfile1 in out3 > /dev/null || fail=1
+"${DDRESCUE}" -m "${testdir}"/logfile2 in out3 > /dev/null || fail=1
 cat "${testdir}"/logfile1 > logfile || framework_failure
-"${DDRESCUE}" -q in out4 logfile || fail=1
+"${DDRESCUE}" in out4 logfile > /dev/null || fail=1
 cat "${testdir}"/logfile2 > logfile || framework_failure
-"${DDRESCUE}" -q in out4 logfile || fail=1
+"${DDRESCUE}" in out4 logfile > /dev/null || fail=1
 cmp in out1 || fail=1
 printf .
 cmp in out2 || fail=1

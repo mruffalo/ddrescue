@@ -97,7 +97,7 @@ void extend_sblock_vector( std::vector< Sblock > & sblock_vector,
       {
       if( back.pos() == isize && back.status() == Sblock::non_tried )
         { sblock_vector.pop_back(); return; }
-      show_error( "bad logfile; last block begins past end of input file" );
+      show_error( "Bad logfile; last block begins past end of input file." );
       std::exit( 1 );
       }
     if( end < 0 || end > isize ) back.size( isize - back.pos() );
@@ -180,7 +180,7 @@ Domain::Domain( const char * const name, const long long p, const long long s )
     {
     char buf[80];
     snprintf( buf, sizeof buf,
-              "logfile `%s' does not exist or is not readable", name );
+              "Logfile `%s' does not exist or is not readable.", name );
     show_error( buf );
     std::exit( 1 );
     }
@@ -296,7 +296,7 @@ bool Logbook::update_logfile( const int odes, const bool force )
     {
     char buf[80];
     const char * const s =
-      f ? "error writing logfile %s" : "error opening logfile %s for writing";
+      f ? "Error writing logfile %s." : "Error opening logfile %s for writing.";
     snprintf( buf, sizeof buf, s, filename_ );
     std::fprintf( stderr, "\n" );
     show_error( buf, errno );

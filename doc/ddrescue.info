@@ -12,7 +12,7 @@ File: ddrescue.info,  Node: Top,  Next: Introduction,  Up: (dir)
 GNU ddrescue Manual
 *******************
 
-This manual is for GNU ddrescue (version 1.13-rc2, 19 July 2010).
+This manual is for GNU ddrescue (version 1.13, 27 August 2010).
 
 * Menu:
 
@@ -53,6 +53,11 @@ in reverse mode, etc.
 efficiently, (only the needed blocks are read). Also you can interrupt
 the rescue at any time and resume it later at the same point.
 
+   Ddrescue does not write zeros to the output when it finds bad
+sectors in the input, and does not truncate the output file if not
+asked to. So, every time you run it on the same output file, it tries
+to fill in the gaps without wiping out the data already rescued.
+
    Automatic merging of backups: If you have two or more damaged copies
 of a file, cdrom, etc, and run ddrescue on all of them, one at a time,
 with the same output file, you will probably obtain a complete and
@@ -61,17 +66,17 @@ areas at the same places on different input files is very low. Using
 the logfile, only the needed blocks are read from the second and
 successive copies.
 
-   Ddrescue recommends lzip for compression of backups, because of its
-reliability and data recovery capabilities.
+   Ddrescue recommends lzip for compression of backups because of its
+reliability and data recovery capabilities, including error-checked
+merging of backup copies. The combination ddrescue + lziprecover is the
+best option for recovering data from multiple damaged copies. See the
+tutorial for an example (*note lzip-example::).
 
    Recordable CD and DVD media keep their data only for a finite time
 (typically for many years). After that time, data loss develops slowly
 with read errors growing from the outer media region towards the inside.
 Just make two (or more) copies of every important CD/DVD you burn so
 that you can later recover them with ddrescue.
-
-   Ddrescue does not truncate the output file if not asked to. So, every
-time you run it on the same output file, it tries to fill in the gaps.
 
    Because ddrescue needs to read and write at random places, it only
 works on seekable (random access) input and output files.
@@ -314,12 +319,12 @@ The format for running ddrescue is:
      files can be preallocated. If preallocation succeeds, rescue will
      not fail due to lack of free space on disc. If ddrescue can't
      determine the size to preallocate, you may need to specify it with
-     some combination of the `--input-position', `--max-size', and
-     `--domain-logfile' options.
+     some combination of the `--input-position', `--output-position',
+     `--max-size', and `--domain-logfile' options.
 
 `--quiet'
 `-q'
-     Quiet operation.
+     Quiet operation. Suppress all messages.
 
 `--max-retries=N'
 `-r N'
@@ -437,7 +442,7 @@ Character   Meaning
 
 And here is an example logfile:
 
-# Rescue Logfile. Created by GNU ddrescue version 1.13-rc2
+# Rescue Logfile. Created by GNU ddrescue version 1.13
 # Command line: ddrescue /dev/fd0 fdimage logfile
 # current_pos  current_status
 0x00120000     ?
@@ -508,7 +513,7 @@ it.  At least not with ddrescue.
 
 
 Example 1: Rescue a whole disc with two ext2 partitions in /dev/hda to
-/dev/hdb
+/dev/hdb.
 Note: you do not need to partition /dev/hdb beforehand, but if the
 partition table on /dev/hda is damaged, you'll need to recreate it
 somehow on /dev/hdb.
@@ -520,7 +525,7 @@ somehow on /dev/hdb.
      e2fsck -v -f /dev/hdb2
 
 
-Example 2: Rescue an ext2 partition in /dev/hda2 to /dev/hdb2
+Example 2: Rescue an ext2 partition in /dev/hda2 to /dev/hdb2.
 Note: you need to create the hdb2 partition with fdisk first. hdb2
 should be of appropiate type and size.
 
@@ -528,26 +533,43 @@ should be of appropiate type and size.
      ddrescue -d -f -r3 /dev/hda2 /dev/hdb2 logfile
      e2fsck -v -f /dev/hdb2
      mount -t ext2 -o ro /dev/hdb2 /mnt
-     read files from /mnt
+       (read rescued files from /mnt)
 
 
-Example 3: Rescue a CD-ROM in /dev/cdrom
+Example 3: Rescue a CD-ROM in /dev/cdrom.
 
      ddrescue -n -b2048 /dev/cdrom cdimage logfile
      ddrescue -d -b2048 /dev/cdrom cdimage logfile
-     write cdimage to a blank CD-ROM
+       (write cdimage to a blank CD-ROM)
 
 
-Example 4: Rescue a lzip compressed backup from two copies
+Example 4: Rescue a CD-ROM in /dev/cdrom from two copies.
 
-     ddrescue copy1.tar.lz rescued.tar.lz logfile
-     ddrescue -r1 copy2.tar.lz rescued.tar.lz logfile
-     test the integrity of the rescued file with `lzip -t' and use
-     `lziprecover' if needed.
+     ddrescue -n -b2048 /dev/cdrom cdimage logfile
+     ddrescue -d -b2048 /dev/cdrom cdimage logfile
+       (insert second copy in the CD drive)
+     ddrescue -d -r1 -b2048 /dev/cdrom cdimage logfile
+       (write cdimage to a blank CD-ROM)
 
 
-Example 5: While rescuing the whole drive /dev/hda to /dev/hdb, /dev/hdb
-fails and you have to rescue data to a third drive, /dev/hdc
+Example 5: Rescue a lzip compressed backup from two copies on CD-ROM
+with error-checked merging of copies (see the lzip manual for details
+about lziprecover).
+
+     ddrescue -b2048 /dev/cdrom cdimage1 logfile1
+     mount -t iso9660 -o loop,ro cdimage1 /mnt/cdimage
+     cp /mnt/cdimage/backup.tar.lz rescued1.tar.lz
+     umount /mnt/cdimage
+       (insert second copy in the CD drive)
+     ddrescue -b2048 /dev/cdrom cdimage2 logfile2
+     mount -t iso9660 -o loop,ro cdimage2 /mnt/cdimage
+     cp /mnt/cdimage/backup.tar.lz rescued2.tar.lz
+     umount /mnt/cdimage
+     lziprecover --merge -o rescued.tar.lz rescued1.tar.lz rescued2.tar.lz
+
+
+Example 6: While rescuing the whole drive /dev/hda to /dev/hdb, /dev/hdb
+fails and you have to rescue data to a third drive, /dev/hdc.
 
      ddrescue -f -n /dev/hda /dev/hdb logfile1     <-- /dev/hdb fails here
      ddrescue -f -m logfile1 /dev/hdb /dev/hdc logfile2
@@ -555,8 +577,8 @@ fails and you have to rescue data to a third drive, /dev/hdc
      ddrescue -d -f -r3 /dev/hda /dev/hdc logfile2
 
 
-Example 6: While rescuing the whole drive /dev/hda to /dev/hdb, /dev/hda
-stops responding and disappears from /dev
+Example 7: While rescuing the whole drive /dev/hda to /dev/hdb, /dev/hda
+stops responding and disappears from /dev.
 
      ddrescue -f -n /dev/hda /dev/hdb logfile      <-- /dev/hda fails here
        (restart /dev/hda or reboot computer as many times as needed)
@@ -595,7 +617,7 @@ and use direct disc access, or a raw device, only to recover the good
 sectors inside the failed blocks.
 
 
-Example 1: using direct disc access
+Example 1: using direct disc access.
 
      ddrescue -f -n /dev/hdb1 /dev/hdc1 logfile
      ddrescue -d -f -r3 /dev/hdb1 /dev/hdc1 logfile
@@ -603,7 +625,7 @@ Example 1: using direct disc access
      mount -t ext2 -o ro /dev/hdc1 /mnt
 
 
-Example 2: using a raw device
+Example 2: using a raw device.
 
      raw /dev/raw/raw1 /dev/hdb1
      ddrescue -f -n /dev/hdb1 /dev/hdc1 logfile
@@ -777,16 +799,17 @@ Concept Index
 
 Tag Table:
 Node: Top203
-Node: Introduction1103
-Node: Basic concepts3260
-Node: Algorithm4467
-Node: Invoking ddrescue7770
-Node: Logfile Structure14497
-Node: Examples16751
-Node: Direct Disc Access21081
-Node: Fill Mode22943
-Node: Generate Mode26572
-Node: Problems28115
-Node: Concept Index28665
+Node: Introduction1101
+Node: Basic concepts3594
+Node: Algorithm4801
+Node: Invoking ddrescue8104
+Node: Logfile Structure14875
+Node: Examples17125
+Ref: lzip-example20787
+Node: Direct Disc Access22159
+Node: Fill Mode24023
+Node: Generate Mode27652
+Node: Problems29195
+Node: Concept Index29745
 
 End Tag Table

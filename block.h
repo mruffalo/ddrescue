@@ -102,6 +102,13 @@ public:
 
   long long size() const throw()
     {
+    if( block_vector.size() )
+      return block_vector.back().end() - block_vector[0].pos();
+    else return 0;
+    }
+
+  long long in_size() const throw()
+    {
     long long s = 0;
     for( unsigned int i = 0; i < block_vector.size(); ++i )
       s += block_vector[i].size();

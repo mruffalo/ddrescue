@@ -440,7 +440,7 @@ int Rescuebook::do_rescue( const int ides, const int odes )
     else if( retval < 0 ) retval = 0;		// interrupted by user
     if( !sync_sparse_file() )
       {
-      show_error( "error syncing sparse output file" );
+      show_error( "Error syncing sparse output file." );
       if( retval == 0 ) retval = 1;
       }
     compact_sblock_vector();

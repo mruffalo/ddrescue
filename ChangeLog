@@ -1,17 +1,13 @@
-2010-07-19  Antonio Diaz Diaz  <ant_diaz@teleline.es>
+2010-08-27  Antonio Diaz Diaz  <ant_diaz@teleline.es>
 
-	* Version 1.13-rc2 released.
-	* main.cc: Fixed detection of presence of posix_fallocate.
-	* main.cc (write_logfile_header): Write command line to logfile.
-	* ddrescue.texinfo: Added info about logfile and recoverable formats.
-
-2010-06-29  Antonio Diaz Diaz  <ant_diaz@teleline.es>
-
-	* Version 1.13-rc1 released.
+	* Version 1.13 released.
 	* Non-regular output files are no more overwritten by default.
 	* Added new option "--force".
 	* Added new option "--preallocate".
+	* main.cc (write_logfile_header): Write command line to logfile.
+	* ddrescue.texinfo: Added info about logfile and recoverable formats.
 	* ddrescue.texinfo: Added a couple more warnings to the tutorial.
+	* testsuite: "test1" renamed to "test.txt"
 	* Revert to use "long" instead of "time_t" for time variables.
 	  Ddrescue only needs counting seconds and "time_t" causes
 	  warnings on some systems.

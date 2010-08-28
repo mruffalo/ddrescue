@@ -6,12 +6,12 @@
 # This configure script is free software: you have unlimited permission
 # to copy, distribute and modify it.
 #
-# Date of this version: 2010-07-19
+# Date of this version: 2010-08-27
 
 args=
 no_create=
 pkgname=ddrescue
-pkgversion=1.13-rc2
+pkgversion=1.13
 progname=ddrescue
 srctrigger=ddrescue.h
 
@@ -81,7 +81,7 @@ while [ -n "$1" ] ; do
 		bindir=`echo ${optarg} | sed -e 's,/$,,'` ;;
 	--datadir* | --da*)
 		datadir=`echo ${optarg} | sed -e 's,/$,,'` ;;
-	--infodir* | --in*)
+	--infodir* | --inf*)
 		infodir=`echo ${optarg} | sed -e 's,/$,,'` ;;
 	--mandir* | --ma*)
 		mandir=`echo ${optarg} | sed -e 's,/$,,'` ;;
