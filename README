@@ -68,5 +68,5 @@ This file is free documentation: you have unlimited permission to copy,
 distribute and modify it.
 
 The file Makefile.in is a data file used by configure to produce the
-Makefile. It has the same copyright owner and permissions that this
-file.
+Makefile. It has the same copyright owner and permissions that configure
+itself.

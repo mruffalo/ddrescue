@@ -25,7 +25,7 @@ cd "${objdir}"/tmp
 cat "${testdir}"/test.txt > in || framework_failure
 fail=0
 
-"${DDRESCUE}" -t -p -i15000 in out1 logfile2a > /dev/null || fail=1
+"${DDRESCUE}" -t -pq -i15000 in out1 logfile2a > /dev/null || fail=1
 "${DDRESCUE}" -D -f -s15000 in out1 logfile2a > /dev/null || fail=1
 "${DDRESCUE}" -F+ -o15000 in out2a logfile2a > /dev/null || fail=1
 "${DDRESCUE}" -S -i15000 -o0 out2a out2 > /dev/null || fail=1

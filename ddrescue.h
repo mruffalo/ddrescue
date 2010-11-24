@@ -28,7 +28,7 @@ private:
   long long current_pos_;
   Status current_status_;
   Domain & domain_;			// rescue domain
-  char *iobuf_base, *iobuf_;		// iobuf is aligned to page and hardbs
+  uint8_t *iobuf_base, *iobuf_;		// iobuf is aligned to page and hardbs
   const char * const filename_;
   const int hardbs_, softbs_;
   const char * final_msg_;
@@ -57,7 +57,7 @@ public:
   Status current_status() const throw() { return current_status_; }
   const Domain & domain() const throw() { return domain_; }
   const char *filename() const throw() { return filename_; }
-  char * iobuf() const throw() { return iobuf_; }
+  uint8_t * iobuf() const throw() { return iobuf_; }
   int hardbs() const throw() { return hardbs_; }
   int softbs() const throw() { return softbs_; }
   long long offset() const throw() { return offset_; }
@@ -120,6 +120,32 @@ public:
   };
 
 
+class Genbook : public Logbook
+  {
+  long long recsize, gensize;		// total recovered and generated sizes
+  int odes_;				// output file descriptor
+					// variables for show_status
+  long long a_rate, c_rate, first_size, last_size;
+  long long last_ipos;
+  long t0, t1;
+  int oldlen;
+
+  int check_block( const Block & b, int & copied_size, int & error_size );
+  int check_all();
+  void show_status( const long long ipos, const char * const msg = 0,
+                    bool force = false ) throw();
+public:
+  Genbook( const long long ipos, const long long opos, Domain & dom,
+           const long long isize, const char * const logname,
+           const int cluster, const int hardbs )
+    : Logbook( ipos, opos, dom, isize, logname, cluster, hardbs, false ),
+      a_rate( 0 ), c_rate( 0 ), first_size( 0 ), last_size( 0 ),
+      last_ipos( 0 ), t0( 0 ), t1( 0 ), oldlen( 0 ) {}
+
+  int do_generate( const int odes );
+  };
+
+
 class Rescuebook : public Logbook
   {
   long long sparse_size;		// end position of pending writes
@@ -137,10 +163,8 @@ class Rescuebook : public Logbook
 
   int skipbs() const throw() { return skipbs_; }
   bool sync_sparse_file() throw();
-  int check_block( const Block & b, int & copied_size, int & error_size );
   int copy_block( const Block & b, int & copied_size, int & error_size );
-  int check_all();
-  void count_errors() throw();
+  int count_errors() throw();
   bool too_many_errors() const throw()
     { return ( max_errors_ >= 0 && errors > max_errors_ ); }
   int copy_and_update( const Block & b, const Sblock::Status st,
@@ -154,14 +178,15 @@ class Rescuebook : public Logbook
                     bool force = false ) throw();
 public:
   Rescuebook( const long long ipos, const long long opos,
-              Domain & dom, const long long isize, const char * const iname,
-              const char * const logname, const int cluster, const int hardbs,
+              Domain & dom, const long long isize,
+              const char * const iname, const char * const logname,
+              const int cluster, const int hardbs,
               const int max_errors = -1, const int max_retries = 0,
-              const bool complete_only = false, const bool nosplit = false,
+              const bool complete_only = false,
+              const bool new_errors_only = false, const bool nosplit = false,
               const bool retrim = false, const bool sparse = false,
               const bool synchronous = false, const bool try_again = false );
 
-  int do_generate( const int odes );
   int do_rescue( const int ides, const int odes );
   };
 

@@ -5,8 +5,8 @@
 @finalout
 @c %**end of header
 
-@set UPDATED 27 August 2010
-@set VERSION 1.13
+@set UPDATED 24 November 2010
+@set VERSION 1.14-pre1
 
 @dircategory GNU Packages
 @direntry
@@ -14,6 +14,7 @@
 @end direntry
 
 
+@ifnothtml
 @titlepage
 @title GNU ddrescue
 @subtitle Data recovery tool
@@ -25,6 +26,7 @@
 @end titlepage
 
 @contents
+@end ifnothtml
 
 @node Top
 @top
@@ -32,17 +34,17 @@
 This manual is for GNU ddrescue (version @value{VERSION}, @value{UPDATED}).
 
 @menu
-* Introduction::	Purpose and features of GNU ddrescue
-* Basic concepts::	Blocks, clusters, devices, files, sectors, etc
-* Algorithm::		How ddrescue recovers the data
-* Invoking ddrescue::	Command line interface
-* Logfile Structure::	Detailed format of the logfile
-* Examples::		A small tutorial with examples
-* Direct Disc Access::	Bypassing the kernel cache
-* Fill Mode::		Selectively overwriting the output file
-* Generate Mode::	Generating an approximate logfile
-* Problems::		Reporting bugs
-* Concept Index::	Index of concepts
+* Introduction::        Purpose and features of GNU ddrescue
+* Basic concepts::      Blocks, clusters, devices, files, sectors, etc
+* Algorithm::           How ddrescue recovers the data
+* Invoking ddrescue::   Command line interface
+* Logfile Structure::   Detailed format of the logfile
+* Examples::            A small tutorial with examples
+* Direct Disc Access::  Bypassing the kernel cache
+* Fill Mode::           Selectively overwriting the output file
+* Generate Mode::       Generating an approximate logfile
+* Problems::            Reporting bugs
+* Concept Index::       Index of concepts
 @end menu
 
 @sp 1
@@ -85,8 +87,8 @@ successive copies.
 Ddrescue recommends lzip for compression of backups because of its
 reliability and data recovery capabilities, including error-checked
 merging of backup copies. The combination ddrescue + lziprecover is the
-best option for recovering data from multiple damaged copies. See the
-tutorial for an example (@pxref{lzip-example}).
+best option for recovering data from multiple damaged copies.
+@xref{lzip-example}, for an example
 
 Recordable CD and DVD media keep their data only for a finite time
 (typically for many years). After that time, data loss develops slowly
@@ -242,39 +244,39 @@ ddrescue [@var{options}] @var{infile} @var{outfile} [@var{logfile}]
 ddrescue supports the following options:
 
 @table @samp
-@item --help
-@itemx -h
+@item -h
+@itemx --help
 Print an informative help message describing the options and exit.
 
-@item --version
-@itemx -V
+@item -V
+@itemx --version
 Print the version number of ddrescue on the standard output and exit.
 
-@item --block-size=@var{bytes}
-@itemx -b @var{bytes}
-Hardware block (sector) size of input device in bytes (usually 512 for
+@item -b @var{bytes}
+@itemx --block-size=@var{bytes}
+Sector (hardware block) size of input device in bytes (usually 512 for
 hard discs and 3.5" floppies, 1024 for 5.25" floppies, and 2048 for
 cdroms). Defaults to 512.
 
-@item --binary-prefixes
-@itemx -B
+@item -B
+@itemx --binary-prefixes
 Show units with binary prefixes (powers of 1024).@*
 SI prefixes (powers of 1000) are used by default. (See table below).
 
-@item --cluster-size=@var{sectors}
-@itemx -c @var{sectors}
+@item -c @var{sectors}
+@itemx --cluster-size=@var{sectors}
 Number of sectors to copy at a time. Defaults to @w{64KiB / sector_size}.
 Try smaller values for slow drives. The number of sectors per track (18
 or 9) is a good value for floppies.
 
-@item --complete-only
-@itemx -C
+@item -C
+@itemx --complete-only
 Limit rescue domain to the blocks listed in the logfile. Do not read new
 data beyond logfile limits. This is useful when reading from devices of
 undefined size, like raw devices.
 
-@item --direct
-@itemx -d
+@item -d
+@itemx --direct
 Use direct disc access to read the input file, bypassing the kernel
 cache. (Open the file with the O_DIRECT flag). Use it only on devices or
 partitions, not on regular files. Sector size must be correctly set for
@@ -284,61 +286,71 @@ If your system does not support direct disc access, ddrescue will warn
 you. If the sector size is not correctly set, all reads will result in
 errors, and no data will be rescued.
 
-@item --synchronous
-@itemx -D
+@item -D
+@itemx --synchronous
 Use synchronous writes for output file. (Issue a fsync call after every
 write). May be useful when forcing the drive to remap its bad sectors.
 
-@item --max-errors=@var{n}
-@itemx -e @var{n}
-Maximum number of error areas allowed before giving up. Defaults to infinity.
+@item -e [+]@var{n}
+@itemx --max-errors=[+]@var{n}
+Maximum number of error areas allowed before giving up. Defaults to
+infinity. If @var{n} is preceded by @samp{+} the number refers to new
+error areas found in this run, not counting those already annotated in
+the logfile.
 
-@item --force
-@itemx -f
+@item -f
+@itemx --force
 Force overwrite of output file. Needed when the output file is not a
 regular file, but a device or partition.
 
-@item --fill=@var{types}
-@itemx -F @var{types}
+@item -F @var{types}
+@itemx --fill=@var{types}
 Fill the output file blocks specified as any of @var{types} in the
 logfile, with data read from the input file. @var{types} contains one or
 more of the status characters defined in the chapter Logfile Structure
 (@pxref{Logfile Structure}). See the chapter Fill Mode (@pxref{Fill
 Mode}) for a complete description of the fill mode.
 
-@item --generate-logfile
-@itemx -g
+@item -g
+@itemx --generate-logfile
 Generate an approximate logfile from the input and output files of the
-original rescue run. Note that you should keep the original offset
-between @samp{--input-position} and @samp{--output-position} of the
-original rescue run.
+original rescue run. Note that you must keep the original offset between
+@samp{--input-position} and @samp{--output-position} of the original
+rescue run.
 
-@item --input-position=@var{pos}
-@itemx -i @var{pos}
+@item -i @var{pos}
+@itemx --input-position=@var{pos}
 Starting position in input file, in bytes. Defaults to 0. In fill mode
 it refers to the original input file. See the chapter Fill Mode
 (@pxref{Fill Mode}) for details.
 
-@item --domain-logfile=@var{file}
-@itemx -m @var{file}
+@item -m @var{file}
+@itemx --domain-logfile=@var{file}
 Restrict the rescue domain to the blocks marked as finished in the
 logfile @var{file}. This is useful if the destination drive fails during
 the rescue.
 
-@item --no-split
-@itemx -n
+@item -M
+@itemx --retrim
+Mark all failed blocks inside the rescue domain as non-trimmed before
+beginning the rescue. The effect is similar to @samp{--max-retries=1},
+but the bad sectors are tried in a different order, making perhaps
+possible to rescue some of them.
+
+@item -n
+@itemx --no-split
 Stop after the trimming pass. Avoids spending a lot of time trying to
 rescue the most difficult parts of the file. This option overrides the
 @samp{--max-retries} option.
 
-@item --output-position=@var{pos}
-@itemx -o @var{pos}
+@item -o @var{pos}
+@itemx --output-position=@var{pos}
 Starting position in output file, in bytes. Defaults to
 @samp{--input-position}. The bytes below @var{pos} aren't touched if
 they exist and truncation is not requested. Else they are set to 0.
 
-@item --preallocate
-@itemx -p
+@item -p
+@itemx --preallocate
 Preallocate space on disc for output file. Only space for regular files
 can be preallocated. If preallocation succeeds, rescue will not fail due
 to lack of free space on disc. If ddrescue can't determine the size to
@@ -346,26 +358,19 @@ preallocate, you may need to specify it with some combination of the
 @samp{--input-position}, @samp{--output-position}, @samp{--max-size},
 and @samp{--domain-logfile} options.
 
-@item --quiet
-@itemx -q
+@item -q
+@itemx --quiet
 Quiet operation. Suppress all messages.
 
-@item --max-retries=@var{n}
-@itemx -r @var{n}
+@item -r @var{n}
+@itemx --max-retries=@var{n}
 Exit after given number of retry passes. Defaults to 0. -1 means
 infinity. Every bad sector is tried only one time per pass. To retry bad
 sectors detected on a previous run, you must specify a non-zero number
 of retries.
 
-@item --retrim
-@itemx -R
-Mark all failed blocks inside the rescue domain as non-trimmed before
-beginning the rescue. The effect is similar to @samp{--max-retries=1},
-but the bad sectors are tried in a different order, making perhaps
-possible to rescue some of them.
-
-@item --max-size=@var{bytes}
-@itemx -s @var{bytes}
+@item -s @var{bytes}
+@itemx --max-size=@var{bytes}
 Maximum size of the input data to be copied, in bytes. If ddrescue can't
 determine the size of the input device, you may need to specify it with
 this option. Note that this option specifies the size of the input data
@@ -377,27 +382,27 @@ data on the last 200 bytes:
 ddrescue -i 100 -s 200 infile outfile logfile
 @end example
 
-@item --sparse
-@itemx -S
+@item -S
+@itemx --sparse
 Use sparse writes for output file. (The blocks of zeros are not actually
 allocated on disc). May save a lot of disc space in some cases. Not all
 systems support this.
 
-@item --truncate
-@itemx -t
+@item -t
+@itemx --truncate
 Truncate output file to zero size before writing to it. Only works for
 regular files, not for drives or partitions.
 
-@item --try-again
-@itemx -T
+@item -T
+@itemx --try-again
 Mark all non-split and non-trimmed blocks inside the rescue domain as
 non-tried before beginning the rescue. Try this if the drive stops
 responding and ddrescue immediately starts splitting failed blocks when
 restarted. If @samp{--retrim} is also specified, mark all failed blocks
 inside the rescue domain as non-tried.
 
-@item --verbose
-@itemx -v
+@item -v
+@itemx --verbose
 Verbose mode.
 
 @end table
@@ -666,11 +671,11 @@ multiple of sector size. Ddrescue can't determine the size of a raw
 device, so a explicit @samp{--max-size} or @samp{--complete-only} option
 is needed.
 
-Using direct disc access, or reading from a raw device, may be slower
-than normal cached reading for hard discs (but faster for floppies). In
-this case you may want to make a first pass using normal cached reads,
-and use direct disc access, or a raw device, only to recover the good
-sectors inside the failed blocks.
+Using direct disc access, or reading from a raw device, may be slower or
+faster than normal cached reading depending on your OS and hardware. In
+case it is slower you may want to make a first pass using normal cached
+reads and use direct disc access, or a raw device, only to recover the
+good sectors inside the failed blocks.
 
 @sp 1
 @noindent

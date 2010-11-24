@@ -1,18 +1,11 @@
-Changes in version 1.13:
+Changes in version 1.14:
 
-Non-regular output files are no more overwritten by default.
+The syntax of option "--max-errors" has been extended to specify new
+errors (--max-errors=+N).
 
-The option "--force", which forces overwriting of non-regular output
-files has been added.
+The short name of option "--retrim" has been changed to "-M".
 
-The option "--preallocate", which preallocates space on disc for output
-file has been added.
+A spurious warning about "preallocation not available" has been fixed.
 
-The command line used is now written to the logfile as information for
-the user.
-
-Even more warnings have been added to the tutorial in the manual.
-
-Revert to use "long" instead of "time_t" for time variables. Ddrescue
-only needs counting seconds and "time_t" causes warnings on some
-systems.
+The code implementing logfile generation has been moved to the new class
+"Genbook" in preparation for the addition of the reverse mode.

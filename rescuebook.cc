@@ -24,49 +24,18 @@
 #include <cstring>
 #include <string>
 #include <vector>
+#include <stdint.h>
 #include <unistd.h>
 
 #include "block.h"
 #include "ddrescue.h"
 
 
-// Return values: 0 OK, -1 interrupted, -2 logfile error.
-//
-int Rescuebook::check_all()
+int Rescuebook::count_errors() throw()
   {
-  long long pos = ( (offset() >= 0) ? 0 : -offset() );
-  if( current_status() == generating && domain().includes( current_pos() ) &&
-      ( offset() >= 0 || current_pos() >= -offset() ) )
-    pos = current_pos();
-  bool first_post = true;
-
-  while( pos >= 0 )
-    {
-    Block b( pos, softbs() );
-    find_chunk( b, Sblock::non_tried );
-    if( b.size() <= 0 ) break;
-    pos = b.end();
-    current_status( generating );
-    if( verbosity >= 0 )
-      { show_status( b.pos(), "Generating logfile...", first_post ); first_post = false; }
-    int copied_size, error_size;
-    const int retval = check_block( b, copied_size, error_size );
-    if( !retval )
-      {
-      if( copied_size + error_size < b.size() )		// EOF
-        truncate_vector( b.pos() + copied_size + error_size );
-      }
-    if( retval ) return retval;
-    if( !update_logfile() ) return -2;
-    }
-  return 0;
-  }
-
-
-void Rescuebook::count_errors() throw()
-  {
+  int e = 0;
   bool good = true;
-  errors = 0;
+
   for( int i = 0; i < sblocks(); ++i )
     {
     const Sblock & sb = sblock( i );
@@ -77,9 +46,10 @@ void Rescuebook::count_errors() throw()
       case Sblock::finished:   good = true; break;
       case Sblock::non_trimmed:
       case Sblock::non_split:
-      case Sblock::bad_sector: if( good ) { good = false; ++errors; } break;
+      case Sblock::bad_sector: if( good ) { good = false; ++e; } break;
       }
     }
+  return e;
   }
 
 
@@ -112,7 +82,7 @@ int Rescuebook::copy_and_update( const Block & b, const Sblock::Status st,
         }
       else
         change_chunk_status( Block( b.pos() + copied_size, error_size ), st );
-      if( max_errors_ >= 0 ) count_errors();
+      if( max_errors_ >= 0 ) errors = count_errors();
       if( iname_ && access( iname_, F_OK ) != 0 )
         {
         final_msg( "input file disappeared" ); final_errno( errno );
@@ -249,7 +219,7 @@ int Rescuebook::split_errors()
 
 
 // Return values: 1 I/O error, 0 OK, -1 interrupted, -2 logfile error.
-// Try to read the damaged areas, one hard block at a time.
+// Try to read the damaged areas, one sector at a time.
 //
 int Rescuebook::copy_errors()
   {
@@ -287,16 +257,18 @@ int Rescuebook::copy_errors()
 
 
 Rescuebook::Rescuebook( const long long ipos, const long long opos,
-                        Domain & dom, const long long isize, const char * const iname,
-                        const char * const logname, const int cluster, const int hardbs,
+                        Domain & dom, const long long isize,
+                        const char * const iname, const char * const logname,
+                        const int cluster, const int hardbs,
                         const int max_errors, const int max_retries,
-                        const bool complete_only, const bool nosplit,
-                        const bool retrim, const bool sparse,
+                        const bool complete_only, const bool new_errors_only,
+                        const bool nosplit, const bool retrim, const bool sparse,
                         const bool synchronous, const bool try_again )
   : Logbook( ipos, opos, dom, isize, logname, cluster, hardbs, complete_only ),
     sparse_size( 0 ),
-    iname_( ( iname && access( iname, F_OK ) == 0 ) ? iname : 0 ),
-    max_errors_( max_errors ), max_retries_( max_retries ),
+    iname_( ( access( iname, F_OK ) == 0 ) ? iname : 0 ),
+    max_errors_( max_errors + ( new_errors_only ? count_errors() : 0 ) ),
+    max_retries_( max_retries ),
     skipbs_( std::max( 65536, hardbs ) ),
     nosplit_( nosplit ), sparse_( sparse ), synchronous_( synchronous ),
     a_rate( 0 ), c_rate( 0 ), first_size( 0 ), last_size( 0 ),
@@ -325,61 +297,6 @@ Rescuebook::Rescuebook( const long long ipos, const long long opos,
   }
 
 
-// Return values: 1 write error, 0 OK.
-//
-int Rescuebook::do_generate( const int odes )
-  {
-  recsize = 0; errsize = 0;
-  ides_ = -1; odes_ = odes;
-
-  for( int i = 0; i < sblocks(); ++i )
-    {
-    const Sblock & sb = sblock( i );
-    if( !domain().includes( sb ) ) { if( domain() < sb ) break; else continue; }
-    switch( sb.status() )
-      {
-      case Sblock::non_tried:   break;
-      case Sblock::non_trimmed: 			// fall through
-      case Sblock::non_split:   			// fall through
-      case Sblock::bad_sector:  errsize += sb.size(); break;
-      case Sblock::finished:    recsize += sb.size(); break;
-      }
-    }
-  count_errors();
-  set_signals();
-  if( verbosity >= 0 )
-    {
-    std::printf( "Press Ctrl-C to interrupt\n" );
-    if( filename() )
-      {
-      std::printf( "Initial status (read from logfile)\n" );
-      std::printf( "rescued: %10sB,", format_num( recsize ) );
-      std::printf( "  errsize:%9sB,", format_num( errsize, 99999 ) );
-      std::printf( "  errors: %7u\n", errors );
-      std::printf( "Current status\n" );
-      }
-    }
-  int retval = check_all();
-  if( verbosity >= 0 )
-    {
-    show_status( -1, (retval ? 0 : "Finished"), true );
-    if( retval == -2 ) std::printf( "Logfile error" );
-    else if( retval < 0 ) std::printf( "\nInterrupted by user" );
-    std::fputc( '\n', stdout );
-    }
-  if( retval == -2 ) retval = 1;		// logfile error
-  else
-    {
-    if( retval == 0 ) current_status( finished );
-    else if( retval < 0 ) retval = 0;		// interrupted by user
-    compact_sblock_vector();
-    if( !update_logfile( -1, true ) && retval == 0 ) retval = 1;
-    }
-  if( final_msg() ) show_error( final_msg(), final_errno() );
-  return retval;
-  }
-
-
 // Return values: 1 I/O error, 0 OK.
 //
 int Rescuebook::do_rescue( const int ides, const int odes )
@@ -402,7 +319,7 @@ int Rescuebook::do_rescue( const int ides, const int odes )
       case Sblock::finished:    recsize += sb.size(); break;
       }
     }
-  count_errors();
+  errors = count_errors();
   set_signals();
   if( verbosity >= 0 )
     {

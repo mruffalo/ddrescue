@@ -27,6 +27,7 @@
 #include <ctime>
 #include <string>
 #include <vector>
+#include <stdint.h>
 #include <unistd.h>
 
 #include "block.h"
@@ -221,7 +222,7 @@ Logbook::Logbook( const long long ipos, const long long opos, Domain & dom,
   int alignment = sysconf( _SC_PAGESIZE );
   if( alignment < hardbs_ || alignment % hardbs_ ) alignment = hardbs_;
   if( alignment < 2 || alignment > 65536 ) alignment = 0;
-  iobuf_ = iobuf_base = new char[ softbs_ + alignment ];
+  iobuf_ = iobuf_base = new uint8_t[ softbs_ + alignment ];
   if( alignment > 1 )		// align iobuf for use with raw devices
     {
     const int disp = alignment - ( reinterpret_cast<long> (iobuf_) % alignment );

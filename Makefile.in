@@ -6,7 +6,8 @@ INSTALL_DATA = $(INSTALL) -p -m 644
 INSTALL_DIR = $(INSTALL) -d -m 755
 SHELL = /bin/sh
 
-objs = arg_parser.o block.o ddrescue.o fillbook.o logbook.o rescuebook.o main.o
+objs = arg_parser.o block.o ddrescue.o fillbook.o genbook.o logbook.o \
+       rescuebook.o main.o
 
 
 .PHONY : all install install-info install-man install-strip \

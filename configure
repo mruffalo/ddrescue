@@ -6,12 +6,12 @@
 # This configure script is free software: you have unlimited permission
 # to copy, distribute and modify it.
 #
-# Date of this version: 2010-08-27
+# Date of this version: 2010-11-24
 
 args=
 no_create=
 pkgname=ddrescue
-pkgversion=1.13
+pkgversion=1.14-pre1
 progname=ddrescue
 srctrigger=ddrescue.h
 

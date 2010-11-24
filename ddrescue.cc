@@ -28,6 +28,7 @@
 #include <ctime>
 #include <string>
 #include <vector>
+#include <stdint.h>
 #include <unistd.h>
 
 #include "block.h"
@@ -40,7 +41,7 @@ bool volatile interrupted = false;		// user pressed Ctrl-C
 extern "C" void sighandler( int ) throw() { interrupted = true; }
 
 
-bool block_is_zero( const char * const buf, const int size ) throw()
+bool block_is_zero( const uint8_t * const buf, const int size ) throw()
   {
   for( int i = 0; i < size; ++i ) if( buf[i] != 0 ) return false;
   return true;
@@ -67,7 +68,7 @@ const char * format_time( long t ) throw()
 // Returns the number of bytes really read.
 // If (returned value < size) and (errno == 0), means EOF was reached.
 //
-int readblock( const int fd, char * const buf, const int size,
+int readblock( const int fd, uint8_t * const buf, const int size,
                const long long pos ) throw()
   {
   int rest = size;
@@ -88,7 +89,7 @@ int readblock( const int fd, char * const buf, const int size,
 // Returns the number of bytes really written.
 // If (returned value < size), it is always an error.
 //
-int writeblock( const int fd, const char * const buf, const int size,
+int writeblock( const int fd, const uint8_t * const buf, const int size,
                 const long long pos ) throw()
   {
   int rest = size;
@@ -117,7 +118,7 @@ int Fillbook::fill_block( const Block & b )
   const int size = b.size();
 
   if( writeblock( odes_, iobuf(), size, b.pos() + offset() ) != size ||
-      ( synchronous_ && fsync( odes_ ) < 0 ) )
+      ( synchronous_ && fsync( odes_ ) < 0 && errno != EINVAL ) )
     { final_msg( "write error" ); final_errno( errno ); return 1; }
   filled_size += size; remaining_size -= size;
   return 0;
@@ -171,30 +172,11 @@ bool Fillbook::read_buffer( const int ides ) throw()
   }
 
 
-bool Rescuebook::sync_sparse_file() throw()
-  {
-  bool done = true;
-  if( sparse_ && sparse_size > 0 )
-    {
-    const long long size = lseek( odes_, 0, SEEK_END );
-    if( size < 0 ) done = false;
-    if( sparse_size > size )
-      {
-      const char zero = 0;
-      if( writeblock( odes_, &zero, 1, sparse_size - 1 ) != 1 )
-        done = false;
-      fsync( odes_ );
-      }
-    }
-  return done;
-  }
-
-
 // Return values: 0 OK, -1 interrupted.
 // If !OK, copied_size and error_size are set to 0.
 // If OK && copied_size + error_size < b.size(), it means EOF has been reached.
 //
-int Rescuebook::check_block( const Block & b, int & copied_size, int & error_size )
+int Genbook::check_block( const Block & b, int & copied_size, int & error_size )
   {
   current_pos( b.pos() );
   copied_size = 0; error_size = 0;
@@ -211,9 +193,69 @@ int Rescuebook::check_block( const Block & b, int & copied_size, int & error_siz
       change_chunk_status( Block( b.pos() + pos, size ), Sblock::finished );
       recsize += size;
       }
+    gensize += size;
     pos += size;
     }
   return 0;
+  }
+
+
+void Genbook::show_status( const long long ipos, const char * const msg,
+                           bool force ) throw()
+  {
+  const char * const up = "\x1b[A";
+  if( t0 == 0 )
+    {
+    t0 = t1 = std::time( 0 );
+    first_size = last_size = gensize;
+    force = true;
+    std::printf( "\n\n" );
+    }
+
+  if( ipos >= 0 ) last_ipos = ipos;
+  const long t2 = std::time( 0 );
+  if( t2 > t1 || force )
+    {
+    if( t2 > t1 )
+      {
+      a_rate = ( gensize - first_size ) / ( t2 - t0 );
+      c_rate = ( gensize - last_size ) / ( t2 - t1 );
+      t1 = t2;
+      last_size = gensize;
+      }
+    std::printf( "\r%s%s", up, up );
+    std::printf( "rescued: %10sB,", format_num( recsize ) );
+    std::printf( "  generated:%10sB,", format_num( gensize ) );
+    std::printf( "  current rate: %9sB/s\n", format_num( c_rate, 99999 ) );
+    std::printf( "   opos: %10sB,                        ",
+                 format_num( last_ipos + offset() ) );
+    std::printf( "  average rate: %9sB/s\n", format_num( a_rate, 99999 ) );
+    int len = oldlen;
+    if( msg ) { len = std::strlen( msg ); if( len ) std::printf( "%s", msg ); }
+    for( int i = len; i < oldlen; ++i ) std::fputc( ' ', stdout );
+    if( len || oldlen ) std::fputc( '\r', stdout );
+    oldlen = len;
+    std::fflush( stdout );
+    }
+  }
+
+
+bool Rescuebook::sync_sparse_file() throw()
+  {
+  bool done = true;
+  if( sparse_ && sparse_size > 0 )
+    {
+    const long long size = lseek( odes_, 0, SEEK_END );
+    if( size < 0 ) done = false;
+    if( sparse_size > size )
+      {
+      const uint8_t zero = 0;
+      if( writeblock( odes_, &zero, 1, sparse_size - 1 ) != 1 )
+        done = false;
+      fsync( odes_ );
+      }
+    }
+  return done;
   }
 
 
@@ -238,7 +280,7 @@ int Rescuebook::copy_block( const Block & b, int & copied_size, int & error_size
         lseek( odes_, end, SEEK_SET ) >= 0 )
       { if( end > sparse_size ) sparse_size = end; }
     else if( writeblock( odes_, iobuf(), copied_size, pos ) != copied_size ||
-             ( synchronous_ && fsync( odes_ ) < 0 ) )
+             ( synchronous_ && fsync( odes_ ) < 0 && errno != EINVAL ) )
       {
       copied_size = 0; error_size = 0;
       final_msg( "write error" ); final_errno( errno );
@@ -273,7 +315,7 @@ void Rescuebook::show_status( const long long ipos, const char * const msg,
       t1 = t2;
       last_size = recsize;
       }
-    count_errors();
+    errors = count_errors();
     std::printf( "\r%s%s%s", up, up, up );
     std::printf( "rescued: %10sB,", format_num( recsize ) );
     std::printf( "  errsize:%9sB,", format_num( errsize, 99999 ) );

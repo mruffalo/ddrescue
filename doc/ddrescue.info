@@ -12,21 +12,21 @@ File: ddrescue.info,  Node: Top,  Next: Introduction,  Up: (dir)
 GNU ddrescue Manual
 *******************
 
-This manual is for GNU ddrescue (version 1.13, 27 August 2010).
+This manual is for GNU ddrescue (version 1.14-pre1, 24 November 2010).
 
 * Menu:
 
-* Introduction::	Purpose and features of GNU ddrescue
-* Basic concepts::	Blocks, clusters, devices, files, sectors, etc
-* Algorithm::		How ddrescue recovers the data
-* Invoking ddrescue::	Command line interface
-* Logfile Structure::	Detailed format of the logfile
-* Examples::		A small tutorial with examples
-* Direct Disc Access::	Bypassing the kernel cache
-* Fill Mode::		Selectively overwriting the output file
-* Generate Mode::	Generating an approximate logfile
-* Problems::		Reporting bugs
-* Concept Index::	Index of concepts
+* Introduction::        Purpose and features of GNU ddrescue
+* Basic concepts::      Blocks, clusters, devices, files, sectors, etc
+* Algorithm::           How ddrescue recovers the data
+* Invoking ddrescue::   Command line interface
+* Logfile Structure::   Detailed format of the logfile
+* Examples::            A small tutorial with examples
+* Direct Disc Access::  Bypassing the kernel cache
+* Fill Mode::           Selectively overwriting the output file
+* Generate Mode::       Generating an approximate logfile
+* Problems::            Reporting bugs
+* Concept Index::       Index of concepts
 
 
    Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010 Antonio Diaz
@@ -69,8 +69,8 @@ successive copies.
    Ddrescue recommends lzip for compression of backups because of its
 reliability and data recovery capabilities, including error-checked
 merging of backup copies. The combination ddrescue + lziprecover is the
-best option for recovering data from multiple damaged copies. See the
-tutorial for an example (*note lzip-example::).
+best option for recovering data from multiple damaged copies.  *Note
+lzip-example::, for an example
 
    Recordable CD and DVD media keep their data only for a finite time
 (typically for many years). After that time, data loss develops slowly
@@ -214,41 +214,41 @@ The format for running ddrescue is:
 
    ddrescue supports the following options:
 
-`--help'
 `-h'
+`--help'
      Print an informative help message describing the options and exit.
 
-`--version'
 `-V'
+`--version'
      Print the version number of ddrescue on the standard output and
      exit.
 
-`--block-size=BYTES'
 `-b BYTES'
-     Hardware block (sector) size of input device in bytes (usually 512
+`--block-size=BYTES'
+     Sector (hardware block) size of input device in bytes (usually 512
      for hard discs and 3.5" floppies, 1024 for 5.25" floppies, and
      2048 for cdroms). Defaults to 512.
 
-`--binary-prefixes'
 `-B'
+`--binary-prefixes'
      Show units with binary prefixes (powers of 1024).
      SI prefixes (powers of 1000) are used by default. (See table
      below).
 
-`--cluster-size=SECTORS'
 `-c SECTORS'
+`--cluster-size=SECTORS'
      Number of sectors to copy at a time. Defaults to
      64KiB / sector_size.  Try smaller values for slow drives. The
      number of sectors per track (18 or 9) is a good value for floppies.
 
-`--complete-only'
 `-C'
+`--complete-only'
      Limit rescue domain to the blocks listed in the logfile. Do not
      read new data beyond logfile limits. This is useful when reading
      from devices of undefined size, like raw devices.
 
-`--direct'
 `-d'
+`--direct'
      Use direct disc access to read the input file, bypassing the kernel
      cache. (Open the file with the O_DIRECT flag). Use it only on
      devices or partitions, not on regular files. Sector size must be
@@ -258,63 +258,72 @@ The format for running ddrescue is:
      warn you. If the sector size is not correctly set, all reads will
      result in errors, and no data will be rescued.
 
-`--synchronous'
 `-D'
+`--synchronous'
      Use synchronous writes for output file. (Issue a fsync call after
      every write). May be useful when forcing the drive to remap its
      bad sectors.
 
-`--max-errors=N'
-`-e N'
-     Maximum number of error areas allowed before giving up. Defaults
-     to infinity.
+`-e [+]N'
+`--max-errors=[+]N'
+     Maximum number of error areas allowed before giving up. Defaults to
+     infinity. If N is preceded by `+' the number refers to new error
+     areas found in this run, not counting those already annotated in
+     the logfile.
 
-`--force'
 `-f'
+`--force'
      Force overwrite of output file. Needed when the output file is not
      a regular file, but a device or partition.
 
-`--fill=TYPES'
 `-F TYPES'
+`--fill=TYPES'
      Fill the output file blocks specified as any of TYPES in the
      logfile, with data read from the input file. TYPES contains one or
      more of the status characters defined in the chapter Logfile
      Structure (*note Logfile Structure::). See the chapter Fill Mode
      (*note Fill Mode::) for a complete description of the fill mode.
 
-`--generate-logfile'
 `-g'
+`--generate-logfile'
      Generate an approximate logfile from the input and output files of
-     the original rescue run. Note that you should keep the original
+     the original rescue run. Note that you must keep the original
      offset between `--input-position' and `--output-position' of the
      original rescue run.
 
-`--input-position=POS'
 `-i POS'
+`--input-position=POS'
      Starting position in input file, in bytes. Defaults to 0. In fill
      mode it refers to the original input file. See the chapter Fill
      Mode (*note Fill Mode::) for details.
 
-`--domain-logfile=FILE'
 `-m FILE'
+`--domain-logfile=FILE'
      Restrict the rescue domain to the blocks marked as finished in the
      logfile FILE. This is useful if the destination drive fails during
      the rescue.
 
-`--no-split'
+`-M'
+`--retrim'
+     Mark all failed blocks inside the rescue domain as non-trimmed
+     before beginning the rescue. The effect is similar to
+     `--max-retries=1', but the bad sectors are tried in a different
+     order, making perhaps possible to rescue some of them.
+
 `-n'
+`--no-split'
      Stop after the trimming pass. Avoids spending a lot of time trying
      to rescue the most difficult parts of the file. This option
      overrides the `--max-retries' option.
 
-`--output-position=POS'
 `-o POS'
+`--output-position=POS'
      Starting position in output file, in bytes. Defaults to
      `--input-position'. The bytes below POS aren't touched if they
      exist and truncation is not requested. Else they are set to 0.
 
-`--preallocate'
 `-p'
+`--preallocate'
      Preallocate space on disc for output file. Only space for regular
      files can be preallocated. If preallocation succeeds, rescue will
      not fail due to lack of free space on disc. If ddrescue can't
@@ -322,26 +331,19 @@ The format for running ddrescue is:
      some combination of the `--input-position', `--output-position',
      `--max-size', and `--domain-logfile' options.
 
-`--quiet'
 `-q'
+`--quiet'
      Quiet operation. Suppress all messages.
 
-`--max-retries=N'
 `-r N'
+`--max-retries=N'
      Exit after given number of retry passes. Defaults to 0. -1 means
      infinity. Every bad sector is tried only one time per pass. To
      retry bad sectors detected on a previous run, you must specify a
      non-zero number of retries.
 
-`--retrim'
-`-R'
-     Mark all failed blocks inside the rescue domain as non-trimmed
-     before beginning the rescue. The effect is similar to
-     `--max-retries=1', but the bad sectors are tried in a different
-     order, making perhaps possible to rescue some of them.
-
-`--max-size=BYTES'
 `-s BYTES'
+`--max-size=BYTES'
      Maximum size of the input data to be copied, in bytes. If ddrescue
      can't determine the size of the input device, you may need to
      specify it with this option. Note that this option specifies the
@@ -351,27 +353,27 @@ The format for running ddrescue is:
 
           ddrescue -i 100 -s 200 infile outfile logfile
 
-`--sparse'
 `-S'
+`--sparse'
      Use sparse writes for output file. (The blocks of zeros are not
      actually allocated on disc). May save a lot of disc space in some
      cases. Not all systems support this.
 
-`--truncate'
 `-t'
+`--truncate'
      Truncate output file to zero size before writing to it. Only works
      for regular files, not for drives or partitions.
 
-`--try-again'
 `-T'
+`--try-again'
      Mark all non-split and non-trimmed blocks inside the rescue domain
      as non-tried before beginning the rescue. Try this if the drive
      stops responding and ddrescue immediately starts splitting failed
      blocks when restarted. If `--retrim' is also specified, mark all
      failed blocks inside the rescue domain as non-tried.
 
-`--verbose'
 `-v'
+`--verbose'
      Verbose mode.
 
 
@@ -442,7 +444,7 @@ Character   Meaning
 
 And here is an example logfile:
 
-# Rescue Logfile. Created by GNU ddrescue version 1.13
+# Rescue Logfile. Created by GNU ddrescue version 1.14-pre1
 # Command line: ddrescue /dev/fd0 fdimage logfile
 # current_pos  current_status
 0x00120000     ?
@@ -610,11 +612,11 @@ multiple of sector size. Ddrescue can't determine the size of a raw
 device, so a explicit `--max-size' or `--complete-only' option is
 needed.
 
-   Using direct disc access, or reading from a raw device, may be slower
-than normal cached reading for hard discs (but faster for floppies). In
-this case you may want to make a first pass using normal cached reads,
-and use direct disc access, or a raw device, only to recover the good
-sectors inside the failed blocks.
+   Using direct disc access, or reading from a raw device, may be
+slower or faster than normal cached reading depending on your OS and
+hardware. In case it is slower you may want to make a first pass using
+normal cached reads and use direct disc access, or a raw device, only
+to recover the good sectors inside the failed blocks.
 
 
 Example 1: using direct disc access.
@@ -799,17 +801,17 @@ Concept Index
 
 Tag Table:
 Node: Top203
-Node: Introduction1101
-Node: Basic concepts3594
-Node: Algorithm4801
-Node: Invoking ddrescue8104
-Node: Logfile Structure14875
-Node: Examples17125
-Ref: lzip-example20787
-Node: Direct Disc Access22159
-Node: Fill Mode24023
-Node: Generate Mode27652
-Node: Problems29195
-Node: Concept Index29745
+Node: Introduction1175
+Node: Basic concepts3650
+Node: Algorithm4857
+Node: Invoking ddrescue8160
+Node: Logfile Structure15078
+Node: Examples17333
+Ref: lzip-example20995
+Node: Direct Disc Access22367
+Node: Fill Mode24241
+Node: Generate Mode27870
+Node: Problems29413
+Node: Concept Index29963
 
 End Tag Table
