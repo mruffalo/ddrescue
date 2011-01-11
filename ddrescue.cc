@@ -1,5 +1,5 @@
 /*  GNU ddrescue - Data recovery tool
-    Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010
+    Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
     Antonio Diaz Diaz.
 
     This program is free software: you can redistribute it and/or modify
@@ -291,16 +291,17 @@ int Rescuebook::copy_block( const Block & b, int & copied_size, int & error_size
   }
 
 
-void Rescuebook::show_status( const long long ipos, const char * const msg,
-                              bool force ) throw()
+void Rescuebook::update_status( const long long ipos, const char * const msg,
+                                bool force ) throw()
   {
   const char * const up = "\x1b[A";
   if( t0 == 0 )
     {
     t0 = t1 = ts = std::time( 0 );
     first_size = last_size = recsize;
+    last_errsize = errsize;
     force = true;
-    std::printf( "\n\n\n" );
+    if( verbosity >= 0 ) std::printf( "\n\n\n" );
     }
 
   if( ipos >= 0 ) last_ipos = ipos;
@@ -312,26 +313,36 @@ void Rescuebook::show_status( const long long ipos, const char * const msg,
       a_rate = ( recsize - first_size ) / ( t2 - t0 );
       c_rate = ( recsize - last_size ) / ( t2 - t1 );
       if( recsize > last_size ) ts = t2;
-      t1 = t2;
       last_size = recsize;
+      if( max_error_rate_ >= 0 )
+        {
+        e_rate = ( errsize - last_errsize ) / ( t2 - t1 );
+        last_errsize = errsize;
+        }
+      t1 = t2;
       }
-    errors = count_errors();
-    std::printf( "\r%s%s%s", up, up, up );
-    std::printf( "rescued: %10sB,", format_num( recsize ) );
-    std::printf( "  errsize:%9sB,", format_num( errsize, 99999 ) );
-    std::printf( "  current rate: %9sB/s\n", format_num( c_rate, 99999 ) );
-    std::printf( "   ipos: %10sB,   errors: %7u,  ",
-                 format_num( last_ipos ), errors );
-    std::printf( "  average rate: %9sB/s\n", format_num( a_rate, 99999 ) );
-    std::printf( "   opos: %10sB,", format_num( last_ipos + offset() ) );
-    std::printf( "     time from last successful read: %9s\n",
-                 format_time( t2 - ts ) );
-    int len = oldlen;
-    if( msg ) { len = std::strlen( msg ); if( len ) std::printf( "%s", msg ); }
-    for( int i = len; i < oldlen; ++i ) std::fputc( ' ', stdout );
-    if( len || oldlen ) std::fputc( '\r', stdout );
-    oldlen = len;
-    std::fflush( stdout );
+    if( verbosity >= 0 )
+      {
+      count_errors();
+      update_ecode();
+      std::printf( "\r%s%s%s", up, up, up );
+      std::printf( "rescued: %10sB,", format_num( recsize ) );
+      std::printf( "  errsize:%9sB,", format_num( errsize, 99999 ) );
+      std::printf( "  current rate: %9sB/s\n", format_num( c_rate, 99999 ) );
+      std::printf( "   ipos: %10sB,   errors: %7u,  ",
+                   format_num( last_ipos ), errors );
+      std::printf( "  average rate: %9sB/s\n", format_num( a_rate, 99999 ) );
+      std::printf( "   opos: %10sB,", format_num( last_ipos + offset() ) );
+      std::printf( "     time from last successful read: %9s\n",
+                   format_time( t2 - ts ) );
+      int len = oldlen;
+      if( msg && !too_many_errors() )
+        { len = std::strlen( msg ); if( len ) std::printf( "%s", msg ); }
+      for( int i = len; i < oldlen; ++i ) std::fputc( ' ', stdout );
+      if( len || oldlen ) std::fputc( '\r', stdout );
+      oldlen = len;
+      std::fflush( stdout );
+      }
     }
   }
 

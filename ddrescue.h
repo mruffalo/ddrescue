@@ -1,5 +1,5 @@
 /*  GNU ddrescue - Data recovery tool
-    Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010
+    Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
     Antonio Diaz Diaz.
 
     This program is free software: you can redistribute it and/or modify
@@ -151,12 +151,14 @@ class Rescuebook : public Logbook
   long long sparse_size;		// end position of pending writes
   long long recsize, errsize;		// total recovered and error sizes
   const char * const iname_;
+  const int max_error_rate_, max_retries_, skipbs_;
+  int max_errors_;
+  int e_code;				// error code for too many errors
   int errors;				// error areas found so far
   int ides_, odes_;			// input and output file descriptors
-  const int max_errors_, max_retries_, skipbs_;
   const bool nosplit_, sparse_, synchronous_;
-					// variables for show_status
-  long long a_rate, c_rate, first_size, last_size;
+					// variables for update_status
+  long long a_rate, c_rate, e_rate, first_size, last_size, last_errsize;
   long long last_ipos;
   long t0, t1, ts;
   int oldlen;
@@ -164,30 +166,38 @@ class Rescuebook : public Logbook
   int skipbs() const throw() { return skipbs_; }
   bool sync_sparse_file() throw();
   int copy_block( const Block & b, int & copied_size, int & error_size );
-  int count_errors() throw();
-  bool too_many_errors() const throw()
-    { return ( max_errors_ >= 0 && errors > max_errors_ ); }
+  void count_errors() throw();
+  void update_ecode() throw()
+    {
+    if( max_error_rate_ >= 0 && e_rate > max_error_rate_ ) e_code |= 1;
+    if( max_errors_ >= 0 && errors > max_errors_ ) e_code |= 2;
+    }
+  bool too_many_errors() const throw() { return ( e_code != 0 ); }
   int copy_and_update( const Block & b, const Sblock::Status st,
                        int & copied_size, int & error_size,
                        const char * const msg, bool & first_post );
   int copy_non_tried();
+  int rcopy_non_tried();
   int trim_errors();
+  int rtrim_errors();
   int split_errors();
+  int rsplit_errors();
   int copy_errors();
-  void show_status( const long long ipos, const char * const msg = 0,
-                    bool force = false ) throw();
+  int rcopy_errors();
+  void update_status( const long long ipos, const char * const msg = 0,
+                      bool force = false ) throw();
 public:
   Rescuebook( const long long ipos, const long long opos,
               Domain & dom, const long long isize,
               const char * const iname, const char * const logname,
-              const int cluster, const int hardbs,
+              const int cluster, const int hardbs, const int max_error_rate,
               const int max_errors = -1, const int max_retries = 0,
               const bool complete_only = false,
               const bool new_errors_only = false, const bool nosplit = false,
               const bool retrim = false, const bool sparse = false,
               const bool synchronous = false, const bool try_again = false );
 
-  int do_rescue( const int ides, const int odes );
+  int do_rescue( const int ides, const int odes, const bool reverse );
   };
 
 

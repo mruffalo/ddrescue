@@ -17,13 +17,13 @@ objs = arg_parser.o block.o ddrescue.o fillbook.o genbook.o logbook.o \
 all : $(progname)
 
 $(progname) : $(objs)
-	$(CXX) $(LDFLAGS) -o $(progname) $(objs)
+	$(CXX) $(LDFLAGS) -o $@ $(objs)
 
 $(progname)_profiled : $(objs)
-	$(CXX) $(LDFLAGS) -pg -o $(progname)_profiled $(objs)
+	$(CXX) $(LDFLAGS) -pg -o $@ $(objs)
 
 static_$(progname) : $(objs)
-	$(CXX) $(LDFLAGS) -static -o static_$(progname) $(objs)
+	$(CXX) $(LDFLAGS) -static -o $@ $(objs)
 
 main.o : main.cc
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -DPROGVERSION=\"$(pkgversion)\" -c -o $@ $<
@@ -47,7 +47,7 @@ man : $(VPATH)/doc/$(progname).1
 
 $(VPATH)/doc/$(progname).1 : $(progname)
 	help2man -n 'data recovery tool' \
-	  -o $(VPATH)/doc/$(progname).1 ./$(progname)
+	  -o $@ ./$(progname)
 
 Makefile : $(VPATH)/configure $(VPATH)/Makefile.in
 	./config.status
@@ -99,6 +99,8 @@ dist : doc
 	  $(DISTNAME)/testsuite/logfile1 \
 	  $(DISTNAME)/testsuite/logfile2 \
 	  $(DISTNAME)/testsuite/test.txt \
+	  $(DISTNAME)/testsuite/test1.txt \
+	  $(DISTNAME)/testsuite/test2.txt \
 	  $(DISTNAME)/*.h \
 	  $(DISTNAME)/*.cc
 	rm -f $(DISTNAME)

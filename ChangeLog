@@ -1,6 +1,8 @@
-2010-11-24  Antonio Diaz Diaz  <ant_diaz@teleline.es>
+2011-01-10  Antonio Diaz Diaz  <ant_diaz@teleline.es>
 
-	* Version 1.14-pre1 released.
+	* Version 1.14 released.
+	* Added new option `-R, --reverse'.
+	* Added new option `-E, --max-error-rate'.
 	* Extended syntax `--max-errors=+N' to specify new errors.
 	* Changed short name of option `--retrim' to `-M'.
 	* Removed spurious warning about `preallocation not available'.
@@ -203,7 +205,7 @@
 	* Version 0.1 released.
 
 
-Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010
+Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
 Antonio Diaz Diaz.
 
 This file is a collection of facts, and thus it is not copyrightable,

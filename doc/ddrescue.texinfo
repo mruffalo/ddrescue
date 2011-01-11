@@ -5,8 +5,8 @@
 @finalout
 @c %**end of header
 
-@set UPDATED 24 November 2010
-@set VERSION 1.14-pre1
+@set UPDATED 10 January 2011
+@set VERSION 1.14
 
 @dircategory GNU Packages
 @direntry
@@ -48,7 +48,7 @@ This manual is for GNU ddrescue (version @value{VERSION}, @value{UPDATED}).
 @end menu
 
 @sp 1
-Copyright @copyright{} 2004, 2005, 2006, 2007, 2008, 2009, 2010
+Copyright @copyright{} 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
 Antonio Diaz Diaz.
 
 This manual is free documentation: you have unlimited permission
@@ -185,9 +185,9 @@ found as bad-sector and mark the rest of that block as non-split.
 
 4) Read forwards one sector at a time the non-split blocks, marking the
 bad sectors found as bad-sector. After a number of consecutive bad
-sectors is found in a block larger enough, the block is split by half
-and the reading continues on the second half. This recursively splits
-the largest failed blocks without producing a logfile too large.
+sectors is found in a block large enough, the block is split by half and
+the reading continues on the second half. This recursively splits the
+largest failed blocks without producing a logfile too large.
 
 5) Optionally try to read again the bad sectors until the specified
 number of retries is reached.
@@ -298,6 +298,11 @@ infinity. If @var{n} is preceded by @samp{+} the number refers to new
 error areas found in this run, not counting those already annotated in
 the logfile.
 
+@item -E @var{bytes}
+@itemx --max-error-rate=@var{bytes}
+Maximum growth per second of error size, in bytes, allowed before giving
+up. Defaults to infinity.
+
 @item -f
 @itemx --force
 Force overwrite of output file. Needed when the output file is not a
@@ -368,6 +373,12 @@ Exit after given number of retry passes. Defaults to 0. -1 means
 infinity. Every bad sector is tried only one time per pass. To retry bad
 sectors detected on a previous run, you must specify a non-zero number
 of retries.
+
+@item -R
+@itemx --reverse
+Reverse direction of all copy operations. This means the copy of the
+non-tried blocks, splitting and retrying are run backwards, while
+trimming is run forwards.
 
 @item -s @var{bytes}
 @itemx --max-size=@var{bytes}

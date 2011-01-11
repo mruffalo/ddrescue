@@ -12,7 +12,7 @@ File: ddrescue.info,  Node: Top,  Next: Introduction,  Up: (dir)
 GNU ddrescue Manual
 *******************
 
-This manual is for GNU ddrescue (version 1.14-pre1, 24 November 2010).
+This manual is for GNU ddrescue (version 1.14, 10 January 2011).
 
 * Menu:
 
@@ -29,8 +29,8 @@ This manual is for GNU ddrescue (version 1.14-pre1, 24 November 2010).
 * Concept Index::       Index of concepts
 
 
-   Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010 Antonio Diaz
-Diaz.
+   Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011 Antonio
+Diaz Diaz.
 
    This manual is free documentation: you have unlimited permission to
 copy, distribute and modify it.
@@ -169,9 +169,9 @@ found as bad-sector and mark the rest of that block as non-split.
 
    4) Read forwards one sector at a time the non-split blocks, marking
 the bad sectors found as bad-sector. After a number of consecutive bad
-sectors is found in a block larger enough, the block is split by half
-and the reading continues on the second half. This recursively splits
-the largest failed blocks without producing a logfile too large.
+sectors is found in a block large enough, the block is split by half and
+the reading continues on the second half. This recursively splits the
+largest failed blocks without producing a logfile too large.
 
    5) Optionally try to read again the bad sectors until the specified
 number of retries is reached.
@@ -271,6 +271,11 @@ The format for running ddrescue is:
      areas found in this run, not counting those already annotated in
      the logfile.
 
+`-E BYTES'
+`--max-error-rate=BYTES'
+     Maximum growth per second of error size, in bytes, allowed before
+     giving up. Defaults to infinity.
+
 `-f'
 `--force'
      Force overwrite of output file. Needed when the output file is not
@@ -341,6 +346,12 @@ The format for running ddrescue is:
      infinity. Every bad sector is tried only one time per pass. To
      retry bad sectors detected on a previous run, you must specify a
      non-zero number of retries.
+
+`-R'
+`--reverse'
+     Reverse direction of all copy operations. This means the copy of
+     the non-tried blocks, splitting and retrying are run backwards,
+     while trimming is run forwards.
 
 `-s BYTES'
 `--max-size=BYTES'
@@ -444,7 +455,7 @@ Character   Meaning
 
 And here is an example logfile:
 
-# Rescue Logfile. Created by GNU ddrescue version 1.14-pre1
+# Rescue Logfile. Created by GNU ddrescue version 1.14
 # Command line: ddrescue /dev/fd0 fdimage logfile
 # current_pos  current_status
 0x00120000     ?
@@ -804,14 +815,14 @@ Node: Top203
 Node: Introduction1175
 Node: Basic concepts3650
 Node: Algorithm4857
-Node: Invoking ddrescue8160
-Node: Logfile Structure15078
-Node: Examples17333
-Ref: lzip-example20995
-Node: Direct Disc Access22367
-Node: Fill Mode24241
-Node: Generate Mode27870
-Node: Problems29413
-Node: Concept Index29963
+Node: Invoking ddrescue8159
+Node: Logfile Structure15417
+Node: Examples17667
+Ref: lzip-example21329
+Node: Direct Disc Access22701
+Node: Fill Mode24575
+Node: Generate Mode28204
+Node: Problems29747
+Node: Concept Index30297
 
 End Tag Table
