@@ -10,6 +10,7 @@ export LC_ALL
 objdir=`pwd`
 testdir=`cd "$1" ; pwd`
 DDRESCUE="${objdir}"/ddrescue
+DDRESCUELOG="${objdir}"/ddrescuelog
 framework_failure() { echo "failure in testing framework" ; exit 1 ; }
 
 if [ ! -x "${DDRESCUE}" ] ; then
@@ -96,6 +97,29 @@ rm logfile || framework_failure
 "${DDRESCUE}" -g -s34816 in out logfile > /dev/null || fail=1
 "${DDRESCUE}" -R in1 out logfile > /dev/null || fail=1
 cmp in out || fail=1
+printf .
+
+printf "\ntesting ddrescuelog-%s..." "$2"
+cat logfile1 > logfile || framework_failure
+"${DDRESCUELOG}" -b2KiB -l+ logfile > out || fail=1
+printf "0\n2\n4\n6\n8\n10\n12\n14\n16\n" | cmp out - || fail=1
+printf .
+"${DDRESCUELOG}" -b2KiB -l? logfile > out || fail=1
+printf "1\n3\n5\n7\n9\n11\n13\n15\n17\n" | cmp out - || fail=1
+printf .
+"${DDRESCUELOG}" -b2KiB -l+ -i6KiB -o0 -s16KiB logfile > out || fail=1
+printf "1\n3\n5\n7\n" | cmp out - || fail=1
+printf .
+
+cat logfile2 > logfile || framework_failure
+"${DDRESCUELOG}" -b2KiB -l? logfile > out || fail=1
+printf "0\n2\n4\n6\n8\n10\n12\n14\n16\n" | cmp out - || fail=1
+printf .
+"${DDRESCUELOG}" -b2KiB -l+ logfile > out || fail=1
+printf "1\n3\n5\n7\n9\n11\n13\n15\n17\n" | cmp out - || fail=1
+printf .
+"${DDRESCUELOG}" -b2KiB -l? -i2KiB -o0 -s16KiB logfile > out || fail=1
+printf "1\n3\n5\n7\n" | cmp out - || fail=1
 printf .
 
 echo

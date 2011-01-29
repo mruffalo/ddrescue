@@ -168,10 +168,7 @@ class Rescuebook : public Logbook
   int copy_block( const Block & b, int & copied_size, int & error_size );
   void count_errors() throw();
   void update_ecode() throw()
-    {
-    if( max_error_rate_ >= 0 && e_rate > max_error_rate_ ) e_code |= 1;
-    if( max_errors_ >= 0 && errors > max_errors_ ) e_code |= 2;
-    }
+    { if( max_errors_ >= 0 && errors > max_errors_ ) e_code |= 2; }
   bool too_many_errors() const throw() { return ( e_code != 0 ); }
   int copy_and_update( const Block & b, const Sblock::Status st,
                        int & copied_size, int & error_size,
@@ -201,14 +198,14 @@ public:
   };
 
 
-// Defined in ddrescue.cc
+// Defined in io.cc
 //
 const char * format_num( long long num, long long limit = 999999,
                          const int set_prefix = 0 ) throw();
 void set_signals() throw();
 
 
-// Defined in main.cc
+// Defined in main.cc ddrescuelog.cc
 //
 extern int verbosity;
 void internal_error( const char * const msg ) __attribute__ ((noreturn));

@@ -306,6 +306,12 @@ void Rescuebook::update_status( const long long ipos, const char * const msg,
 
   if( ipos >= 0 ) last_ipos = ipos;
   const long t2 = std::time( 0 );
+  if( max_error_rate_ >= 0 )
+    {
+    e_rate = errsize - last_errsize;
+    if( t2 > t1 ) { e_rate /= ( t2 - t1 ); last_errsize = errsize; }
+    if( e_rate > max_error_rate_ ) e_code |= 1;
+    }
   if( t2 > t1 || force )
     {
     if( t2 > t1 )
@@ -314,11 +320,6 @@ void Rescuebook::update_status( const long long ipos, const char * const msg,
       c_rate = ( recsize - last_size ) / ( t2 - t1 );
       if( recsize > last_size ) ts = t2;
       last_size = recsize;
-      if( max_error_rate_ >= 0 )
-        {
-        e_rate = ( errsize - last_errsize ) / ( t2 - t1 );
-        last_errsize = errsize;
-        }
       t1 = t2;
       }
     if( verbosity >= 0 )

@@ -230,7 +230,8 @@ int get_max_errors( const char * const arg, bool * const new_errors_onlyp ) thro
 
 
 int do_fill( long long ipos, const long long opos, Domain & domain,
-             const char *iname, const char *oname, const char *logname,
+             const char * const iname, const char * const oname,
+             const char * const logname,
              const int cluster, const int hardbs,
              const std::string & filltypes, const bool synchronous )
   {
@@ -277,7 +278,8 @@ int do_fill( long long ipos, const long long opos, Domain & domain,
 
 
 int do_generate( const long long ipos, const long long opos, Domain & domain,
-                 const char *iname, const char *oname, const char *logname,
+                 const char * const iname, const char * const oname,
+                 const char * const logname,
                  const int cluster, const int hardbs )
   {
   if( !logname )
@@ -326,7 +328,8 @@ int do_generate( const long long ipos, const long long opos, Domain & domain,
 
 
 int do_rescue( const long long ipos, const long long opos, Domain & domain,
-               const char *iname, const char *oname, const char *logname,
+               const char * const iname, const char * const oname,
+               const char * const logname,
                const int cluster, const int hardbs, const int max_error_rate,
                const int max_errors, const int max_retries,
                const int o_direct, const int o_trunc,
@@ -459,7 +462,7 @@ int main( const int argc, const char * const argv[] )
   const int cluster_bytes = 65536;
   const int default_hardbs = 512;
   int cluster = 0;
-  int hardbs = 512;
+  int hardbs = default_hardbs;
   int max_error_rate = -1;
   int max_errors = -1;
   int max_retries = 0;
@@ -580,7 +583,7 @@ int main( const int argc, const char * const argv[] )
 
   if( !check_files( iname, oname, force, preallocate ) ) return 1;
 
-  Domain domain( domain_logfile_name, ipos, max_size );
+  Domain domain( ipos, max_size, domain_logfile_name );
 
   if( filltypes.size() )
     {

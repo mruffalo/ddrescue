@@ -95,7 +95,7 @@ class Domain
   std::vector< Block > block_vector;	// blocks are ordered and don't overlap
 
 public:
-  Domain( const char * const name, const long long p, const long long s );
+  Domain( const long long p, const long long s, const char * const name = 0 );
 
   long long pos() const throw()
     { if( block_vector.size() ) return block_vector[0].pos(); else return 0; }

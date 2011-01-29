@@ -6,34 +6,42 @@ INSTALL_DATA = $(INSTALL) -p -m 644
 INSTALL_DIR = $(INSTALL) -d -m 755
 SHELL = /bin/sh
 
-objs = arg_parser.o block.o ddrescue.o fillbook.o genbook.o logbook.o \
+objs = arg_parser.o block.o fillbook.o genbook.o io.o logbook.o \
        rescuebook.o main.o
+logobjs = arg_parser.o block.o logbook.o ddrescuelog.o
 
 
 .PHONY : all install install-info install-man install-strip \
          uninstall uninstall-info uninstall-man \
          doc info man check dist clean distclean
 
-all : $(progname)
+all : $(progname) ddrescuelog
 
 $(progname) : $(objs)
-	$(CXX) $(LDFLAGS) -o $@ $(objs)
+	$(CXX) $(LDFLAGS) -o $@ $^
 
 $(progname)_profiled : $(objs)
-	$(CXX) $(LDFLAGS) -pg -o $@ $(objs)
+	$(CXX) $(LDFLAGS) -pg -o $@ $^
+
+ddrescuelog : $(logobjs)
+	$(CXX) $(LDFLAGS) -o $@ $^
 
 static_$(progname) : $(objs)
-	$(CXX) $(LDFLAGS) -static -o $@ $(objs)
+	$(CXX) $(LDFLAGS) -static -o $@ $^
 
 main.o : main.cc
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -DPROGVERSION=\"$(pkgversion)\" -c -o $@ $<
+
+ddrescuelog.o : ddrescuelog.cc
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -DPROGVERSION=\"$(pkgversion)\" -c -o $@ $<
 
 %.o : %.cc
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c -o $@ $<
 
-$(objs)      : Makefile block.h ddrescue.h
-arg_parser.o : arg_parser.h
-main.o       : arg_parser.h
+$(objs)       : Makefile block.h ddrescue.h
+arg_parser.o  : arg_parser.h
+main.o        : arg_parser.h
+ddrescuelog.o : Makefile arg_parser.h block.h ddrescue.h
 
 
 doc : info man
@@ -43,11 +51,15 @@ info : $(VPATH)/doc/$(pkgname).info
 $(VPATH)/doc/$(pkgname).info : $(VPATH)/doc/$(pkgname).texinfo
 	cd $(VPATH)/doc && makeinfo $(pkgname).texinfo
 
-man : $(VPATH)/doc/$(progname).1
+man : $(VPATH)/doc/$(progname).1 $(VPATH)/doc/ddrescuelog.1
 
 $(VPATH)/doc/$(progname).1 : $(progname)
 	help2man -n 'data recovery tool' \
 	  -o $@ ./$(progname)
+
+$(VPATH)/doc/ddrescuelog.1 : ddrescuelog
+	help2man -n 'manipulates ddrescue logfiles' \
+	  -o $@ --no-info ./ddrescuelog
 
 Makefile : $(VPATH)/configure $(VPATH)/Makefile.in
 	./config.status
@@ -58,6 +70,7 @@ check : all
 install : all install-info install-man
 	if [ ! -d "$(DESTDIR)$(bindir)" ] ; then $(INSTALL_DIR) "$(DESTDIR)$(bindir)" ; fi
 	$(INSTALL_PROGRAM) ./$(progname) "$(DESTDIR)$(bindir)/$(progname)"
+	$(INSTALL_PROGRAM) ./ddrescuelog "$(DESTDIR)$(bindir)/ddrescuelog"
 
 install-info :
 	if [ ! -d "$(DESTDIR)$(infodir)" ] ; then $(INSTALL_DIR) "$(DESTDIR)$(infodir)" ; fi
@@ -67,12 +80,14 @@ install-info :
 install-man :
 	if [ ! -d "$(DESTDIR)$(mandir)/man1" ] ; then $(INSTALL_DIR) "$(DESTDIR)$(mandir)/man1" ; fi
 	$(INSTALL_DATA) $(VPATH)/doc/$(progname).1 "$(DESTDIR)$(mandir)/man1/$(progname).1"
+	$(INSTALL_DATA) $(VPATH)/doc/ddrescuelog.1 "$(DESTDIR)$(mandir)/man1/ddrescuelog.1"
 
 install-strip : all
 	$(MAKE) INSTALL_PROGRAM='$(INSTALL_PROGRAM) -s' install
 
 uninstall : uninstall-info uninstall-man
 	-rm -f "$(DESTDIR)$(bindir)/$(progname)"
+	-rm -f "$(DESTDIR)$(bindir)/ddrescuelog"
 
 uninstall-info :
 	-install-info --info-dir="$(DESTDIR)$(infodir)" --remove "$(DESTDIR)$(infodir)/$(pkgname).info"
@@ -80,6 +95,7 @@ uninstall-info :
 
 uninstall-man :
 	-rm -f "$(DESTDIR)$(mandir)/man1/$(progname).1"
+	-rm -f "$(DESTDIR)$(mandir)/man1/ddrescuelog.1"
 
 dist : doc
 	ln -sf $(VPATH) $(DISTNAME)
@@ -93,6 +109,7 @@ dist : doc
 	  $(DISTNAME)/README \
 	  $(DISTNAME)/configure \
 	  $(DISTNAME)/doc/$(progname).1 \
+	  $(DISTNAME)/doc/ddrescuelog.1 \
 	  $(DISTNAME)/doc/$(pkgname).info \
 	  $(DISTNAME)/doc/$(pkgname).texinfo \
 	  $(DISTNAME)/testsuite/check.sh \
@@ -108,6 +125,7 @@ dist : doc
 
 clean :
 	-rm -f $(progname) $(progname)_profiled static_$(progname) $(objs)
+	-rm -f ddrescuelog ddrescuelog.o
 
 distclean : clean
 	-rm -f Makefile config.status *.tar *.tar.lz

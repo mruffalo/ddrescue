@@ -1,14 +1,4 @@
-Changes in version 1.14:
+Changes in version 1.15:
 
-The new option "-R, --reverse", which reverses direction of copy
-operations, has been added.
-
-The new option "-E, --max-error-rate", which stops ddrescue when the
-error size grows too fast (in Bytes/s), has been added.
-
-The syntax of option "--max-errors" has been extended to specify new
-errors (--max-errors=+N).
-
-The short name of option "--retrim" has been changed to "-M".
-
-A spurious warning about "preallocation not available" has been fixed.
+Ddrescuelog, a tool for conversion and manipulation of ddrescue
+logfiles, has been added.

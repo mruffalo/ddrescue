@@ -170,10 +170,10 @@ bool read_logfile( const char * const name, std::vector< Sblock > & sblock_vecto
 } // end namespace
 
 
-Domain::Domain( const char * const name, const long long p, const long long s )
+Domain::Domain( const long long p, const long long s, const char * const name )
   {
   Block b( p, s ); b.fix_size();
-  if( !name ) { block_vector.push_back( b ); return; }
+  if( !name || !name[0] ) { block_vector.push_back( b ); return; }
   std::vector< Sblock > sblock_vector;
   long long current_pos;			// not used
   Logbook::Status current_status;		// not used

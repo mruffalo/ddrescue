@@ -3,7 +3,7 @@ ddrescue.texinfo.
 
 INFO-DIR-SECTION GNU Packages
 START-INFO-DIR-ENTRY
-* ddrescue: (ddrescue).         Data recovery tool
+* Ddrescue: (ddrescue).         Data recovery tool
 END-INFO-DIR-ENTRY
 
 
@@ -12,21 +12,23 @@ File: ddrescue.info,  Node: Top,  Next: Introduction,  Up: (dir)
 GNU ddrescue Manual
 *******************
 
-This manual is for GNU ddrescue (version 1.14, 10 January 2011).
+This manual is for GNU ddrescue (version 1.15-pre1, 28 January 2011).
 
 * Menu:
 
-* Introduction::        Purpose and features of GNU ddrescue
-* Basic concepts::      Blocks, clusters, devices, files, sectors, etc
-* Algorithm::           How ddrescue recovers the data
-* Invoking ddrescue::   Command line interface
-* Logfile Structure::   Detailed format of the logfile
-* Examples::            A small tutorial with examples
-* Direct Disc Access::  Bypassing the kernel cache
-* Fill Mode::           Selectively overwriting the output file
-* Generate Mode::       Generating an approximate logfile
-* Problems::            Reporting bugs
-* Concept Index::       Index of concepts
+* Introduction::          Purpose and features of GNU ddrescue
+* Basic Concepts::        Blocks, clusters, devices, files, sectors, etc
+* Algorithm::             How ddrescue recovers the data
+* Invoking Ddrescue::     Command line interface
+* Logfile Structure::     Detailed format of the logfile
+* Examples::              A small tutorial with examples
+* Direct Disc Access::    Bypassing the kernel cache
+* Fill Mode::             Selectively overwriting the output file
+* Generate Mode::         Generating an approximate logfile
+* Ddrescuelog::           Converting ddrescue logfiles
+* Invoking Ddrescuelog::  Command line interface
+* Problems::              Reporting bugs
+* Concept Index::         Index of concepts
 
 
    Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011 Antonio
@@ -36,7 +38,7 @@ Diaz Diaz.
 copy, distribute and modify it.
 
 
-File: ddrescue.info,  Node: Introduction,  Next: Basic concepts,  Prev: Top,  Up: Top
+File: ddrescue.info,  Node: Introduction,  Next: Basic Concepts,  Prev: Top,  Up: Top
 
 1 Introduction
 **************
@@ -52,6 +54,8 @@ in reverse mode, etc.
    If you use the logfile feature of ddrescue, the data is rescued very
 efficiently, (only the needed blocks are read). Also you can interrupt
 the rescue at any time and resume it later at the same point.
+
+   Ddrescuelog is a conversion tool for ddrescue logfiles.
 
    Ddrescue does not write zeros to the output when it finds bad
 sectors in the input, and does not truncate the output file if not
@@ -90,9 +94,9 @@ wiping data, marking bad areas or even, in some cases, "repair" damaged
 sectors.
 
 
-File: ddrescue.info,  Node: Basic concepts,  Next: Algorithm,  Prev: Introduction,  Up: Top
+File: ddrescue.info,  Node: Basic Concepts,  Next: Algorithm,  Prev: Introduction,  Up: Top
 
-2 Basic concepts
+2 Basic Concepts
 ****************
 
 Block
@@ -113,7 +117,7 @@ File
 
 Partition
      Every part in which a device is divided. A partition normally
-     contains a filesystem. /dev/hda1, /dev/sdb3, are partition names.
+     contains a file system. /dev/hda1, /dev/sdb3, are partition names.
 
 Recoverable formats
      As ddrescue uses standard library functions to read data from the
@@ -127,7 +131,7 @@ Sector
 
 
 
-File: ddrescue.info,  Node: Algorithm,  Next: Invoking ddrescue,  Prev: Basic concepts,  Up: Top
+File: ddrescue.info,  Node: Algorithm,  Next: Invoking Ddrescue,  Prev: Basic Concepts,  Up: Top
 
 3 Algorithm
 ***********
@@ -203,9 +207,9 @@ Now rescue the rest (does not recopy what is already done).
      ddrescue -d -r3 /dev/hdc hdimage logfile
 
 
-File: ddrescue.info,  Node: Invoking ddrescue,  Next: Logfile Structure,  Prev: Algorithm,  Up: Top
+File: ddrescue.info,  Node: Invoking Ddrescue,  Next: Logfile Structure,  Prev: Algorithm,  Up: Top
 
-4 Invoking ddrescue
+4 Invoking Ddrescue
 *******************
 
 The format for running ddrescue is:
@@ -406,7 +410,7 @@ Z        zettabyte (10^21)         |   Zi       zebibyte (2^70)
 Y        yottabyte (10^24)         |   Yi       yobibyte (2^80)
 
 
-File: ddrescue.info,  Node: Logfile Structure,  Next: Examples,  Prev: Invoking ddrescue,  Up: Top
+File: ddrescue.info,  Node: Logfile Structure,  Next: Examples,  Prev: Invoking Ddrescue,  Up: Top
 
 5 Logfile Structure
 *******************
@@ -455,7 +459,7 @@ Character   Meaning
 
 And here is an example logfile:
 
-# Rescue Logfile. Created by GNU ddrescue version 1.14
+# Rescue Logfile. Created by GNU ddrescue version 1.15-pre1
 # Command line: ddrescue /dev/fd0 fdimage logfile
 # current_pos  current_status
 0x00120000     ?
@@ -604,7 +608,7 @@ File: ddrescue.info,  Node: Direct Disc Access,  Next: Fill Mode,  Prev: Example
 7 Direct Disc Access
 ********************
 
-If you notice that the sizes and offsets in the log file are ALWAYS
+If you notice that the positions and sizes in the log file are ALWAYS
 multiples of the sector size, maybe your kernel is caching the disc
 accesses and grouping them. In this case you may want to use direct disc
 access or a raw device to bypass the kernel cache and rescue more of
@@ -733,7 +737,7 @@ this time reside (at least partially) in damaged disc areas.
 file with zeros to restore the disc image.
 
 
-File: ddrescue.info,  Node: Generate Mode,  Next: Problems,  Prev: Fill Mode,  Up: Top
+File: ddrescue.info,  Node: Generate Mode,  Next: Ddrescuelog,  Prev: Fill Mode,  Up: Top
 
 9 Generate-logfile Mode
 ***********************
@@ -765,13 +769,115 @@ thus non-tried but non-zero.
      or
      dd if=infile of=outfile conv=noerror,sync
 
-   you can generate an approximate logfile with this command:
+   then you can generate an approximate logfile with this command:
      ddrescue --generate-logfile infile outfile logfile
 
 
-File: ddrescue.info,  Node: Problems,  Next: Concept Index,  Prev: Generate Mode,  Up: Top
+File: ddrescue.info,  Node: Ddrescuelog,  Next: Invoking Ddrescuelog,  Prev: Generate Mode,  Up: Top
 
-10 Reporting Bugs
+10 Ddrescuelog
+**************
+
+Ddrescuelog is a tool that manipulates ddrescue logfiles and converts
+them to/from other formats.
+
+
+Example 1: Rescue two ext2 partitions in /dev/hda to /dev/hdb and
+repair the file systems using badblock lists generated with
+ddrescuelog. File system block size is 4096.
+Note: you do need to partition /dev/hdb beforehand.
+
+     fdisk /dev/hdb                                <-- partition /deb/hdb
+     ddrescue -f /dev/hda1 /dev/hdb1 logfile1
+     ddrescue -f /dev/hda2 /dev/hdb2 logfile2
+     ddrescuelog -l- -b4096 logfile1 > badblocks1
+     ddrescuelog -l- -b4096 logfile2 > badblocks2
+     e2fsck -v -f -L badblocks1 /dev/hdb1
+     e2fsck -v -f -L badblocks2 /dev/hdb2
+
+
+Example 2: Rescue a whole disc with two ext2 partitions in /dev/hda to
+/dev/hdb and repair the file systems using badblock lists generated with
+ddrescuelog. Disc sector size is 512, file system block size is 4096.
+Arguments to options `-i' and `-s' are the starting positions and sizes
+of the partitions being rescued.
+Note: you do not need to partition /dev/hdb beforehand, but if the
+partition table on /dev/hda is damaged, you'll need to recreate it
+somehow on /dev/hdb.
+
+     ddrescue -f /dev/hda /dev/hdb logfile
+     fdisk /dev/hdb                                <-- get partition sizes
+     ddrescuelog -l- -b512 -i63b -o0 -s9767457b -b4096 logfile > badblocks1
+     ddrescuelog -l- -b512 -i9767520b -o0 -s128520b -b4096 logfile > badblocks2
+     e2fsck -v -f -L badblocks1 /dev/hdb1
+     e2fsck -v -f -L badblocks2 /dev/hdb2
+
+
+File: ddrescue.info,  Node: Invoking Ddrescuelog,  Next: Problems,  Prev: Ddrescuelog,  Up: Top
+
+11 Invoking Ddrescuelog
+***********************
+
+The format for running ddrescuelog is:
+
+     ddrescuelog [OPTIONS] LOGFILE
+
+   Ddrescuelog supports the following options:
+
+`-h'
+`--help'
+     Print an informative help message describing the options and exit.
+
+`-V'
+`--version'
+     Print the version number of ddrescuelog on the standard output and
+     exit.
+
+`-b BYTES'
+`--block-size=BYTES'
+     Block size used by ddrescuelog. Depending on the requested
+     operation it may be the sector size of the input device, the block
+     size of the rescued file system, etc. Defaults to 4096.
+
+`-i POS'
+`--input-position=POS'
+     Starting position of operation, in bytes. Defaults to 0. It refers
+     to a position in the original input file.
+
+`-l TYPES'
+`--list-blocks=TYPES'
+     Print the block numbers of the blocks specified as any of TYPES in
+     the logfile. TYPES contains one or more of the status characters
+     defined in the chapter Logfile Structure (*note Logfile
+     Structure::).
+
+     The list format is one block number per line in decimal, like the
+     output of the badblocks program, so that it can be used as input
+     for e2fsck or other similar filesystem repairing tool.
+
+`-o POS'
+`--output-position=POS'
+     Starting position in output file, in bytes. Defaults to
+     `--input-position'.
+
+`-q'
+`--quiet'
+     Quiet operation. Suppress all messages.
+
+`-s BYTES'
+`--max-size=BYTES'
+     Maximum size of the data to be processed, in bytes. It refers to a
+     size in the original input file.
+
+`-v'
+`--verbose'
+     Verbose mode.
+
+
+
+File: ddrescue.info,  Node: Problems,  Next: Concept Index,  Prev: Invoking Ddrescuelog,  Up: Top
+
+12 Reporting Bugs
 *****************
 
 There are probably bugs in ddrescue. There are certainly errors and
@@ -793,36 +899,40 @@ Concept Index
 * Menu:
 
 * algorithm:                             Algorithm.             (line 6)
-* basic concepts:                        Basic concepts.        (line 6)
+* basic concepts:                        Basic Concepts.        (line 6)
 * bugs:                                  Problems.              (line 6)
+* ddrescuelog:                           Ddrescuelog.           (line 6)
 * direct disc access:                    Direct Disc Access.    (line 6)
 * examples:                              Examples.              (line 6)
 * Fill Mode:                             Fill Mode.             (line 6)
 * Generate-logfile Mode:                 Generate Mode.         (line 6)
 * getting help:                          Problems.              (line 6)
 * introduction:                          Introduction.          (line 6)
-* invoking:                              Invoking ddrescue.     (line 6)
+* invoking ddrescue:                     Invoking Ddrescue.     (line 6)
+* invoking ddrescuelog:                  Invoking Ddrescuelog.  (line 6)
 * logfile structure:                     Logfile Structure.     (line 6)
-* options:                               Invoking ddrescue.     (line 6)
+* options:                               Invoking Ddrescue.     (line 6)
 * raw devices:                           Direct Disc Access.    (line 6)
-* usage:                                 Invoking ddrescue.     (line 6)
-* version:                               Invoking ddrescue.     (line 6)
+* usage:                                 Invoking Ddrescue.     (line 6)
+* version:                               Invoking Ddrescue.     (line 6)
 
 
 
 Tag Table:
 Node: Top203
-Node: Introduction1175
-Node: Basic concepts3650
-Node: Algorithm4857
-Node: Invoking ddrescue8159
-Node: Logfile Structure15417
-Node: Examples17667
-Ref: lzip-example21329
-Node: Direct Disc Access22701
-Node: Fill Mode24575
-Node: Generate Mode28204
-Node: Problems29747
-Node: Concept Index30297
+Node: Introduction1306
+Node: Basic Concepts3841
+Node: Algorithm5049
+Node: Invoking Ddrescue8351
+Node: Logfile Structure15609
+Node: Examples17864
+Ref: lzip-example21526
+Node: Direct Disc Access22898
+Node: Fill Mode24774
+Node: Generate Mode28403
+Node: Ddrescuelog29954
+Node: Invoking Ddrescuelog31599
+Node: Problems33259
+Node: Concept Index33816
 
 End Tag Table
