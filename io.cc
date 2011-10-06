@@ -291,41 +291,46 @@ int Rescuebook::copy_block( const Block & b, int & copied_size, int & error_size
   }
 
 
-void Rescuebook::update_status( const long long ipos, const char * const msg,
-                                bool force ) throw()
+void Rescuebook::update_status() throw()
   {
-  const char * const up = "\x1b[A";
   if( t0 == 0 )
     {
     t0 = t1 = ts = std::time( 0 );
     first_size = last_size = recsize;
     last_errsize = errsize;
-    force = true;
+    status_changed = true;
     if( verbosity >= 0 ) std::printf( "\n\n\n" );
     }
 
-  if( ipos >= 0 ) last_ipos = ipos;
   const long t2 = std::time( 0 );
   if( max_error_rate_ >= 0 )
     {
-    e_rate = errsize - last_errsize;
+    long long e_rate = errsize - last_errsize;
     if( t2 > t1 ) { e_rate /= ( t2 - t1 ); last_errsize = errsize; }
     if( e_rate > max_error_rate_ ) e_code |= 1;
     }
-  if( t2 > t1 || force )
+  if( t2 > t1 )
     {
-    if( t2 > t1 )
-      {
-      a_rate = ( recsize - first_size ) / ( t2 - t0 );
-      c_rate = ( recsize - last_size ) / ( t2 - t1 );
-      if( recsize > last_size ) ts = t2;
-      last_size = recsize;
-      t1 = t2;
-      }
+    a_rate = ( recsize - first_size ) / ( t2 - t0 );
+    c_rate = ( recsize - last_size ) / ( t2 - t1 );
+    if( recsize > last_size ) ts = t2;
+    last_size = recsize;
+    t1 = t2;
+    status_changed = true;
+    }
+  }
+
+
+void Rescuebook::show_status( const long long ipos, const char * const msg,
+                              const bool force ) throw()
+  {
+  const char * const up = "\x1b[A";
+
+  if( ipos >= 0 ) last_ipos = ipos;
+  if( status_changed || force )
+    {
     if( verbosity >= 0 )
       {
-      count_errors();
-      update_ecode();
       std::printf( "\r%s%s%s", up, up, up );
       std::printf( "rescued: %10sB,", format_num( recsize ) );
       std::printf( "  errsize:%9sB,", format_num( errsize, 99999 ) );
@@ -335,7 +340,7 @@ void Rescuebook::update_status( const long long ipos, const char * const msg,
       std::printf( "  average rate: %9sB/s\n", format_num( a_rate, 99999 ) );
       std::printf( "   opos: %10sB,", format_num( last_ipos + offset() ) );
       std::printf( "     time from last successful read: %9s\n",
-                   format_time( t2 - ts ) );
+                   format_time( t1 - ts ) );
       int len = oldlen;
       if( msg && !too_many_errors() )
         { len = std::strlen( msg ); if( len ) std::printf( "%s", msg ); }
@@ -344,6 +349,7 @@ void Rescuebook::update_status( const long long ipos, const char * const msg,
       oldlen = len;
       std::fflush( stdout );
       }
+    status_changed = false;
     }
   }
 
@@ -364,8 +370,7 @@ const char * format_num( long long num, long long limit,
   const char *p = "";
   limit = std::max( 999LL, std::min( 999999LL, limit ) );
 
-  for( int i = 0; i < 8 && ( llabs( num ) > limit ||
-       ( llabs( num ) >= factor && num % factor == 0 ) ); ++i )
+  for( int i = 0; i < 8 && llabs( num ) > limit; ++i )
     { num /= factor; p = prefix[i]; }
   snprintf( buf, sizeof buf, "%lld %s", num, p );
   return buf;

@@ -5,8 +5,8 @@
 @finalout
 @c %**end of header
 
-@set UPDATED 28 January 2011
-@set VERSION 1.15-pre1
+@set UPDATED 6 October 2011
+@set VERSION 1.15-pre2
 
 @dircategory GNU Packages
 @direntry
@@ -155,18 +155,20 @@ Hardware block. Smallest accessible amount of data on a device.
 @cindex algorithm
 
 GNU ddrescue manages efficiently the status of the rescue in progress
-and tries to rescue the good parts first, maximizing the amount of data
-finally recovered from a failing drive.
+and tries to rescue the good parts first, scheduling reads inside bad
+areas for later. This maximizes the amount of data that can be finally
+recovered from a failing drive.
 
 The standard dd utility can be used to save data from a failing drive,
 but it reads the data secuentially, which may wear out the drive without
 rescuing anything if the errors are at the beginning of the drive.
 
 Other programs switch to small size reads when they find errors, but
-this is a bad idea because it means spending more time at error areas,
-damaging the surface, the heads and the drive mechanics, instead of
-getting out of them as fast as possible. This behavior reduces the
-chances of rescuing the remaining good data.
+they still read the data secuentially. This is a bad idea because it
+means spending more time at error areas, damaging the surface, the heads
+and the drive mechanics, instead of getting out of them as fast as
+possible. This behavior reduces the chances of rescuing the remaining
+good data.
 
 The algorithm of ddrescue is as follows (the user may interrupt the
 process at any point, but be aware that a bad drive can block ddrescue
@@ -256,6 +258,13 @@ Print an informative help message describing the options and exit.
 @itemx --version
 Print the version number of ddrescue on the standard output and exit.
 
+@item -a @var{bytes}
+@itemx --min-read-rate=@var{bytes}
+Minimum read rate of good areas in bytes per second. If the read rate
+falls below this value, ddrescue will skip ahead a variable amount
+depending on rate and error history. If @var{bytes} is 0, the minimum
+read rate is taken as @w{(average_rate / 10)}.
+
 @item -b @var{bytes}
 @itemx --block-size=@var{bytes}
 Sector (hardware block) size of input device in bytes (usually 512 for
@@ -325,7 +334,8 @@ Mode}) for a complete description of the fill mode.
 Generate an approximate logfile from the input and output files of the
 original rescue run. Note that you must keep the original offset between
 @samp{--input-position} and @samp{--output-position} of the original
-rescue run.
+rescue run. See the chapter Generate Mode (@pxref{Generate Mode}) for a
+complete description of the generate mode.
 
 @item -i @var{pos}
 @itemx --input-position=@var{pos}
@@ -683,8 +693,8 @@ Ddrescue aligns its I/O buffer to the sector size so that it can be used
 for direct disc access or to read from raw devices. For efficiency
 reasons, also aligns it to the memory page size if page size is a
 multiple of sector size. Ddrescue can't determine the size of a raw
-device, so a explicit @samp{--max-size} or @samp{--complete-only} option
-is needed.
+device, so an explicit @samp{--max-size} or @samp{--complete-only}
+option is needed.
 
 Using direct disc access, or reading from a raw device, may be slower or
 faster than normal cached reading depending on your OS and hardware. In
@@ -731,7 +741,9 @@ option.
 
 In fill mode the input file may have any size. If it is too small, the
 data will be duplicated as many times as necessary to fill the input
-buffer. If it is too big, only the needed data will be read.
+buffer. If it is too big, only the data needed to fill the input buffer
+will be read. Then the same data will be written to every block or
+sector to be filled.
 
 Note that in fill mode the input file is always read from position 0. If
 you specify a @samp{--input-position}, it refers to the original input
@@ -798,19 +810,32 @@ the disc. Just follow these steps:
 sparse writes. This yields a logfile with only finished (@samp{+}) and
 bad-sector (@samp{-}) blocks.
 
-2) Mount the copied drive (or the image file, via loopback device).
+2) Fill the bad-sector blocks of the copied drive or image file with a
+string not present in any file, for example "DEADBEEF".
 
-3) Compute a md5sum or other checksum for every file. Build a list of
-all the files and their checksums.
+3) Mount the copied drive (or the image file, via loopback device).
 
-4) Fill the bad-sector blocks of the copied drive or image file with a
-byte value different from zero.
+4) Grep for the fill string in all the files. Those files containing the
+string reside (at least partially) in damaged disc areas.
 
-5) Verify the checksums. Those files which have different checksums this
-time reside (at least partially) in damaged disc areas.
+5) Unmount the copied drive or image file.
 
 6) Optionally fill the bad-sector blocks of the copied drive or image
 file with zeros to restore the disc image.
+
+@noindent
+Example 4: Figure out what files are in the bad areas of the disc.
+
+@example
+ddrescue -b2048 /dev/cdrom cdimage logfile
+echo -n "DEADBEEF" > tmpfile
+ddrescue --fill=- tmpfile cdimage logfile
+rm tmpfile
+mount -t iso9660 -o loop,ro cdimage /mnt/cdimage
+find /mnt/cdimage -type f -exec grep "DEADBEEF" '@{@}' ';'
+umount /mnt/cdimage
+ddrescue --fill=- /dev/zero cdimage logfile
+@end example
 
 
 @node Generate Mode
@@ -851,6 +876,10 @@ then you can generate an approximate logfile with this command:
 ddrescue --generate-logfile infile outfile logfile
 @end example
 
+@noindent
+Note that you must keep the original offset between
+@samp{--input-position} and @samp{--output-position} of the original
+rescue run.
 
 @node Ddrescuelog
 @chapter Ddrescuelog

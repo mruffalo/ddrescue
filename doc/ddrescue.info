@@ -12,7 +12,7 @@ File: ddrescue.info,  Node: Top,  Next: Introduction,  Up: (dir)
 GNU ddrescue Manual
 *******************
 
-This manual is for GNU ddrescue (version 1.15-pre1, 28 January 2011).
+This manual is for GNU ddrescue (version 1.15-pre2, 6 October 2011).
 
 * Menu:
 
@@ -137,8 +137,9 @@ File: ddrescue.info,  Node: Algorithm,  Next: Invoking Ddrescue,  Prev: Basic Co
 ***********
 
 GNU ddrescue manages efficiently the status of the rescue in progress
-and tries to rescue the good parts first, maximizing the amount of data
-finally recovered from a failing drive.
+and tries to rescue the good parts first, scheduling reads inside bad
+areas for later. This maximizes the amount of data that can be finally
+recovered from a failing drive.
 
    The standard dd utility can be used to save data from a failing
 drive, but it reads the data secuentially, which may wear out the drive
@@ -146,10 +147,11 @@ without rescuing anything if the errors are at the beginning of the
 drive.
 
    Other programs switch to small size reads when they find errors, but
-this is a bad idea because it means spending more time at error areas,
-damaging the surface, the heads and the drive mechanics, instead of
-getting out of them as fast as possible. This behavior reduces the
-chances of rescuing the remaining good data.
+they still read the data secuentially. This is a bad idea because it
+means spending more time at error areas, damaging the surface, the heads
+and the drive mechanics, instead of getting out of them as fast as
+possible. This behavior reduces the chances of rescuing the remaining
+good data.
 
    The algorithm of ddrescue is as follows (the user may interrupt the
 process at any point, but be aware that a bad drive can block ddrescue
@@ -227,6 +229,13 @@ The format for running ddrescue is:
      Print the version number of ddrescue on the standard output and
      exit.
 
+`-a BYTES'
+`--min-read-rate=BYTES'
+     Minimum read rate of good areas in bytes per second. If the read
+     rate falls below this value, ddrescue will skip ahead a variable
+     amount depending on rate and error history. If BYTES is 0, the
+     minimum read rate is taken as (average_rate / 10).
+
 `-b BYTES'
 `--block-size=BYTES'
      Sector (hardware block) size of input device in bytes (usually 512
@@ -298,7 +307,8 @@ The format for running ddrescue is:
      Generate an approximate logfile from the input and output files of
      the original rescue run. Note that you must keep the original
      offset between `--input-position' and `--output-position' of the
-     original rescue run.
+     original rescue run. See the chapter Generate Mode (*note Generate
+     Mode::) for a complete description of the generate mode.
 
 `-i POS'
 `--input-position=POS'
@@ -459,7 +469,7 @@ Character   Meaning
 
 And here is an example logfile:
 
-# Rescue Logfile. Created by GNU ddrescue version 1.15-pre1
+# Rescue Logfile. Created by GNU ddrescue version 1.15-pre2
 # Command line: ddrescue /dev/fd0 fdimage logfile
 # current_pos  current_status
 0x00120000     ?
@@ -624,7 +634,7 @@ device.
 used for direct disc access or to read from raw devices. For efficiency
 reasons, also aligns it to the memory page size if page size is a
 multiple of sector size. Ddrescue can't determine the size of a raw
-device, so a explicit `--max-size' or `--complete-only' option is
+device, so an explicit `--max-size' or `--complete-only' option is
 needed.
 
    Using direct disc access, or reading from a raw device, may be
@@ -666,7 +676,9 @@ type characters specified as argument to the `--fill' option.
 
    In fill mode the input file may have any size. If it is too small,
 the data will be duplicated as many times as necessary to fill the input
-buffer. If it is too big, only the needed data will be read.
+buffer. If it is too big, only the data needed to fill the input buffer
+will be read. Then the same data will be written to every block or
+sector to be filled.
 
    Note that in fill mode the input file is always read from position
 0. If you specify a `--input-position', it refers to the original input
@@ -722,19 +734,29 @@ the disc. Just follow these steps:
 sparse writes. This yields a logfile with only finished (`+') and
 bad-sector (`-') blocks.
 
-   2) Mount the copied drive (or the image file, via loopback device).
+   2) Fill the bad-sector blocks of the copied drive or image file with
+a string not present in any file, for example "DEADBEEF".
 
-   3) Compute a md5sum or other checksum for every file. Build a list of
-all the files and their checksums.
+   3) Mount the copied drive (or the image file, via loopback device).
 
-   4) Fill the bad-sector blocks of the copied drive or image file with
-a byte value different from zero.
+   4) Grep for the fill string in all the files. Those files containing
+the string reside (at least partially) in damaged disc areas.
 
-   5) Verify the checksums. Those files which have different checksums
-this time reside (at least partially) in damaged disc areas.
+   5) Unmount the copied drive or image file.
 
    6) Optionally fill the bad-sector blocks of the copied drive or image
 file with zeros to restore the disc image.
+
+Example 4: Figure out what files are in the bad areas of the disc.
+
+     ddrescue -b2048 /dev/cdrom cdimage logfile
+     echo -n "DEADBEEF" > tmpfile
+     ddrescue --fill=- tmpfile cdimage logfile
+     rm tmpfile
+     mount -t iso9660 -o loop,ro cdimage /mnt/cdimage
+     find /mnt/cdimage -type f -exec grep "DEADBEEF" '{}' ';'
+     umount /mnt/cdimage
+     ddrescue --fill=- /dev/zero cdimage logfile
 
 
 File: ddrescue.info,  Node: Generate Mode,  Next: Ddrescuelog,  Prev: Fill Mode,  Up: Top
@@ -771,6 +793,9 @@ thus non-tried but non-zero.
 
    then you can generate an approximate logfile with this command:
      ddrescue --generate-logfile infile outfile logfile
+
+Note that you must keep the original offset between `--input-position'
+and `--output-position' of the original rescue run.
 
 
 File: ddrescue.info,  Node: Ddrescuelog,  Next: Invoking Ddrescuelog,  Prev: Generate Mode,  Up: Top
@@ -920,19 +945,19 @@ Concept Index
 
 Tag Table:
 Node: Top203
-Node: Introduction1306
-Node: Basic Concepts3841
-Node: Algorithm5049
-Node: Invoking Ddrescue8351
-Node: Logfile Structure15609
-Node: Examples17864
-Ref: lzip-example21526
-Node: Direct Disc Access22898
-Node: Fill Mode24774
-Node: Generate Mode28403
-Node: Ddrescuelog29954
-Node: Invoking Ddrescuelog31599
-Node: Problems33259
-Node: Concept Index33816
+Node: Introduction1305
+Node: Basic Concepts3840
+Node: Algorithm5048
+Node: Invoking Ddrescue8450
+Node: Logfile Structure16116
+Node: Examples18371
+Ref: lzip-example22033
+Node: Direct Disc Access23405
+Node: Fill Mode25282
+Node: Generate Mode29378
+Node: Ddrescuelog31053
+Node: Invoking Ddrescuelog32698
+Node: Problems34358
+Node: Concept Index34915
 
 End Tag Table

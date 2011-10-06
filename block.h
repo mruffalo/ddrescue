@@ -87,6 +87,8 @@ public:
   static bool isstatus( const int st ) throw()
     { return ( st == non_tried || st == non_trimmed || st == non_split ||
                st == bad_sector || st == finished ); }
+  static bool is_good_status( const Status st ) throw()
+    { return ( st == non_tried || st == finished ); }
   };
 
 

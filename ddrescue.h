@@ -79,7 +79,7 @@ public:
   int find_index( const long long pos ) const throw();
   void find_chunk( Block & b, const Sblock::Status st ) const;
   void rfind_chunk( Block & b, const Sblock::Status st ) const;
-  void change_chunk_status( const Block & b, const Sblock::Status st );
+  int change_chunk_status( const Block & b, const Sblock::Status st );
 
   static bool isstatus( const int st ) throw()
     { return ( st == copying || st == trimming || st == splitting ||
@@ -148,28 +148,33 @@ public:
 
 class Rescuebook : public Logbook
   {
+  const long long max_error_rate_, min_read_rate_;
   long long sparse_size;		// end position of pending writes
   long long recsize, errsize;		// total recovered and error sizes
   const char * const iname_;
-  const int max_error_rate_, max_retries_, skipbs_;
+  const int max_retries_, skipbs_;
   int max_errors_;
   int e_code;				// error code for too many errors
   int errors;				// error areas found so far
   int ides_, odes_;			// input and output file descriptors
   const bool nosplit_, sparse_, synchronous_;
 					// variables for update_status
-  long long a_rate, c_rate, e_rate, first_size, last_size, last_errsize;
+  long long a_rate, c_rate, first_size, last_size, last_errsize;
   long long last_ipos;
   long t0, t1, ts;
   int oldlen;
+  bool status_changed;
 
   int skipbs() const throw() { return skipbs_; }
   bool sync_sparse_file() throw();
   int copy_block( const Block & b, int & copied_size, int & error_size );
   void count_errors() throw();
-  void update_ecode() throw()
-    { if( max_errors_ >= 0 && errors > max_errors_ ) e_code |= 2; }
-  bool too_many_errors() const throw() { return ( e_code != 0 ); }
+  bool too_many_errors() throw()
+    { if( max_errors_ >= 0 && errors > max_errors_ ) e_code |= 2;
+      return ( e_code != 0 ); }
+  bool slow_read() const throw()
+    { return ( ( min_read_rate_ > 0 && c_rate < min_read_rate_ ) ||
+               ( min_read_rate_ == 0 && c_rate < a_rate / 10 ) ); }
   int copy_and_update( const Block & b, const Sblock::Status st,
                        int & copied_size, int & error_size,
                        const char * const msg, bool & first_post );
@@ -181,14 +186,16 @@ class Rescuebook : public Logbook
   int rsplit_errors();
   int copy_errors();
   int rcopy_errors();
-  void update_status( const long long ipos, const char * const msg = 0,
-                      bool force = false ) throw();
+  void update_status() throw();
+  void show_status( const long long ipos, const char * const msg = 0,
+                    const bool force = false ) throw();
 public:
   Rescuebook( const long long ipos, const long long opos,
               Domain & dom, const long long isize,
               const char * const iname, const char * const logname,
-              const int cluster, const int hardbs, const int max_error_rate,
-              const int max_errors = -1, const int max_retries = 0,
+              const int cluster, const int hardbs,
+              const long long max_error_rate, const int max_errors = -1,
+              const int max_retries = 0, const long long min_read_rate = -1,
               const bool complete_only = false,
               const bool new_errors_only = false, const bool nosplit = false,
               const bool retrim = false, const bool sparse = false,

@@ -1,4 +1,9 @@
 Changes in version 1.15:
 
+The new option "-a, --min-read-rate" has been added.
+
 Ddrescuelog, a tool for conversion and manipulation of ddrescue
 logfiles, has been added.
+
+A spurious warning about "-D" being ignored in fill mode has been
+removed.

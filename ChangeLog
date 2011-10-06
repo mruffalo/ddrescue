@@ -1,3 +1,12 @@
+2011-10-06  Antonio Diaz Diaz  <ant_diaz@teleline.es>
+
+	* Version 1.15-pre2 released.
+	* Added new option `-a, --min-read-rate'.
+	* main.cc: Removed spurious warning about `-D' ignored in fill mode.
+	* ddrescue.texinfo: Improved description of algorithm.
+	* logbook.cc (change_chunk_status): Return an adjust value (-1, 0, 1)
+	  to keep "errors" updated without calling count_errors every time.
+
 2011-01-28  Antonio Diaz Diaz  <ant_diaz@teleline.es>
 
 	* Version 1.15-pre1 released.

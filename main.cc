@@ -68,6 +68,7 @@ void show_help( const int cluster, const int hardbs ) throw()
   std::printf( "\nOptions:\n" );
   std::printf( "  -h, --help                    display this help and exit\n" );
   std::printf( "  -V, --version                 output version information and exit\n" );
+  std::printf( "  -a, --min-read-rate=<bytes>   minimum read rate of good areas in bytes/s\n" );
   std::printf( "  -b, --block-size=<bytes>      sector size of input device [default %d]\n", hardbs );
   std::printf( "  -B, --binary-prefixes         show binary multipliers in numbers [SI]\n" );
   std::printf( "  -c, --cluster-size=<sectors>  sectors to copy at a time [%d]\n", cluster );
@@ -222,13 +223,6 @@ bool check_files( const char * const iname, const char * const oname,
   }
 
 
-int get_max_errors( const char * const arg, bool * const new_errors_onlyp ) throw()
-  {
-  *new_errors_onlyp = ( *arg == '+' );
-  return getnum( arg, 0, 0, INT_MAX );
-  }
-
-
 int do_fill( long long ipos, const long long opos, Domain & domain,
              const char * const iname, const char * const oname,
              const char * const logname,
@@ -269,7 +263,7 @@ int do_fill( long long ipos, const long long opos, Domain & domain,
     std::printf( ",  outfile = %sB\n",
                  format_num( fillbook.domain().pos() + fillbook.offset() ) );
     std::printf( "    Copy block size: %d sectors\n", cluster );
-    std::printf( "Sector size: %s bytes\n", format_num( hardbs, 99999 ) );
+    std::printf( "Sector size: %sBytes\n", format_num( hardbs, 99999 ) );
     std::printf( "\n" );
     }
 
@@ -329,12 +323,13 @@ int do_generate( const long long ipos, const long long opos, Domain & domain,
 
 int do_rescue( const long long ipos, const long long opos, Domain & domain,
                const char * const iname, const char * const oname,
-               const char * const logname,
-               const int cluster, const int hardbs, const int max_error_rate,
+               const char * const logname, const int cluster,
+               const int hardbs, const long long max_error_rate,
                const int max_errors, const int max_retries,
-               const int o_direct, const int o_trunc,
-               const bool complete_only, const bool new_errors_only,
-               const bool nosplit, const bool preallocate, const bool retrim,
+               const long long min_read_rate, const int o_direct,
+               const int o_trunc, const bool complete_only,
+               const bool new_errors_only, const bool nosplit,
+               const bool preallocate, const bool retrim,
                const bool reverse, const bool sparse,
                const bool synchronous, const bool try_again )
   {
@@ -347,8 +342,8 @@ int do_rescue( const long long ipos, const long long opos, Domain & domain,
 
   Rescuebook rescuebook( ipos, opos, domain, isize, iname, logname, cluster,
                          hardbs, max_error_rate, max_errors, max_retries,
-                         complete_only, new_errors_only, nosplit, retrim,
-                         sparse, synchronous, try_again );
+                         min_read_rate, complete_only, new_errors_only,
+                         nosplit, retrim, sparse, synchronous, try_again );
   if( rescuebook.domain().in_size() == 0 )
     { show_error( "Nothing to do." ); return 0; }
   if( o_trunc && !rescuebook.blank() )
@@ -386,10 +381,10 @@ int do_rescue( const long long ipos, const long long opos, Domain & domain,
     std::printf( ",  outfile = %sB\n",
                  format_num( rescuebook.domain().pos() + rescuebook.offset() ) );
     std::printf( "    Copy block size: %d sectors\n", cluster );
-    std::printf( "Sector size: %s bytes\n", format_num( hardbs, 99999 ) );
+    std::printf( "Sector size: %sBytes\n", format_num( hardbs, 99999 ) );
     bool nl = false;
     if( max_error_rate >= 0 )
-      { nl = true; std::printf( "Max error rate: %sB/s    ",
+      { nl = true; std::printf( "Max error rate: %8sB/s    ",
                                 format_num( max_error_rate, 99999 ) ); }
     if( max_errors >= 0 )
       {
@@ -402,6 +397,9 @@ int do_rescue( const long long ipos, const long long opos, Domain & domain,
     if( max_retries >= 0 )
       { nl = true; std::printf( "Max retries: %d    ", max_retries ); }
     if( nl ) std::printf( "\n" );
+    if( min_read_rate >= 0 )
+      std::printf( "Min read rate: %8sB/s\n",
+                   format_num( min_read_rate, 99999 ) );
     std::printf( "Direct: %s    ", o_direct ? "yes" : "no" );
     std::printf( "Sparse: %s    ", sparse ? "yes" : "no" );
     std::printf( "Split: %s    ", !nosplit ? "yes" : "no" );
@@ -457,13 +455,14 @@ int main( const int argc, const char * const argv[] )
   {
   long long ipos = 0;
   long long opos = -1;
+  long long max_error_rate = -1;
   long long max_size = -1;
+  long long min_read_rate = -1;
   const char * domain_logfile_name = 0;
   const int cluster_bytes = 65536;
   const int default_hardbs = 512;
   int cluster = 0;
   int hardbs = default_hardbs;
-  int max_error_rate = -1;
   int max_errors = -1;
   int max_retries = 0;
   int o_direct = 0;
@@ -487,6 +486,7 @@ int main( const int argc, const char * const argv[] )
 
   const Arg_parser::Option options[] =
     {
+    { 'a', "min-read-rate",    Arg_parser::yes },
     { 'b', "block-size",       Arg_parser::yes },
     { 'B', "binary-prefixes",  Arg_parser::no  },
     { 'c', "cluster-size",     Arg_parser::yes },
@@ -528,6 +528,7 @@ int main( const int argc, const char * const argv[] )
     const char * const arg = parser.argument( argind ).c_str();
     switch( code )
       {
+      case 'a': min_read_rate = getnum( arg, hardbs, 0 ); break;
       case 'b': hardbs = getnum( arg, 0, 1, INT_MAX ); break;
       case 'B': format_num( 0, 0, -1 ); break;		// set binary prefixes
       case 'c': cluster = getnum( arg, 1, 1, INT_MAX ); break;
@@ -540,8 +541,9 @@ int main( const int argc, const char * const argv[] )
                   { show_error( "Direct disc access not available." ); return 1; }
                 break;
       case 'D': synchronous = true; break;
-      case 'e': max_errors = get_max_errors( arg, &new_errors_only ); break;
-      case 'E': max_error_rate = getnum( arg, hardbs, 0, INT_MAX ); break;
+      case 'e': new_errors_only = ( *arg == '+' );
+                max_errors = getnum( arg, 0, 0, INT_MAX ); break;
+      case 'E': max_error_rate = getnum( arg, hardbs, 0 ); break;
       case 'f': force = true; break;
       case 'F': filltypes = arg; check_fill_types( filltypes ); break;
       case 'g': generate = true; break;
@@ -587,11 +589,11 @@ int main( const int argc, const char * const argv[] )
 
   if( filltypes.size() )
     {
-    if( max_error_rate >= 0 || max_errors >= 0 || max_retries || o_direct ||
-        o_trunc || complete_only || generate || nosplit || preallocate ||
-        retrim || reverse || sparse || synchronous || try_again )
+    if( min_read_rate >= 0 || max_error_rate >= 0 || max_errors >= 0 ||
+        max_retries || o_direct || o_trunc || complete_only || generate ||
+        nosplit || preallocate || retrim || reverse || sparse || try_again )
       {
-      show_error( "warning: Options -C -d -D -e -E -g -M -n -p -r -R -S -t and -T" );
+      show_error( "warning: Options -a -C -d -e -E -g -M -n -p -r -R -S -t and -T" );
       show_error( "         are ignored in fill mode." );
       }
 
@@ -600,11 +602,11 @@ int main( const int argc, const char * const argv[] )
     }
   if( generate )
     {
-    if( max_error_rate >= 0 || max_errors >= 0 || max_retries || o_direct ||
-        o_trunc || complete_only || nosplit || preallocate || retrim ||
-        reverse || sparse || synchronous || try_again )
+    if( min_read_rate >= 0 || max_error_rate >= 0 || max_errors >= 0 ||
+        max_retries || o_direct || o_trunc || complete_only || nosplit ||
+        preallocate || retrim || reverse || sparse || synchronous || try_again )
       {
-      show_error( "warning: Options -C -d -D -e -E -M -n -p -r -R -S -t and -T" );
+      show_error( "warning: Options -a -C -d -D -e -E -M -n -p -r -R -S -t and -T" );
       show_error( "         are ignored in generate-logfile mode." );
       }
 
@@ -613,7 +615,7 @@ int main( const int argc, const char * const argv[] )
     }
   return do_rescue( ipos, opos, domain, iname, oname, logname, cluster,
                     hardbs, max_error_rate, max_errors, max_retries,
-                    o_direct, o_trunc, complete_only, new_errors_only,
-                    nosplit, preallocate, retrim, reverse, sparse,
-                    synchronous, try_again );
+                    min_read_rate, o_direct, o_trunc, complete_only,
+                    new_errors_only, nosplit, preallocate, retrim, reverse,
+                    sparse, synchronous, try_again );
   }

@@ -398,15 +398,35 @@ void Logbook::rfind_chunk( Block & b, const Sblock::Status st ) const
   }
 
 
-void Logbook::change_chunk_status( const Block & b, const Sblock::Status st )
+// Returns an adjust value (-1, 0, +1) to keep "errors" updated without
+// having to call count_errors every time.
+//   - - -   -->   - + -   return +1
+//   - - +   -->   - + +   return  0
+//   - + -   -->   - - -   return -1
+//   - + +   -->   - - +   return  0
+//   + - -   -->   + + -   return  0
+//   + - +   -->   + + +   return -1
+//   + + -   -->   + - -   return  0
+//   + + +   -->   + - +   return +1
+//
+int Logbook::change_chunk_status( const Block & b, const Sblock::Status st )
   {
-  if( b.size() <= 0 ) return;
+  if( b.size() <= 0 ) return 0;
   if( !domain_.includes( b ) || find_index( b.pos() ) < 0 ||
       !domain_.includes( sblock_vector[index_] ) )
     internal_error( "can't change status of chunk not in rescue domain" );
   if( !sblock_vector[index_].includes( b ) )
     internal_error( "can't change status of chunk spread over more than 1 block" );
-  if( sblock_vector[index_].status() == st ) return;
+  if( sblock_vector[index_].status() == st ) return 0;
+
+  const bool old_st_good = Sblock::is_good_status( sblock_vector[index_].status() );
+  const bool new_st_good = Sblock::is_good_status( st );
+  bool bl_st_good = ( index_ <= 0 ||
+                      !domain_.includes( sblock_vector[index_-1] ) ||
+                      Sblock::is_good_status( sblock_vector[index_-1].status() ) );
+  bool br_st_good = ( index_ + 1 >= sblocks() ||
+                      !domain_.includes( sblock_vector[index_+1] ) ||
+                      Sblock::is_good_status( sblock_vector[index_+1].status() ) );
   if( sblock_vector[index_].pos() < b.pos() )
     {
     if( sblock_vector[index_].end() == b.end() &&
@@ -416,15 +436,17 @@ void Logbook::change_chunk_status( const Block & b, const Sblock::Status st )
       sblock_vector[index_].inc_size( -b.size() );
       sblock_vector[index_+1].pos( b.pos() );
       sblock_vector[index_+1].inc_size( b.size() );
-      return;
+      return 0;
       }
     insert_sblock( index_, sblock_vector[index_].split( b.pos() ) );
     ++index_;
+    bl_st_good = old_st_good;
     }
   if( sblock_vector[index_].size() > b.size() )
     {
     sblock_vector[index_].pos( b.end() );
     sblock_vector[index_].inc_size( -b.size() );
+    br_st_good = Sblock::is_good_status( sblock_vector[index_].status() );
     if( index_ > 0 && sblock_vector[index_-1].status() == st &&
         domain_.includes( sblock_vector[index_-1] ) )
       sblock_vector[index_-1].inc_size( b.size() );
@@ -447,4 +469,8 @@ void Logbook::change_chunk_status( const Block & b, const Sblock::Status st )
       erase_sblock( index_ + 1 );
       }
     }
+  int retval = 0;
+  if( new_st_good != old_st_good && bl_st_good == br_st_good )
+    { if( old_st_good == bl_st_good ) retval = +1; else retval = -1; }
+  return retval;
   }
