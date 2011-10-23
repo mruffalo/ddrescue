@@ -85,7 +85,7 @@ int Genbook::do_generate( const int odes )
   if( verbosity >= 0 )
     {
     std::printf( "Press Ctrl-C to interrupt\n" );
-    if( filename() )
+    if( logfile_exists() )
       {
       std::printf( "Initial status (read from logfile)\n" );
       std::printf( "rescued: %10sB,", format_num( recsize ) );

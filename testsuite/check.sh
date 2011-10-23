@@ -20,7 +20,6 @@ fi
 
 if [ -d tmp ] ; then rm -rf tmp ; fi
 mkdir tmp
-printf "testing ddrescue-%s..." "$2"
 cd "${objdir}"/tmp
 
 cat "${testdir}"/test.txt > in || framework_failure
@@ -29,6 +28,18 @@ cat "${testdir}"/test2.txt > in2 || framework_failure
 cat "${testdir}"/logfile1 > logfile1 || framework_failure
 cat "${testdir}"/logfile2 > logfile2 || framework_failure
 fail=0
+
+printf "testing ddrescue-%s..." "$2"
+"${DDRESCUE}" -q in
+if [ $? = 0 ] ; then fail=1 ; printf - ; else printf . ; fi
+"${DDRESCUE}" -q -g in out
+if [ $? = 0 ] ; then fail=1 ; printf - ; else printf . ; fi
+"${DDRESCUE}" -q -F- in out
+if [ $? = 0 ] ; then fail=1 ; printf - ; else printf . ; fi
+"${DDRESCUE}" -q -F in out logfile
+if [ $? = 0 ] ; then fail=1 ; printf - ; else printf . ; fi
+"${DDRESCUE}" -q -F- -g in out logfile
+if [ $? = 0 ] ; then fail=1 ; printf - ; else printf . ; fi
 
 "${DDRESCUE}" -t -pq -i15000 in out logfile > /dev/null || fail=1
 "${DDRESCUE}" -D -fn -s15000 in out logfile > /dev/null || fail=1
@@ -100,26 +111,84 @@ cmp in out || fail=1
 printf .
 
 printf "\ntesting ddrescuelog-%s..." "$2"
+"${DDRESCUELOG}" -q logfile
+if [ $? = 0 ] ; then fail=1 ; printf - ; else printf . ; fi
+"${DDRESCUELOG}" -q -d
+if [ $? = 0 ] ; then fail=1 ; printf - ; else printf . ; fi
+"${DDRESCUELOG}" -q -t -d logfile
+if [ $? = 0 ] ; then fail=1 ; printf - ; else printf . ; fi
+
+"${DDRESCUELOG}" -b2048 -l+ logfile1 > out || fail=1
+cat out | "${DDRESCUELOG}" -b2048 -fc logfile || fail=1
+"${DDRESCUELOG}" -b2048 -l+ logfile > copy || fail=1
+cmp out copy || fail=1
+printf .
+cat out | "${DDRESCUELOG}" -b2048 -s35744 -fc?+ logfile || fail=1
+"${DDRESCUELOG}" -p logfile2 logfile || fail=1
+printf .
+cat out | "${DDRESCUELOG}" -b2048 -fc?+ logfile || fail=1
+"${DDRESCUELOG}" -s35744 -p logfile2 logfile || fail=1
+printf .
+"${DDRESCUELOG}" -s35745 -q -p logfile2 logfile
+if [ $? = 0 ] ; then fail=1 ; printf - ; else printf . ; fi
+
 cat logfile1 > logfile || framework_failure
-"${DDRESCUELOG}" -b2KiB -l+ logfile > out || fail=1
-printf "0\n2\n4\n6\n8\n10\n12\n14\n16\n" | cmp out - || fail=1
+"${DDRESCUELOG}" -i1024 -s2048 -d logfile
+if [ $? = 0 ] ; then fail=1 ; printf - ; else printf . ; fi
+"${DDRESCUELOG}" -i1024 -s1024 -d logfile || fail=1
 printf .
-"${DDRESCUELOG}" -b2KiB -l? logfile > out || fail=1
-printf "1\n3\n5\n7\n9\n11\n13\n15\n17\n" | cmp out - || fail=1
-printf .
-"${DDRESCUELOG}" -b2KiB -l+ -i6KiB -o0 -s16KiB logfile > out || fail=1
-printf "1\n3\n5\n7\n" | cmp out - || fail=1
-printf .
+"${DDRESCUELOG}" -i1024 -s1024 -d -q logfile
+if [ $? = 0 ] ; then fail=1 ; printf - ; else printf . ; fi
 
 cat logfile2 > logfile || framework_failure
-"${DDRESCUELOG}" -b2KiB -l? logfile > out || fail=1
-printf "0\n2\n4\n6\n8\n10\n12\n14\n16\n" | cmp out - || fail=1
+"${DDRESCUELOG}" -m logfile1 -D logfile
+if [ $? = 0 ] ; then fail=1 ; printf - ; else printf . ; fi
+"${DDRESCUELOG}" -m logfile2 -D logfile || fail=1
 printf .
-"${DDRESCUELOG}" -b2KiB -l+ logfile > out || fail=1
-printf "1\n3\n5\n7\n9\n11\n13\n15\n17\n" | cmp out - || fail=1
+"${DDRESCUELOG}" -i1024 -s2048 -d logfile
+if [ $? = 0 ] ; then fail=1 ; printf - ; else printf . ; fi
+"${DDRESCUELOG}" -i2048 -s2048 -d logfile || fail=1
 printf .
-"${DDRESCUELOG}" -b2KiB -l? -i2KiB -o0 -s16KiB logfile > out || fail=1
-printf "1\n3\n5\n7\n" | cmp out - || fail=1
+
+cat logfile1 > logfile || framework_failure
+"${DDRESCUELOG}" -b2048 -l+ logfile > out || fail=1
+printf "0\n2\n4\n6\n8\n10\n12\n14\n16\n" > copy || framework_failure
+cmp out copy || fail=1
+printf .
+"${DDRESCUELOG}" -b2048 -l?- logfile > out || fail=1
+printf "1\n3\n5\n7\n9\n11\n13\n15\n17\n" > copy || framework_failure
+cmp out copy || fail=1
+printf .
+"${DDRESCUELOG}" -b2048 -l+ -i6KiB -o0 -s16KiB logfile > out || fail=1
+printf "1\n3\n5\n7\n" > copy || framework_failure
+cmp out copy || fail=1
+printf .
+
+"${DDRESCUELOG}" -n logfile2 > logfile || framework_failure
+"${DDRESCUELOG}" -b2048 -l+ logfile > out || fail=1
+printf "0\n2\n4\n6\n8\n10\n12\n14\n16\n" > copy || framework_failure
+cmp out copy || fail=1
+printf .
+"${DDRESCUELOG}" -b2048 -l?- logfile > out || fail=1
+printf "1\n3\n5\n7\n9\n11\n13\n15\n17\n" > copy || framework_failure
+cmp out copy || fail=1
+printf .
+"${DDRESCUELOG}" -b2048 -l+ -i2048 -o0 -s16KiB logfile > out || fail=1
+printf "1\n3\n5\n7\n" > copy || framework_failure
+cmp out copy || fail=1
+printf .
+
+"${DDRESCUELOG}" -b2048 -l+ logfile1 > out || fail=1
+"${DDRESCUELOG}" -x logfile1 logfile1 > logfile || fail=1
+"${DDRESCUELOG}" -b2048 -l- logfile > copy || fail=1
+cmp out copy || fail=1
+printf .
+"${DDRESCUELOG}" -y logfile2 logfile1 > logfile || fail=1
+"${DDRESCUELOG}" -b2048 -l- logfile > copy || fail=1
+cmp out copy || fail=1
+printf .
+"${DDRESCUELOG}" -z logfile1 logfile2 > logfile || fail=1
+"${DDRESCUELOG}" -d logfile || fail=1
 printf .
 
 echo

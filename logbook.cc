@@ -122,10 +122,13 @@ void show_logfile_error( const char * const filename, const int linenum )
   }
 
 
-bool read_logfile( const char * const name, std::vector< Sblock > & sblock_vector,
+// Returns true if logfile exists and is readable.
+//
+bool read_logfile( const char * const logname,
+                   std::vector< Sblock > & sblock_vector,
                    long long & current_pos, Logbook::Status & current_status )
   {
-  FILE * const f = std::fopen( name, "r" );
+  FILE * const f = std::fopen( logname, "r" );
   if( !f ) return false;
   int linenum = 0;
   sblock_vector.clear();
@@ -139,7 +142,7 @@ bool read_logfile( const char * const name, std::vector< Sblock > & sblock_vecto
       current_status = Logbook::Status( ch );
     else
       {
-      show_logfile_error( name, linenum );
+      show_logfile_error( logname, linenum );
       show_error( "Are you using a logfile from ddrescue 1.5 or older?" );
       std::exit( 2 );
       }
@@ -153,14 +156,14 @@ bool read_logfile( const char * const name, std::vector< Sblock > & sblock_vecto
       if( n == 3 && pos >= 0 && Sblock::isstatus( ch ) &&
           ( size > 0 || size == -1 || ( size == 0 && pos == 0 ) ) )
         {
-        Sblock::Status st = Sblock::Status( ch );
+        const Sblock::Status st = Sblock::Status( ch );
         Sblock sb( pos, size, st ); sb.fix_size();
         if( sblock_vector.size() > 0 && !sb.follows( sblock_vector.back() ) )
-          { show_logfile_error( name, linenum ); std::exit( 2 ); }
+          { show_logfile_error( logname, linenum ); std::exit( 2 ); }
         sblock_vector.push_back( sb );
         }
       else
-        { show_logfile_error( name, linenum ); std::exit( 2 ); }
+        { show_logfile_error( logname, linenum ); std::exit( 2 ); }
       }
     }
   std::fclose( f );
@@ -170,18 +173,19 @@ bool read_logfile( const char * const name, std::vector< Sblock > & sblock_vecto
 } // end namespace
 
 
-Domain::Domain( const long long p, const long long s, const char * const name )
+Domain::Domain( const long long p, const long long s,
+                const char * const logname )
   {
   Block b( p, s ); b.fix_size();
-  if( !name || !name[0] ) { block_vector.push_back( b ); return; }
+  if( !logname || !logname[0] ) { block_vector.push_back( b ); return; }
   std::vector< Sblock > sblock_vector;
   long long current_pos;			// not used
   Logbook::Status current_status;		// not used
-  if( !read_logfile( name, sblock_vector, current_pos, current_status ) )
+  if( !read_logfile( logname, sblock_vector, current_pos, current_status ) )
     {
     char buf[80];
     snprintf( buf, sizeof buf,
-              "Logfile `%s' does not exist or is not readable.", name );
+              "Logfile `%s' does not exist or is not readable.", logname );
     show_error( buf );
     std::exit( 1 );
     }
@@ -210,14 +214,15 @@ void Logbook::split_domain_border_sblocks()
   }
 
 
-Logbook::Logbook( const long long ipos, const long long opos, Domain & dom,
-                  const long long isize, const char * const name,
-                  const int cluster, const int hardbs, const bool complete_only )
-  : offset_( opos - ipos ), current_pos_( 0 ), current_status_( copying ),
-    domain_( dom ), filename_( name ),
+Logbook::Logbook( const long long offset, const long long isize,
+                  Domain & dom, const char * const logname,
+                  const int cluster, const int hardbs,
+                  const bool complete_only, const bool do_not_read )
+  : offset_( offset ), current_pos_( 0 ), current_status_( copying ),
+    domain_( dom ), filename_( logname ),
     hardbs_( hardbs ), softbs_( cluster * hardbs ),
     final_msg_( 0 ), final_errno_( 0 ), index_( 0 ),
-    ul_t1( std::time( 0 ) )
+    ul_t1( std::time( 0 ) ), logfile_exists_( false )
   {
   int alignment = sysconf( _SC_PAGESIZE );
   if( alignment < hardbs_ || alignment % hardbs_ ) alignment = hardbs_;
@@ -230,8 +235,9 @@ Logbook::Logbook( const long long ipos, const long long opos, Domain & dom,
     }
 
   if( !domain_.crop_by_file_size( isize ) ) std::exit( 1 );
-  if( filename_ )
-    read_logfile( filename_, sblock_vector, current_pos_, current_status_ );
+  if( filename_ && !do_not_read )
+    logfile_exists_ = read_logfile( filename_, sblock_vector, current_pos_,
+                                    current_status_ );
   if( !complete_only ) extend_sblock_vector( sblock_vector, isize );
   else if( sblock_vector.size() )  // limit domain to blocks read from logfile
     {
@@ -268,7 +274,8 @@ void Logbook::compact_sblock_vector()
 // Writes periodically the logfile to disc.
 // Returns false only if update is attempted and fails.
 //
-bool Logbook::update_logfile( const int odes, const bool force )
+bool Logbook::update_logfile( const int odes, const bool force,
+                              const bool retry )
   {
   if( !filename_ ) return true;
   const int interval = 30 + std::min( 270, sblocks() / 40 );
@@ -281,41 +288,49 @@ bool Logbook::update_logfile( const int odes, const bool force )
   FILE * const f = std::fopen( filename_, "w" );
   if( f )
     {
-    write_logfile_header( f );
-    std::fprintf( f, "# current_pos  current_status\n" );
-    std::fprintf( f, "0x%08llX     %c\n", current_pos_, current_status_ );
-    std::fprintf( f, "#      pos        size  status\n" );
-    for( unsigned int i = 0; i < sblock_vector.size(); ++i )
-      {
-      const Sblock & sb = sblock_vector[i];
-      std::fprintf( f, "0x%08llX  0x%08llX  %c\n", sb.pos(), sb.size(), sb.status() );
-      }
+    write_logfile( f );
     if( std::fclose( f ) == 0 ) return true;
     }
 
   if( verbosity >= 0 )
     {
     char buf[80];
-    const char * const s =
-      f ? "Error writing logfile %s." : "Error opening logfile %s for writing.";
+    const char * const s = ( f ? "Error writing logfile `%s'" :
+                                 "Error opening logfile `%s' for writing" );
     snprintf( buf, sizeof buf, s, filename_ );
-    std::fprintf( stderr, "\n" );
+    if( retry ) std::fprintf( stderr, "\n" );
     show_error( buf, errno );
-    std::fprintf( stderr, "Fix the problem and press ENTER to retry, or Q+ENTER to abort. " );
-    std::fflush( stderr );
-    while( true )
+    if( retry )
       {
-      const char c = std::tolower( std::fgetc( stdin ) );
-      if( c == '\r' || c == '\n' )
+      std::fprintf( stderr, "Fix the problem and press ENTER to retry, or Q+ENTER to abort. " );
+      std::fflush( stderr );
+      while( true )
         {
-        std::fprintf( stderr, "\n\n\n\n" );
-        return update_logfile( -1, true );
+        const char c = std::tolower( std::fgetc( stdin ) );
+        if( c == '\r' || c == '\n' )
+          {
+          std::fprintf( stderr, "\n\n\n\n" );
+          return update_logfile( -1, true );
+          }
+        if( c == 'q' ) break;
         }
-      if( c == 'q' ) break;
       }
-    std::fprintf( stderr, "\n\n\n\n" );
     }
   return false;
+  }
+
+
+void Logbook::write_logfile( FILE * const f ) const throw()
+  {
+  write_logfile_header( f );
+  std::fprintf( f, "# current_pos  current_status\n" );
+  std::fprintf( f, "0x%08llX     %c\n", current_pos_, current_status_ );
+  std::fprintf( f, "#      pos        size  status\n" );
+  for( unsigned int i = 0; i < sblock_vector.size(); ++i )
+    {
+    const Sblock & sb = sblock_vector[i];
+    std::fprintf( f, "0x%08llX  0x%08llX  %c\n", sb.pos(), sb.size(), sb.status() );
+    }
   }
 
 
@@ -473,4 +488,20 @@ int Logbook::change_chunk_status( const Block & b, const Sblock::Status st )
   if( new_st_good != old_st_good && bl_st_good == br_st_good )
     { if( old_st_good == bl_st_good ) retval = +1; else retval = -1; }
   return retval;
+  }
+
+
+const char * Logbook::status_name( const Logbook::Status st ) throw()
+  {
+  switch( st )
+    {
+    case copying:    return "copying";
+    case trimming:   return "trimming";
+    case splitting:  return "splitting";
+    case retrying:   return "retrying";
+    case filling:    return "filling";
+    case generating: return "generating";
+    case finished:   return "finished";
+    }
+  return "unknown";			// should not be reached
   }

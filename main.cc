@@ -47,7 +47,9 @@ const char * const Program_name = "GNU ddrescue";
 const char * const program_name = "ddrescue";
 const char * const program_year = "2011";
 const char * invocation_name = 0;
-std::string command_line;
+
+enum Mode { m_none, m_fill, m_generate };
+const mode_t outmode = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH;
 
 #ifdef O_BINARY
 const int o_binary = O_BINARY;
@@ -55,132 +57,48 @@ const int o_binary = O_BINARY;
 const int o_binary = 0;
 #endif
 
-const mode_t outmode = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH;
-
 
 void show_help( const int cluster, const int hardbs ) throw()
   {
   std::printf( "%s - Data recovery tool.\n", Program_name );
-  std::printf( "Copies data from one file or block device to another,\n" );
-  std::printf( "trying hard to rescue data in case of read errors.\n" );
+  std::printf( "Copies data from one file or block device to another,\n"
+               "trying hard to rescue data in case of read errors.\n" );
   std::printf( "\nUsage: %s [options] infile outfile [logfile]\n", invocation_name );
-  std::printf( "You should use a logfile unless you know what you are doing.\n" );
-  std::printf( "\nOptions:\n" );
-  std::printf( "  -h, --help                    display this help and exit\n" );
-  std::printf( "  -V, --version                 output version information and exit\n" );
-  std::printf( "  -a, --min-read-rate=<bytes>   minimum read rate of good areas in bytes/s\n" );
-  std::printf( "  -b, --block-size=<bytes>      sector size of input device [default %d]\n", hardbs );
-  std::printf( "  -B, --binary-prefixes         show binary multipliers in numbers [SI]\n" );
-  std::printf( "  -c, --cluster-size=<sectors>  sectors to copy at a time [%d]\n", cluster );
-  std::printf( "  -C, --complete-only           do not read new data beyond logfile limits\n" );
-  std::printf( "  -d, --direct                  use direct disc access for input file\n" );
-  std::printf( "  -D, --synchronous             use synchronous writes for output file\n" );
-  std::printf( "  -e, --max-errors=[+]<n>       maximum number of [new] error areas allowed\n" );
-  std::printf( "  -E, --max-error-rate=<bytes>  maximum growth per second of error size\n" );
-  std::printf( "  -f, --force                   overwrite output device or partition\n" );
-  std::printf( "  -F, --fill=<types>            fill given type blocks with infile data (?*/-+)\n" );
-  std::printf( "  -g, --generate-logfile        generate approximate logfile from partial copy\n" );
-  std::printf( "  -i, --input-position=<pos>    starting position in input file [0]\n" );
-  std::printf( "  -m, --domain-logfile=<file>   restrict domain to finished blocks in file\n" );
-  std::printf( "  -M, --retrim                  mark all failed blocks as non-trimmed\n" );
-  std::printf( "  -n, --no-split                do not try to split or retry failed blocks\n" );
-  std::printf( "  -o, --output-position=<pos>   starting position in output file [ipos]\n" );
-  std::printf( "  -p, --preallocate             preallocate space on disc for output file\n" );
-  std::printf( "  -q, --quiet                   suppress all messages\n" );
-  std::printf( "  -r, --max-retries=<n>         exit after given retries (-1=infinity) [0]\n" );
-  std::printf( "  -R, --reverse                 reverse direction of copy operations\n" );
-  std::printf( "  -s, --max-size=<bytes>        maximum size of input data to be copied\n" );
-  std::printf( "  -S, --sparse                  use sparse writes for output file\n" );
-  std::printf( "  -t, --truncate                truncate output file to zero size\n" );
-  std::printf( "  -T, --try-again               mark non-split, non-trimmed blocks as non-tried\n" );
-  std::printf( "  -v, --verbose                 verbose operation\n" );
-  std::printf( "Numbers may be followed by a multiplier: b = blocks, k = kB = 10^3 = 1000,\n" );
-  std::printf( "Ki = KiB = 2^10 = 1024, M = 10^6, Mi = 2^20, G = 10^9, Gi = 2^30, etc...\n" );
-  std::printf( "\nReport bugs to bug-ddrescue@gnu.org\n");
-  std::printf( "Ddrescue home page: http://www.gnu.org/software/ddrescue/ddrescue.html\n" );
-  std::printf( "General help using GNU software: http://www.gnu.org/gethelp\n" );
-  }
-
-
-void show_version() throw()
-  {
-  std::printf( "%s %s\n", Program_name, PROGVERSION );
-  std::printf( "Copyright (C) %s Antonio Diaz Diaz.\n", program_year );
-  std::printf( "License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>\n" );
-  std::printf( "This is free software: you are free to change and redistribute it.\n" );
-  std::printf( "There is NO WARRANTY, to the extent permitted by law.\n" );
-  }
-
-
-long long getnum( const char * const ptr, const int bs,
-                  const long long min = LLONG_MIN + 1,
-                  const long long max = LLONG_MAX ) throw()
-  {
-  errno = 0;
-  char *tail;
-  long long result = strtoll( ptr, &tail, 0 );
-  if( tail == ptr )
-    {
-    show_error( "Bad or missing numerical argument.", 0, true );
-    std::exit( 1 );
-    }
-
-  if( !errno && tail[0] )
-    {
-    int factor = ( tail[1] == 'i' ) ? 1024 : 1000;
-    int exponent = 0;
-    bool bad_multiplier = false;
-    switch( tail[0] )
-      {
-      case ' ': break;
-      case 'b': if( bs > 0 ) { factor = bs; exponent = 1; }
-                else bad_multiplier = true;
-                break;
-      case 'Y': exponent = 8; break;
-      case 'Z': exponent = 7; break;
-      case 'E': exponent = 6; break;
-      case 'P': exponent = 5; break;
-      case 'T': exponent = 4; break;
-      case 'G': exponent = 3; break;
-      case 'M': exponent = 2; break;
-      case 'K': if( factor == 1024 ) exponent = 1; else bad_multiplier = true;
-                break;
-      case 'k': if( factor == 1000 ) exponent = 1; else bad_multiplier = true;
-                break;
-      default: bad_multiplier = true;
-      }
-    if( bad_multiplier )
-      {
-      show_error( "Bad multiplier in numerical argument.", 0, true );
-      std::exit( 1 );
-      }
-    for( int i = 0; i < exponent; ++i )
-      {
-      if( LLONG_MAX / factor >= llabs( result ) ) result *= factor;
-      else { errno = ERANGE; break; }
-      }
-    }
-  if( !errno && ( result < min || result > max ) ) errno = ERANGE;
-  if( errno )
-    {
-    show_error( "Numerical argument out of limits." );
-    std::exit( 1 );
-    }
-  return result;
-  }
-
-
-void check_fill_types( const std::string & filltypes ) throw()
-  {
-  bool error = false;
-  for( unsigned int i = 0; i < filltypes.size(); ++i )
-    if( !Sblock::isstatus( filltypes[i] ) )
-      { error = true; break; }
-  if( !filltypes.size() || error )
-    {
-    show_error( "Invalid type for `fill' option." );
-    std::exit( 1 );
-    }
+  std::printf( "You should use a logfile unless you know what you are doing.\n"
+               "\nOptions:\n"
+               "  -h, --help                     display this help and exit\n"
+               "  -V, --version                  output version information and exit\n"
+               "  -a, --min-read-rate=<bytes>    minimum read rate of good areas in bytes/s\n"
+               "  -b, --block-size=<bytes>       sector size of input device [default %d]\n", hardbs );
+  std::printf( "  -B, --binary-prefixes          show binary multipliers in numbers [SI]\n"
+               "  -c, --cluster-size=<sectors>   sectors to copy at a time [%d]\n", cluster );
+  std::printf( "  -C, --complete-only            do not read new data beyond logfile limits\n"
+               "  -d, --direct                   use direct disc access for input file\n"
+               "  -D, --synchronous              use synchronous writes for output file\n"
+               "  -e, --max-errors=[+]<n>        maximum number of [new] error areas allowed\n"
+               "  -E, --max-error-rate=<bytes>   maximum growth per second of error size\n"
+               "  -f, --force                    overwrite output device or partition\n"
+               "  -F, --fill=<types>             fill given type blocks with infile data (?*/-+)\n"
+               "  -g, --generate-logfile         generate approximate logfile from partial copy\n"
+               "  -i, --input-position=<bytes>   starting position in input file [0]\n"
+               "  -m, --domain-logfile=<file>    restrict domain to finished blocks in file\n"
+               "  -M, --retrim                   mark all failed blocks as non-trimmed\n"
+               "  -n, --no-split                 do not try to split or retry failed blocks\n"
+               "  -o, --output-position=<bytes>  starting position in output file [ipos]\n"
+               "  -p, --preallocate              preallocate space on disc for output file\n"
+               "  -q, --quiet                    suppress all messages\n"
+               "  -r, --max-retries=<n>          exit after given retries (-1=infinity) [0]\n"
+               "  -R, --reverse                  reverse direction of copy operations\n"
+               "  -s, --max-size=<bytes>         maximum size of input data to be copied\n"
+               "  -S, --sparse                   use sparse writes for output file\n"
+               "  -t, --truncate                 truncate output file to zero size\n"
+               "  -T, --try-again                mark non-split, non-trimmed blocks as non-tried\n"
+               "  -v, --verbose                  verbose operation\n" );
+  std::printf( "Numbers may be followed by a multiplier: b = blocks, k = kB = 10^3 = 1000,\n"
+               "Ki = KiB = 2^10 = 1024, M = 10^6, Mi = 2^20, G = 10^9, Gi = 2^30, etc...\n" );
+  std::printf( "\nReport bugs to bug-ddrescue@gnu.org\n"
+               "Ddrescue home page: http://www.gnu.org/software/ddrescue/ddrescue.html\n"
+               "General help using GNU software: http://www.gnu.org/gethelp\n" );
   }
 
 
@@ -211,8 +129,8 @@ bool check_files( const char * const iname, const char * const oname,
       show_error( "Output file exists and is not a regular file." );
       if( !force )
         {
-        show_error( "Use `--force' if you really want to overwrite it, but be" );
-        show_error( "aware that all existing data in output file will be lost.", 0, true );
+        show_error( "Use `--force' if you really want to overwrite it, but be\n"
+                    "aware that all existing data in output file will be lost.", 0, true );
         }
       else if( preallocate )
         show_error( "Only regular files can be preallocated.", 0, true );
@@ -223,7 +141,7 @@ bool check_files( const char * const iname, const char * const oname,
   }
 
 
-int do_fill( long long ipos, const long long opos, Domain & domain,
+int do_fill( const long long offset, Domain & domain,
              const char * const iname, const char * const oname,
              const char * const logname,
              const int cluster, const int hardbs,
@@ -235,8 +153,8 @@ int do_fill( long long ipos, const long long opos, Domain & domain,
     return 1;
     }
 
-  Fillbook fillbook( ipos, opos, domain, logname, cluster, hardbs, synchronous );
-  if( fillbook.domain().in_size() == 0 )
+  Fillbook fillbook( offset, domain, logname, cluster, hardbs, synchronous );
+  if( fillbook.domain().size() == 0 )
     { show_error( "Nothing to do." ); return 0; }
 
   const int ides = open( iname, O_RDONLY | o_binary );
@@ -271,7 +189,7 @@ int do_fill( long long ipos, const long long opos, Domain & domain,
   }
 
 
-int do_generate( const long long ipos, const long long opos, Domain & domain,
+int do_generate( const long long offset, Domain & domain,
                  const char * const iname, const char * const oname,
                  const char * const logname,
                  const int cluster, const int hardbs )
@@ -289,8 +207,8 @@ int do_generate( const long long ipos, const long long opos, Domain & domain,
   if( isize < 0 )
     { show_error( "Input file is not seekable." ); return 1; }
 
-  Genbook genbook( ipos, opos, domain, isize, logname, cluster, hardbs );
-  if( genbook.domain().in_size() == 0 )
+  Genbook genbook( offset, isize, domain, logname, cluster, hardbs );
+  if( genbook.domain().size() == 0 )
     { show_error( "Nothing to do." ); return 0; }
   if( !genbook.blank() && genbook.current_status() != Logbook::generating )
     {
@@ -321,7 +239,7 @@ int do_generate( const long long ipos, const long long opos, Domain & domain,
   }
 
 
-int do_rescue( const long long ipos, const long long opos, Domain & domain,
+int do_rescue( const long long offset, Domain & domain,
                const char * const iname, const char * const oname,
                const char * const logname, const int cluster,
                const int hardbs, const long long max_error_rate,
@@ -340,11 +258,12 @@ int do_rescue( const long long ipos, const long long opos, Domain & domain,
   if( isize < 0 )
     { show_error( "Input file is not seekable." ); return 1; }
 
-  Rescuebook rescuebook( ipos, opos, domain, isize, iname, logname, cluster,
-                         hardbs, max_error_rate, max_errors, max_retries,
-                         min_read_rate, complete_only, new_errors_only,
-                         nosplit, retrim, sparse, synchronous, try_again );
-  if( rescuebook.domain().in_size() == 0 )
+  Rescuebook rescuebook( offset, isize, max_error_rate, min_read_rate,
+                         domain, iname, logname, cluster, hardbs,
+                         max_errors, max_retries, complete_only,
+                         new_errors_only, nosplit, retrim, sparse,
+                         synchronous, try_again );
+  if( rescuebook.domain().size() == 0 )
     { show_error( "Nothing to do." ); return 0; }
   if( o_trunc && !rescuebook.blank() )
     {
@@ -361,7 +280,8 @@ int do_rescue( const long long ipos, const long long opos, Domain & domain,
   while( preallocate )
     {
 #if defined _POSIX_ADVISORY_INFO && _POSIX_ADVISORY_INFO > 0
-    if( posix_fallocate( odes, opos, rescuebook.domain().size() ) == 0 ) break;
+    if( posix_fallocate( odes, rescuebook.domain().pos() + rescuebook.offset(),
+                         rescuebook.domain().size() ) == 0 ) break;
     if( errno != EINTR )
       { show_error( "Can't preallocate output file", errno ); return 1; }
 #else
@@ -414,41 +334,7 @@ int do_rescue( const long long ipos, const long long opos, Domain & domain,
 } // end namespace
 
 
-int verbosity = 0;
-
-
-void show_error( const char * const msg, const int errcode, const bool help ) throw()
-  {
-  if( verbosity >= 0 )
-    {
-    if( msg && msg[0] )
-      {
-      std::fprintf( stderr, "%s: %s", program_name, msg );
-      if( errcode > 0 )
-        std::fprintf( stderr, ": %s", std::strerror( errcode ) );
-      std::fprintf( stderr, "\n" );
-      }
-    if( help && invocation_name && invocation_name[0] )
-      std::fprintf( stderr, "Try `%s --help' for more information.\n",
-                    invocation_name );
-    }
-  }
-
-
-void internal_error( const char * const msg )
-  {
-  if( verbosity >= 0 )
-    std::fprintf( stderr, "%s: internal error: %s.\n", program_name, msg );
-  std::exit( 3 );
-  }
-
-
-void write_logfile_header( FILE * const f ) throw()
-  {
-  std::fprintf( f, "# Rescue Logfile. Created by %s version %s\n",
-                Program_name, PROGVERSION );
-  std::fprintf( f, "# Command line: %s\n", command_line.c_str() );
-  }
+#include "main_common.cc"
 
 
 int main( const int argc, const char * const argv[] )
@@ -467,9 +353,9 @@ int main( const int argc, const char * const argv[] )
   int max_retries = 0;
   int o_direct = 0;
   int o_trunc = 0;
+  Mode program_mode = m_none;
   bool complete_only = false;
   bool force = false;
-  bool generate = false;
   bool new_errors_only = false;
   bool nosplit = false;
   bool preallocate = false;
@@ -545,8 +431,9 @@ int main( const int argc, const char * const argv[] )
                 max_errors = getnum( arg, 0, 0, INT_MAX ); break;
       case 'E': max_error_rate = getnum( arg, hardbs, 0 ); break;
       case 'f': force = true; break;
-      case 'F': filltypes = arg; check_fill_types( filltypes ); break;
-      case 'g': generate = true; break;
+      case 'F': set_mode( program_mode, m_fill ); filltypes = arg;
+                check_types( filltypes, "fill" ); break;
+      case 'g': set_mode( program_mode, m_generate ); break;
       case 'h': show_help( cluster_bytes / default_hardbs, default_hardbs );
                 return 0;
       case 'i': ipos = getnum( arg, hardbs, 0 ); break;
@@ -587,35 +474,29 @@ int main( const int argc, const char * const argv[] )
 
   Domain domain( ipos, max_size, domain_logfile_name );
 
-  if( filltypes.size() )
+  switch( program_mode )
     {
-    if( min_read_rate >= 0 || max_error_rate >= 0 || max_errors >= 0 ||
-        max_retries || o_direct || o_trunc || complete_only || generate ||
-        nosplit || preallocate || retrim || reverse || sparse || try_again )
-      {
-      show_error( "warning: Options -a -C -d -e -E -g -M -n -p -r -R -S -t and -T" );
-      show_error( "         are ignored in fill mode." );
-      }
-
-    return do_fill( ipos, opos, domain, iname, oname, logname, cluster,
-                    hardbs, filltypes, synchronous );
+    case m_fill:
+      if( min_read_rate >= 0 || max_error_rate >= 0 || max_errors >= 0 ||
+          max_retries || o_direct || o_trunc || complete_only ||
+          nosplit || preallocate || retrim || reverse || sparse || try_again )
+        show_error( "warning: Options -a -C -d -e -E -M -n -p -r -R -S -t and -T\n"
+                    "are ignored in fill mode." );
+      return do_fill( opos - ipos, domain, iname, oname, logname, cluster,
+                      hardbs, filltypes, synchronous );
+    case m_generate:
+      if( min_read_rate >= 0 || max_error_rate >= 0 || max_errors >= 0 ||
+          max_retries || o_direct || o_trunc || complete_only || nosplit ||
+          preallocate || retrim || reverse || sparse || synchronous || try_again )
+        show_error( "warning: Options -a -C -d -D -e -E -M -n -p -r -R -S -t and -T\n"
+                    "are ignored in generate-logfile mode." );
+      return do_generate( opos - ipos, domain, iname, oname, logname,
+                          cluster, hardbs );
+    case m_none:
+      return do_rescue( opos - ipos, domain, iname, oname, logname, cluster,
+                        hardbs, max_error_rate, max_errors, max_retries,
+                        min_read_rate, o_direct, o_trunc, complete_only,
+                        new_errors_only, nosplit, preallocate, retrim, reverse,
+                        sparse, synchronous, try_again );
     }
-  if( generate )
-    {
-    if( min_read_rate >= 0 || max_error_rate >= 0 || max_errors >= 0 ||
-        max_retries || o_direct || o_trunc || complete_only || nosplit ||
-        preallocate || retrim || reverse || sparse || synchronous || try_again )
-      {
-      show_error( "warning: Options -a -C -d -D -e -E -M -n -p -r -R -S -t and -T" );
-      show_error( "         are ignored in generate-logfile mode." );
-      }
-
-    return do_generate( ipos, opos, domain, iname, oname, logname,
-                        cluster, hardbs );
-    }
-  return do_rescue( ipos, opos, domain, iname, oname, logname, cluster,
-                    hardbs, max_error_rate, max_errors, max_retries,
-                    min_read_rate, o_direct, o_trunc, complete_only,
-                    new_errors_only, nosplit, preallocate, retrim, reverse,
-                    sparse, synchronous, try_again );
   }

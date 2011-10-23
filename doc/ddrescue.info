@@ -12,7 +12,7 @@ File: ddrescue.info,  Node: Top,  Next: Introduction,  Up: (dir)
 GNU ddrescue Manual
 *******************
 
-This manual is for GNU ddrescue (version 1.15-pre2, 6 October 2011).
+This manual is for GNU ddrescue (version 1.15-pre3, 23 October 2011).
 
 * Menu:
 
@@ -126,6 +126,12 @@ Recoverable formats
      "compact disc digital audio" CDs can't, "video CDs"[1] maybe.
      [1] http://en.wikipedia.org/wiki/Video_CD
 
+Rescue domain
+     Block or set of blocks to be acted upon (rescued, listed, etc).
+     You can define it with the options `--input-position', `--max-size'
+     and `--domain-logfile'. The rescue domain defaults to the whole
+     input file or logfile.
+
 Sector
      Hardware block. Smallest accessible amount of data on a device.
 
@@ -138,8 +144,8 @@ File: ddrescue.info,  Node: Algorithm,  Next: Invoking Ddrescue,  Prev: Basic Co
 
 GNU ddrescue manages efficiently the status of the rescue in progress
 and tries to rescue the good parts first, scheduling reads inside bad
-areas for later. This maximizes the amount of data that can be finally
-recovered from a failing drive.
+(or slow) areas for later. This maximizes the amount of data that can be
+finally recovered from a failing drive.
 
    The standard dd utility can be used to save data from a failing
 drive, but it reads the data secuentially, which may wear out the drive
@@ -231,10 +237,18 @@ The format for running ddrescue is:
 
 `-a BYTES'
 `--min-read-rate=BYTES'
-     Minimum read rate of good areas in bytes per second. If the read
-     rate falls below this value, ddrescue will skip ahead a variable
-     amount depending on rate and error history. If BYTES is 0, the
-     minimum read rate is taken as (average_rate / 10).
+     Minimum read rate of good areas during the first pass, in bytes per
+     second. If the read rate falls below this value, ddrescue will skip
+     ahead a variable amount depending on rate and error history. The
+     skipped blocks are tried in additional passes where the minimum
+     read rate is divided by ten before each pass, until there are no
+     more non-tried blocks left. If BYTES is 0, the minimum read rate
+     is taken as (average_rate / 10).
+
+     Note that specifying a minimum read rate above the posibilities of
+     the input device will result in a very low average rate because
+     all reads will be considered slow reads and continuous skipping
+     will occur.
 
 `-b BYTES'
 `--block-size=BYTES'
@@ -310,8 +324,8 @@ The format for running ddrescue is:
      original rescue run. See the chapter Generate Mode (*note Generate
      Mode::) for a complete description of the generate mode.
 
-`-i POS'
-`--input-position=POS'
+`-i BYTES'
+`--input-position=BYTES'
      Starting position in input file, in bytes. Defaults to 0. In fill
      mode it refers to the original input file. See the chapter Fill
      Mode (*note Fill Mode::) for details.
@@ -331,14 +345,13 @@ The format for running ddrescue is:
 
 `-n'
 `--no-split'
-     Stop after the trimming pass. Avoids spending a lot of time trying
-     to rescue the most difficult parts of the file. This option
-     overrides the `--max-retries' option.
+     Skip the splitting pass. Avoids spending a lot of time trying to
+     rescue the most difficult parts of the file.
 
-`-o POS'
-`--output-position=POS'
+`-o BYTES'
+`--output-position=BYTES'
      Starting position in output file, in bytes. Defaults to
-     `--input-position'. The bytes below POS aren't touched if they
+     `--input-position'. The bytes below BYTES aren't touched if they
      exist and truncation is not requested. Else they are set to 0.
 
 `-p'
@@ -403,8 +416,8 @@ The format for running ddrescue is:
 
 
 
-   Numbers given as arguments to options (positions, sizes) may be
-followed by a multiplier and an optional `B' for "byte".
+   Numbers given as arguments to options (positions, sizes, retries,
+etc) may be followed by a multiplier and an optional `B' for "byte".
 
    Table of SI and binary prefixes (unit multipliers):
 
@@ -418,6 +431,12 @@ P        petabyte  (10^15)         |   Pi       pebibyte (2^50)
 E        exabyte   (10^18)         |   Ei       exbibyte (2^60)
 Z        zettabyte (10^21)         |   Zi       zebibyte (2^70)
 Y        yottabyte (10^24)         |   Yi       yobibyte (2^80)
+
+
+   Return values: 0 for a normal exit, 1 for environmental problems
+(file not found, invalid flags, I/O errors, etc), 2 to indicate a
+corrupt or invalid input file, 3 for an internal consistency error (eg,
+bug) which caused ddrescue to panic.
 
 
 File: ddrescue.info,  Node: Logfile Structure,  Next: Examples,  Prev: Invoking Ddrescue,  Up: Top
@@ -469,7 +488,7 @@ Character   Meaning
 
 And here is an example logfile:
 
-# Rescue Logfile. Created by GNU ddrescue version 1.15-pre2
+# Rescue Logfile. Created by GNU ddrescue version 1.15-pre3
 # Command line: ddrescue /dev/fd0 fdimage logfile
 # current_pos  current_status
 0x00120000     ?
@@ -803,11 +822,23 @@ File: ddrescue.info,  Node: Ddrescuelog,  Next: Invoking Ddrescuelog,  Prev: Gen
 10 Ddrescuelog
 **************
 
-Ddrescuelog is a tool that manipulates ddrescue logfiles and converts
-them to/from other formats.
+Ddrescuelog is a tool that manipulates ddrescue logfiles, shows their
+contents, and converts them to/from other formats. Ddrescuelog
+operations can be restricted to one or several parts of the logfile if
+the domain setting options are used.
+
+   Here are some examples of how to use ddrescuelog, alone or in
+combination with other tools.
 
 
-Example 1: Rescue two ext2 partitions in /dev/hda to /dev/hdb and
+Example 1: Delete the logfile if the rescue is finished (all data is
+recovered without errors left).
+
+     ddrescue -f /dev/hda /dev/hdb logfile
+     ddrescuelog -d logfile
+
+
+Example 2: Rescue two ext2 partitions in /dev/hda to /dev/hdb and
 repair the file systems using badblock lists generated with
 ddrescuelog. File system block size is 4096.
 Note: you do need to partition /dev/hdb beforehand.
@@ -821,7 +852,7 @@ Note: you do need to partition /dev/hdb beforehand.
      e2fsck -v -f -L badblocks2 /dev/hdb2
 
 
-Example 2: Rescue a whole disc with two ext2 partitions in /dev/hda to
+Example 3: Rescue a whole disc with two ext2 partitions in /dev/hda to
 /dev/hdb and repair the file systems using badblock lists generated with
 ddrescuelog. Disc sector size is 512, file system block size is 4096.
 Arguments to options `-i' and `-s' are the starting positions and sizes
@@ -858,32 +889,89 @@ The format for running ddrescuelog is:
      Print the version number of ddrescuelog on the standard output and
      exit.
 
+`-a OLD_TYPES,NEW_TYPES'
+`--change-types=OLD_TYPES,NEW_TYPES'
+     Change the status of every block in the rescue domain from one
+     type in OLD_TYPES to the corresponding type in NEW_TYPES, much like
+     the `tr' command does, and write the resulting logfile to standard
+     output. OLD_TYPES and NEW_TYPES are strings of block status
+     characters as defined in the chapter Logfile Structure (*note
+     Logfile Structure::). Blocks whose status is not in OLD_TYPES are
+     left unchanged. If NEW_TYPES is shorter than OLD_TYPES the last
+     type of NEW_TYPES is repeated as many times as necessary.
+
 `-b BYTES'
 `--block-size=BYTES'
      Block size used by ddrescuelog. Depending on the requested
      operation it may be the sector size of the input device, the block
      size of the rescued file system, etc. Defaults to 4096.
 
-`-i POS'
-`--input-position=POS'
-     Starting position of operation, in bytes. Defaults to 0. It refers
-     to a position in the original input file.
+`-c[TYPE1TYPE2]'
+`--create-logfile[=TYPE1TYPE2]'
+     Create a logfile from a list of block numbers read from standard
+     input.  Only blocks included in the rescue domain will be added to
+     LOGFILE.
+
+     TYPE1 and TYPE2 are block status characters as defined in the
+     chapter Logfile Structure (*note Logfile Structure::). TYPE1 sets
+     the type for blocks included in the list, while TYPE2 sets the
+     type for the rest of the logfile. If not specified, TYPE1 defaults
+     to `+' and TYPE2 defaults to `-'.
+
+`-d'
+`--delete-if-done'
+     Delete the given LOGFILE if all the blocks in the rescue domain
+     have been successfuly recovered. The exit status is 0 if LOGFILE
+     could be deleted, 1 otherwise.
+
+`-D'
+`--done-status'
+     Test if all the blocks in the rescue domain have been successfuly
+     recovered. The exit status is 0 if all tested blocks are finished,
+     1 otherwise.
+
+`-f'
+`--force'
+     Force overwrite of LOGFILE.
+
+`-i BYTES'
+`--input-position=BYTES'
+     Starting position of the rescue domain, in bytes. Defaults to 0. It
+     refers to a position in the original input file.
 
 `-l TYPES'
 `--list-blocks=TYPES'
-     Print the block numbers of the blocks specified as any of TYPES in
-     the logfile. TYPES contains one or more of the status characters
-     defined in the chapter Logfile Structure (*note Logfile
-     Structure::).
+     Print on standard output the block numbers of the blocks specified
+     as any of TYPES in LOGFILE and included in the rescue domain.
+     TYPES contains one or more of the block status characters defined
+     in the chapter Logfile Structure (*note Logfile Structure::).
 
      The list format is one block number per line in decimal, like the
      output of the badblocks program, so that it can be used as input
      for e2fsck or other similar filesystem repairing tool.
 
-`-o POS'
-`--output-position=POS'
-     Starting position in output file, in bytes. Defaults to
-     `--input-position'.
+`-m FILE'
+`--domain-logfile=FILE'
+     Restrict the rescue domain to the blocks marked as finished in the
+     logfile FILE.
+
+`-n'
+`--invert-logfile'
+     Invert the types of the blocks in LOGFILE which are included in
+     the rescue domain, and write the resulting logfile to standard
+     output.  Finished blocks (`+') are changed to bad-sector (`-'), all
+     other types are changed to finished.
+
+`-o BYTES'
+`--output-position=BYTES'
+     Starting position in output file, in bytes. Is used by the
+     `--list-blocks' option. Defaults to `--input-position'.
+
+`-p FILE'
+`--compare-logfile=FILE'
+     Compare the types of the blocks included in the rescue domain. The
+     exit status is 0 if all tested blocks are the same in both files, 1
+     otherwise.
 
 `-q'
 `--quiet'
@@ -891,13 +979,48 @@ The format for running ddrescuelog is:
 
 `-s BYTES'
 `--max-size=BYTES'
-     Maximum size of the data to be processed, in bytes. It refers to a
-     size in the original input file.
+     Maximum size of the rescue domain, in bytes. It refers to a size
+     in the original input file.
+
+`-t'
+`--show-status'
+     Print a summary of LOGFILE contents on the standard output. The
+     summary can be restricted to one or several parts of LOGFILE if
+     the domain setting options are used.
 
 `-v'
 `--verbose'
      Verbose mode.
 
+`-x FILE'
+`--xor-logfile=FILE'
+     Perform a logical XOR (exclusive OR) operation between the finished
+     blocks in FILE and those in LOGFILE, and write the resulting
+     logfile to standard output. In other words, in the resulting
+     logfile a block is only shown as finisned if it was finisned in
+     either of the two input logfiles but not in both.
+
+`-y FILE'
+`--and-logfile=FILE'
+     Perform a logical AND operation between the finished blocks in
+     FILE and those in LOGFILE, and write the resulting logfile to
+     standard output. In other words, in the resulting logfile a block
+     is only shown as finisned if it was finisned in both input
+     logfiles.
+
+`-z FILE'
+`--or-logfile=FILE'
+     Perform a logical OR operation between the finished blocks in FILE
+     and those in LOGFILE, and write the resulting logfile to standard
+     output. In other words, in the resulting logfile a block is shown
+     as finisned if it was finisned in either of the two input logfiles.
+
+
+
+   Return values: 0 for a normal exit, 1 for environmental problems
+(file not found, invalid flags, I/O errors, etc), 2 to indicate a
+corrupt or invalid input file, 3 for an internal consistency error (eg,
+bug) which caused ddrescuelog to panic.
 
 
 File: ddrescue.info,  Node: Problems,  Next: Concept Index,  Prev: Invoking Ddrescuelog,  Up: Top
@@ -945,19 +1068,19 @@ Concept Index
 
 Tag Table:
 Node: Top203
-Node: Introduction1305
-Node: Basic Concepts3840
-Node: Algorithm5048
-Node: Invoking Ddrescue8450
-Node: Logfile Structure16116
-Node: Examples18371
-Ref: lzip-example22033
-Node: Direct Disc Access23405
-Node: Fill Mode25282
-Node: Generate Mode29378
-Node: Ddrescuelog31053
-Node: Invoking Ddrescuelog32698
-Node: Problems34358
-Node: Concept Index34915
+Node: Introduction1306
+Node: Basic Concepts3841
+Node: Algorithm5303
+Node: Invoking Ddrescue8715
+Node: Logfile Structure17017
+Node: Examples19272
+Ref: lzip-example22934
+Node: Direct Disc Access24306
+Node: Fill Mode26183
+Node: Generate Mode30279
+Node: Ddrescuelog31954
+Node: Invoking Ddrescuelog34013
+Node: Problems39389
+Node: Concept Index39946
 
 End Tag Table

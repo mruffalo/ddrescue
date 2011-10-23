@@ -49,6 +49,11 @@ public:
   void align_end( const int hardbs ) throw();
   void inc_size( const long long delta ) throw() { size_ += delta; }
 
+  bool operator==( const Block & b ) const throw()
+    { return pos_ == b.pos_ && size_ == b.size_; }
+  bool operator!=( const Block & b ) const throw()
+    { return pos_ != b.pos_ || size_ != b.size_; }
+
   bool follows( const Block & b ) const throw()
     { return ( pos_ == b.end() ); }
   bool includes( const Block & b ) const throw()
@@ -80,6 +85,9 @@ public:
   Status status() const throw() { return status_; }
   void status( const Status st ) throw() { status_ = st; }
 
+  bool operator!=( const Sblock & sb ) const throw()
+    { return Block::operator!=( sb ) || status_ != sb.status_; }
+
   bool join( const Sblock & sb ) throw()
     { if( status_ == sb.status_ ) return Block::join( sb ); else return false; }
   Sblock split( const long long pos, const int hardbs = 1 )
@@ -97,7 +105,8 @@ class Domain
   std::vector< Block > block_vector;	// blocks are ordered and don't overlap
 
 public:
-  Domain( const long long p, const long long s, const char * const name = 0 );
+  Domain( const long long p, const long long s,
+          const char * const logname = 0 );
 
   long long pos() const throw()
     { if( block_vector.size() ) return block_vector[0].pos(); else return 0; }
@@ -120,6 +129,14 @@ public:
   long long end() const throw()
     { if( block_vector.size() ) return block_vector.back().end();
       else return 0; }
+
+  bool operator!=( const Domain & d ) const throw()
+    {
+    if( block_vector.size() != d.block_vector.size() ) return true;
+    for( unsigned int i = 0; i < block_vector.size(); ++i )
+      if( block_vector[i] != d.block_vector[i] ) return true;
+    return false;
+    }
 
   bool operator<( const Block & b ) const throw()
     { return ( block_vector.size() && block_vector.back().end() <= b.pos() ); }
@@ -153,4 +170,5 @@ public:
   void clear() { block_vector.clear(); }
   void crop( const Block & b );
   bool crop_by_file_size( const long long isize );
+  int blocks() const throw() { return (int)block_vector.size(); }
   };

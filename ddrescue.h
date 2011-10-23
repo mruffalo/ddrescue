@@ -36,6 +36,7 @@ private:
   mutable int index_;			// cached index of last find or change
   std::vector< Sblock > sblock_vector;	// note: blocks are consecutive
   long ul_t1;				// variable for update_logfile
+  bool logfile_exists_;
 
   void erase_sblock( const int i )
     { sblock_vector.erase( sblock_vector.begin() + i ); }
@@ -44,28 +45,32 @@ private:
   void split_domain_border_sblocks();
 
 public:
-  Logbook( const long long ipos, const long long opos, Domain & dom,
-           const long long isize, const char * const name,
-           const int cluster, const int hardbs, const bool complete_only );
+  Logbook( const long long offset, const long long isize,
+           Domain & dom, const char * const logname,
+           const int cluster, const int hardbs,
+           const bool complete_only, const bool do_not_read = false );
   ~Logbook() { delete[] iobuf_base; }
 
   bool blank() const throw();
   void compact_sblock_vector();
-  bool update_logfile( const int odes = -1, const bool force = false );
+  bool update_logfile( const int odes = -1, const bool force = false,
+                       const bool retry = true );
+  void write_logfile( FILE * const f ) const throw();
 
   long long current_pos() const throw() { return current_pos_; }
   Status current_status() const throw() { return current_status_; }
   const Domain & domain() const throw() { return domain_; }
-  const char *filename() const throw() { return filename_; }
+  const char * filename() const throw() { return filename_; }
   uint8_t * iobuf() const throw() { return iobuf_; }
   int hardbs() const throw() { return hardbs_; }
   int softbs() const throw() { return softbs_; }
   long long offset() const throw() { return offset_; }
   const char * final_msg() const throw() { return final_msg_; }
   int final_errno() const throw() { return final_errno_; }
+  bool logfile_exists() const throw() { return logfile_exists_; }
 
   void current_pos( const long long pos ) throw() { current_pos_ = pos; }
-  void current_status( Status st ) throw() { current_status_ = st; }
+  void current_status( const Status st ) throw() { current_status_ = st; }
   void final_msg( const char * const msg ) throw() { final_msg_ = msg; }
   void final_errno( const int e ) throw() { final_errno_ = e; }
 
@@ -74,6 +79,11 @@ public:
   int sblocks() const throw() { return (int)sblock_vector.size(); }
   void change_sblock_status( const int i, const Sblock::Status st ) throw()
     { sblock_vector[i].status( st ); }
+  void split_sblock_by( const long long pos, const int i )
+    {
+    if( sblock_vector[i].includes( pos ) )
+      insert_sblock( i, sblock_vector[i].split( pos ) );
+    }
   void truncate_vector( const long long pos );
 
   int find_index( const long long pos ) const throw();
@@ -85,6 +95,7 @@ public:
     { return ( st == copying || st == trimming || st == splitting ||
                st == retrying || st == filling || st == generating ||
                st == finished ); }
+  static const char * status_name( const Status st ) throw();
   };
 
 
@@ -106,10 +117,10 @@ class Fillbook : public Logbook
   void show_status( const long long ipos, bool force = false ) throw();
 
 public:
-  Fillbook( const long long ipos, const long long opos, Domain & dom,
-            const char * const name, const int cluster, const int hardbs,
+  Fillbook( const long long offset, Domain & dom,
+            const char * const logname, const int cluster, const int hardbs,
             const bool synchronous )
-    : Logbook( ipos, opos, dom, 0, name, cluster, hardbs, true ),
+    : Logbook( offset, 0, dom, logname, cluster, hardbs, true ),
       synchronous_( synchronous ),
       a_rate( 0 ), c_rate( 0 ), first_size( 0 ), last_size( 0 ),
       last_ipos( 0 ), t0( 0 ), t1( 0 )
@@ -135,10 +146,10 @@ class Genbook : public Logbook
   void show_status( const long long ipos, const char * const msg = 0,
                     bool force = false ) throw();
 public:
-  Genbook( const long long ipos, const long long opos, Domain & dom,
-           const long long isize, const char * const logname,
+  Genbook( const long long offset, const long long isize,
+           Domain & dom, const char * const logname,
            const int cluster, const int hardbs )
-    : Logbook( ipos, opos, dom, isize, logname, cluster, hardbs, false ),
+    : Logbook( offset, isize, dom, logname, cluster, hardbs, false ),
       a_rate( 0 ), c_rate( 0 ), first_size( 0 ), last_size( 0 ),
       last_ipos( 0 ), t0( 0 ), t1( 0 ), oldlen( 0 ) {}
 
@@ -148,7 +159,8 @@ public:
 
 class Rescuebook : public Logbook
   {
-  const long long max_error_rate_, min_read_rate_;
+  const long long max_error_rate_;
+  long long min_read_rate_;
   long long sparse_size;		// end position of pending writes
   long long recsize, errsize;		// total recovered and error sizes
   const char * const iname_;
@@ -172,6 +184,8 @@ class Rescuebook : public Logbook
   bool too_many_errors() throw()
     { if( max_errors_ >= 0 && errors > max_errors_ ) e_code |= 2;
       return ( e_code != 0 ); }
+  void reduce_min_read_rate() throw()
+    { if( min_read_rate_ > 0 ) min_read_rate_ /= 10; }
   bool slow_read() const throw()
     { return ( ( min_read_rate_ > 0 && c_rate < min_read_rate_ ) ||
                ( min_read_rate_ == 0 && c_rate < a_rate / 10 ) ); }
@@ -190,12 +204,12 @@ class Rescuebook : public Logbook
   void show_status( const long long ipos, const char * const msg = 0,
                     const bool force = false ) throw();
 public:
-  Rescuebook( const long long ipos, const long long opos,
-              Domain & dom, const long long isize,
+  Rescuebook( const long long offset, const long long isize,
+              const long long max_error_rate,
+              const long long min_read_rate, Domain & dom,
               const char * const iname, const char * const logname,
               const int cluster, const int hardbs,
-              const long long max_error_rate, const int max_errors = -1,
-              const int max_retries = 0, const long long min_read_rate = -1,
+              const int max_errors, const int max_retries,
               const bool complete_only = false,
               const bool new_errors_only = false, const bool nosplit = false,
               const bool retrim = false, const bool sparse = false,
@@ -207,15 +221,15 @@ public:
 
 // Defined in io.cc
 //
-const char * format_num( long long num, long long limit = 999999,
-                         const int set_prefix = 0 ) throw();
 void set_signals() throw();
 
 
-// Defined in main.cc ddrescuelog.cc
+// Defined in main_common.cc
 //
 extern int verbosity;
 void internal_error( const char * const msg ) __attribute__ ((noreturn));
 void show_error( const char * const msg,
                  const int errcode = 0, const bool help = false ) throw();
 void write_logfile_header( FILE * const f ) throw();
+const char * format_num( long long num, long long limit = 999999,
+                         const int set_prefix = 0 ) throw();

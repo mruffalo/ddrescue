@@ -1,9 +1,37 @@
 Changes in version 1.15:
 
-The new option "-a, --min-read-rate" has been added.
+The new option "-a, --min-read-rate" has been added. It now uses
+additional passes, dividing rate by ten on each pass.
 
 Ddrescuelog, a tool for conversion and manipulation of ddrescue
 logfiles, has been added.
+
+The new option "-a, --change-types" has been added to ddrescuelog.
+
+Added new option "-c, --create-logfile" instructing ddrescuelog to
+create a logfile from a list of block numbers read from standard input.
+
+Added new option "-d, --delete-if-done" instructing ddrescuelog to
+delete the given logfile if all the blocks in domain have been
+successfuly recovered.
+
+Added new option "-D, --done-status" instructing ddrescuelog to test if
+all the blocks in domain have been successfuly recovered.
+
+The option "-m, --domain-logfile" has been added to ddrescuelog.
+
+The new option "-n, --invert-logfile" has been added to ddrescuelog.
+
+The new option "-p, --compare-logfile" has been added to ddrescuelog.
+
+Added new option "-t, --show-status" instructing ddrescuelog to print a
+summary of the given logfile.
+
+The new option "-x, --xor-logfile" has been added to ddrescuelog.
+
+The new option "-y, --and-logfile" has been added to ddrescuelog.
+
+The new option "-z, --or-logfile" has been added to ddrescuelog.
 
 A spurious warning about "-D" being ignored in fill mode has been
 removed.

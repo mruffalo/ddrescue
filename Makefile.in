@@ -40,8 +40,8 @@ ddrescuelog.o : ddrescuelog.cc
 
 $(objs)       : Makefile block.h ddrescue.h
 arg_parser.o  : arg_parser.h
-main.o        : arg_parser.h
-ddrescuelog.o : Makefile arg_parser.h block.h ddrescue.h
+main.o        : arg_parser.h main_common.cc
+ddrescuelog.o : Makefile arg_parser.h block.h ddrescue.h main_common.cc
 
 
 doc : info man

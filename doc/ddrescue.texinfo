@@ -5,8 +5,8 @@
 @finalout
 @c %**end of header
 
-@set UPDATED 6 October 2011
-@set VERSION 1.15-pre2
+@set UPDATED 23 October 2011
+@set VERSION 1.15-pre3
 
 @dircategory GNU Packages
 @direntry
@@ -144,6 +144,12 @@ ddrescue. DVDs can be mounted and they can be rescued, "compact disc
 digital audio" CDs can't, "video CDs"[1] maybe.@*
 [1] http://en.wikipedia.org/wiki/Video_CD
 
+@item Rescue domain
+Block or set of blocks to be acted upon (rescued, listed, etc). You can
+define it with the options @samp{--input-position}, @samp{--max-size}
+and @samp{--domain-logfile}. The rescue domain defaults to the whole
+input file or logfile.
+
 @item Sector
 Hardware block. Smallest accessible amount of data on a device.
 
@@ -156,8 +162,8 @@ Hardware block. Smallest accessible amount of data on a device.
 
 GNU ddrescue manages efficiently the status of the rescue in progress
 and tries to rescue the good parts first, scheduling reads inside bad
-areas for later. This maximizes the amount of data that can be finally
-recovered from a failing drive.
+(or slow) areas for later. This maximizes the amount of data that can be
+finally recovered from a failing drive.
 
 The standard dd utility can be used to save data from a failing drive,
 but it reads the data secuentially, which may wear out the drive without
@@ -260,10 +266,17 @@ Print the version number of ddrescue on the standard output and exit.
 
 @item -a @var{bytes}
 @itemx --min-read-rate=@var{bytes}
-Minimum read rate of good areas in bytes per second. If the read rate
-falls below this value, ddrescue will skip ahead a variable amount
-depending on rate and error history. If @var{bytes} is 0, the minimum
-read rate is taken as @w{(average_rate / 10)}.
+Minimum read rate of good areas during the first pass, in bytes per
+second. If the read rate falls below this value, ddrescue will skip
+ahead a variable amount depending on rate and error history. The skipped
+blocks are tried in additional passes where the minimum read rate is
+divided by ten before each pass, until there are no more non-tried
+blocks left. If @var{bytes} is 0, the minimum read rate is taken as
+@w{(average_rate / 10)}.
+
+Note that specifying a minimum read rate above the posibilities of the
+input device will result in a very low average rate because all reads
+will be considered slow reads and continuous skipping will occur.
 
 @item -b @var{bytes}
 @itemx --block-size=@var{bytes}
@@ -337,8 +350,8 @@ original rescue run. Note that you must keep the original offset between
 rescue run. See the chapter Generate Mode (@pxref{Generate Mode}) for a
 complete description of the generate mode.
 
-@item -i @var{pos}
-@itemx --input-position=@var{pos}
+@item -i @var{bytes}
+@itemx --input-position=@var{bytes}
 Starting position in input file, in bytes. Defaults to 0. In fill mode
 it refers to the original input file. See the chapter Fill Mode
 (@pxref{Fill Mode}) for details.
@@ -358,14 +371,13 @@ possible to rescue some of them.
 
 @item -n
 @itemx --no-split
-Stop after the trimming pass. Avoids spending a lot of time trying to
-rescue the most difficult parts of the file. This option overrides the
-@samp{--max-retries} option.
+Skip the splitting pass. Avoids spending a lot of time trying to rescue
+the most difficult parts of the file.
 
-@item -o @var{pos}
-@itemx --output-position=@var{pos}
+@item -o @var{bytes}
+@itemx --output-position=@var{bytes}
 Starting position in output file, in bytes. Defaults to
-@samp{--input-position}. The bytes below @var{pos} aren't touched if
+@samp{--input-position}. The bytes below @var{bytes} aren't touched if
 they exist and truncation is not requested. Else they are set to 0.
 
 @item -p
@@ -433,8 +445,8 @@ Verbose mode.
 @end table
 
 @sp 1
-Numbers given as arguments to options (positions, sizes) may be followed
-by a multiplier and an optional @samp{B} for "byte".
+Numbers given as arguments to options (positions, sizes, retries, etc)
+may be followed by a multiplier and an optional @samp{B} for "byte".
 
 Table of SI and binary prefixes (unit multipliers):
 
@@ -450,6 +462,12 @@ Table of SI and binary prefixes (unit multipliers):
 @item Z @tab zettabyte (10^21)        @tab | @tab Zi @tab zebibyte (2^70)
 @item Y @tab yottabyte (10^24)        @tab | @tab Yi @tab yobibyte (2^80)
 @end multitable
+
+@sp 1
+Return values: 0 for a normal exit, 1 for environmental problems (file
+not found, invalid flags, I/O errors, etc), 2 to indicate a corrupt or
+invalid input file, 3 for an internal consistency error (eg, bug) which
+caused ddrescue to panic.
 
 
 @node Logfile Structure
@@ -881,16 +899,32 @@ Note that you must keep the original offset between
 @samp{--input-position} and @samp{--output-position} of the original
 rescue run.
 
+
 @node Ddrescuelog
 @chapter Ddrescuelog
 @cindex ddrescuelog
 
-Ddrescuelog is a tool that manipulates ddrescue logfiles and converts
-them to/from other formats.
+Ddrescuelog is a tool that manipulates ddrescue logfiles, shows their
+contents, and converts them to/from other formats. Ddrescuelog
+operations can be restricted to one or several parts of the logfile if
+the domain setting options are used.
+
+Here are some examples of how to use ddrescuelog, alone or in
+combination with other tools.
 
 @sp 1
 @noindent
-Example 1: Rescue two ext2 partitions in /dev/hda to
+Example 1: Delete the logfile if the rescue is finished (all data is
+recovered without errors left).
+
+@example
+ddrescue -f /dev/hda /dev/hdb logfile
+ddrescuelog -d logfile
+@end example
+
+@sp 1
+@noindent
+Example 2: Rescue two ext2 partitions in /dev/hda to
 /dev/hdb and repair the file systems using badblock lists generated with
 ddrescuelog. File system block size is 4096.@*
 Note: you do need to partition /dev/hdb beforehand.
@@ -907,7 +941,7 @@ e2fsck -v -f -L badblocks2 /dev/hdb2
 
 @sp 1
 @noindent
-Example 2: Rescue a whole disc with two ext2 partitions in /dev/hda to
+Example 3: Rescue a whole disc with two ext2 partitions in /dev/hda to
 /dev/hdb and repair the file systems using badblock lists generated with
 ddrescuelog. Disc sector size is 512, file system block size is 4096.
 Arguments to options @samp{-i} and @samp{-s} are the starting positions
@@ -947,31 +981,88 @@ Print an informative help message describing the options and exit.
 @itemx --version
 Print the version number of ddrescuelog on the standard output and exit.
 
+@item -a @var{old_types},@var{new_types}
+@itemx --change-types=@var{old_types},@var{new_types}
+Change the status of every block in the rescue domain from one type in
+@var{old_types} to the corresponding type in @var{new_types}, much like
+the @samp{tr} command does, and write the resulting logfile to standard
+output. @var{old_types} and @var{new_types} are strings of block status
+characters as defined in the chapter Logfile Structure (@pxref{Logfile
+Structure}). Blocks whose status is not in @var{old_types} are left
+unchanged. If @var{new_types} is shorter than @var{old_types} the last
+type of @var{new_types} is repeated as many times as necessary.
+
 @item -b @var{bytes}
 @itemx --block-size=@var{bytes}
 Block size used by ddrescuelog. Depending on the requested operation it
 may be the sector size of the input device, the block size of the
 rescued file system, etc. Defaults to 4096.
 
-@item -i @var{pos}
-@itemx --input-position=@var{pos}
-Starting position of operation, in bytes. Defaults to 0. It refers to a
-position in the original input file.
+@item -c[@var{type1}@var{type2}]
+@itemx --create-logfile[=@var{type1}@var{type2}]
+Create a logfile from a list of block numbers read from standard input.
+Only blocks included in the rescue domain will be added to @var{logfile}.
+
+@var{type1} and @var{type2} are block status characters as defined in
+the chapter Logfile Structure (@pxref{Logfile Structure}). @var{type1}
+sets the type for blocks included in the list, while @var{type2} sets
+the type for the rest of the logfile. If not specified, @var{type1}
+defaults to @samp{+} and @var{type2} defaults to @samp{-}.
+
+@item -d
+@itemx --delete-if-done
+Delete the given @var{logfile} if all the blocks in the rescue domain
+have been successfuly recovered. The exit status is 0 if @var{logfile}
+could be deleted, 1 otherwise.
+
+@item -D
+@itemx --done-status
+Test if all the blocks in the rescue domain have been successfuly
+recovered. The exit status is 0 if all tested blocks are finished, 1
+otherwise.
+
+@item -f
+@itemx --force
+Force overwrite of @var{logfile}.
+
+@item -i @var{bytes}
+@itemx --input-position=@var{bytes}
+Starting position of the rescue domain, in bytes. Defaults to 0. It
+refers to a position in the original input file.
 
 @item -l @var{types}
 @itemx --list-blocks=@var{types}
-Print the block numbers of the blocks specified as any of @var{types} in
-the logfile. @var{types} contains one or more of the status characters
-defined in the chapter Logfile Structure (@pxref{Logfile Structure}).
+Print on standard output the block numbers of the blocks specified as
+any of @var{types} in @var{logfile} and included in the rescue domain.
+@var{types} contains one or more of the block status characters defined
+in the chapter Logfile Structure (@pxref{Logfile Structure}).
 
 The list format is one block number per line in decimal, like the output
 of the badblocks program, so that it can be used as input for e2fsck or
 other similar filesystem repairing tool.
 
-@item -o @var{pos}
-@itemx --output-position=@var{pos}
-Starting position in output file, in bytes. Defaults to
-@samp{--input-position}.
+@item -m @var{file}
+@itemx --domain-logfile=@var{file}
+Restrict the rescue domain to the blocks marked as finished in the
+logfile @var{file}.
+
+@item -n
+@itemx --invert-logfile
+Invert the types of the blocks in @var{logfile} which are included in
+the rescue domain, and write the resulting logfile to standard output.
+Finished blocks (@samp{+}) are changed to bad-sector (@samp{-}), all
+other types are changed to finished.
+
+@item -o @var{bytes}
+@itemx --output-position=@var{bytes}
+Starting position in output file, in bytes. Is used by the
+@samp{--list-blocks} option. Defaults to @samp{--input-position}.
+
+@item -p @var{file}
+@itemx --compare-logfile=@var{file}
+Compare the types of the blocks included in the rescue domain. The exit
+status is 0 if all tested blocks are the same in both files, 1
+otherwise.
 
 @item -q
 @itemx --quiet
@@ -979,14 +1070,48 @@ Quiet operation. Suppress all messages.
 
 @item -s @var{bytes}
 @itemx --max-size=@var{bytes}
-Maximum size of the data to be processed, in bytes. It refers to a size
-in the original input file.
+Maximum size of the rescue domain, in bytes. It refers to a size in the
+original input file.
+
+@item -t
+@itemx --show-status
+Print a summary of @var{logfile} contents on the standard output. The
+summary can be restricted to one or several parts of @var{logfile} if
+the domain setting options are used.
 
 @item -v
 @itemx --verbose
 Verbose mode.
 
+@item -x @var{file}
+@itemx --xor-logfile=@var{file}
+Perform a logical XOR (exclusive OR) operation between the finished
+blocks in @var{file} and those in @var{logfile}, and write the resulting
+logfile to standard output. In other words, in the resulting logfile a
+block is only shown as finisned if it was finisned in either of the two
+input logfiles but not in both.
+
+@item -y @var{file}
+@itemx --and-logfile=@var{file}
+Perform a logical AND operation between the finished blocks in
+@var{file} and those in @var{logfile}, and write the resulting logfile
+to standard output. In other words, in the resulting logfile a block is
+only shown as finisned if it was finisned in both input logfiles.
+
+@item -z @var{file}
+@itemx --or-logfile=@var{file}
+Perform a logical OR operation between the finished blocks in @var{file}
+and those in @var{logfile}, and write the resulting logfile to standard
+output. In other words, in the resulting logfile a block is shown as
+finisned if it was finisned in either of the two input logfiles.
+
 @end table
+
+@sp 1
+Return values: 0 for a normal exit, 1 for environmental problems (file
+not found, invalid flags, I/O errors, etc), 2 to indicate a corrupt or
+invalid input file, 3 for an internal consistency error (eg, bug) which
+caused ddrescuelog to panic.
 
 
 @node Problems

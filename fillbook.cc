@@ -87,7 +87,7 @@ int Fillbook::do_fill( const int odes, const std::string & filltypes )
   if( verbosity >= 0 )
     {
     std::printf( "Press Ctrl-C to interrupt\n" );
-    if( filename() )
+    if( logfile_exists() )
       {
       std::printf( "Initial status (read from logfile)\n" );
       std::printf( "filled size:    %10sB,", format_num( filled_size ) );

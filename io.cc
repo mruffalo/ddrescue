@@ -354,29 +354,6 @@ void Rescuebook::show_status( const long long ipos, const char * const msg,
   }
 
 
-const char * format_num( long long num, long long limit,
-                         const int set_prefix ) throw()
-  {
-  const char * const si_prefix[8] =
-    { "k", "M", "G", "T", "P", "E", "Z", "Y" };
-  const char * const binary_prefix[8] =
-    { "Ki", "Mi", "Gi", "Ti", "Pi", "Ei", "Zi", "Yi" };
-  static bool si = true;
-  static char buf[16];
-
-  if( set_prefix ) si = ( set_prefix > 0 );
-  const int factor = ( si ) ? 1000 : 1024;
-  const char * const *prefix = ( si ) ? si_prefix : binary_prefix;
-  const char *p = "";
-  limit = std::max( 999LL, std::min( 999999LL, limit ) );
-
-  for( int i = 0; i < 8 && llabs( num ) > limit; ++i )
-    { num /= factor; p = prefix[i]; }
-  snprintf( buf, sizeof buf, "%lld %s", num, p );
-  return buf;
-  }
-
-
 void set_signals() throw()
   {
   interrupted = false;
