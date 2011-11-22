@@ -25,9 +25,9 @@ void show_version() throw()
   {
   std::printf( "%s %s\n", Program_name, PROGVERSION );
   std::printf( "Copyright (C) %s Antonio Diaz Diaz.\n", program_year );
-  std::printf( "License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>\n" );
-  std::printf( "This is free software: you are free to change and redistribute it.\n" );
-  std::printf( "There is NO WARRANTY, to the extent permitted by law.\n" );
+  std::printf( "License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>\n"
+               "This is free software: you are free to change and redistribute it.\n"
+               "There is NO WARRANTY, to the extent permitted by law.\n" );
   }
 
 
@@ -167,8 +167,8 @@ const char * format_num( long long num, long long limit,
 
   if( set_prefix ) si = ( set_prefix > 0 );
   const int factor = ( si ? 1000 : 1024 );
-  const char * const *prefix = ( si ? si_prefix : binary_prefix );
-  const char *p = "";
+  const char * const * prefix = ( si ? si_prefix : binary_prefix );
+  const char * p = "";
   limit = std::max( 999LL, std::min( 999999LL, limit ) );
 
   for( int i = 0; i < 8 && llabs( num ) > limit; ++i )

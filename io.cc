@@ -37,8 +37,8 @@
 
 namespace {
 
-bool volatile interrupted = false;		// user pressed Ctrl-C
-extern "C" void sighandler( int ) throw() { interrupted = true; }
+bool volatile interrupted_ = false;		// user pressed Ctrl-C
+extern "C" void sighandler( int ) throw() { interrupted_ = true; }
 
 
 bool block_is_zero( const uint8_t * const buf, const int size ) throw()
@@ -108,12 +108,10 @@ int writeblock( const int fd, const uint8_t * const buf, const int size,
 } // end namespace
 
 
-// Return values: 1 write error, 0 OK, -1 interrupted.
+// Return values: 1 write error, 0 OK.
 //
 int Fillbook::fill_block( const Block & b )
   {
-  current_pos( b.pos() );
-  if( interrupted ) return -1;
   if( b.size() <= 0 ) internal_error( "bad size filling a Block" );
   const int size = b.size();
 
@@ -172,15 +170,10 @@ bool Fillbook::read_buffer( const int ides ) throw()
   }
 
 
-// Return values: 0 OK, -1 interrupted.
-// If !OK, copied_size and error_size are set to 0.
-// If OK && copied_size + error_size < b.size(), it means EOF has been reached.
+// If copied_size + error_size < b.size(), it means EOF has been reached.
 //
-int Genbook::check_block( const Block & b, int & copied_size, int & error_size )
+void Genbook::check_block( const Block & b, int & copied_size, int & error_size )
   {
-  current_pos( b.pos() );
-  copied_size = 0; error_size = 0;
-  if( interrupted ) return -1;
   if( b.size() <= 0 ) internal_error( "bad size checking a Block" );
   copied_size = readblock( odes_, iobuf(), b.size(), b.pos() + offset() );
   if( errno ) error_size = b.size() - copied_size;
@@ -196,7 +189,6 @@ int Genbook::check_block( const Block & b, int & copied_size, int & error_size )
     gensize += size;
     pos += size;
     }
-  return 0;
   }
 
 
@@ -240,34 +232,30 @@ void Genbook::show_status( const long long ipos, const char * const msg,
   }
 
 
-bool Rescuebook::sync_sparse_file() throw()
+bool Rescuebook::extend_outfile_size() throw()
   {
-  bool done = true;
-  if( sparse_ && sparse_size > 0 )
+  if( min_outfile_size_ > 0 || sparse_size > 0 )
     {
+    const long long min_size = std::max( min_outfile_size_, sparse_size );
     const long long size = lseek( odes_, 0, SEEK_END );
-    if( size < 0 ) done = false;
-    if( sparse_size > size )
+    if( size < 0 ) return false;
+    if( min_size > size )
       {
       const uint8_t zero = 0;
-      if( writeblock( odes_, &zero, 1, sparse_size - 1 ) != 1 )
-        done = false;
+      if( writeblock( odes_, &zero, 1, min_size - 1 ) != 1 ) return false;
       fsync( odes_ );
       }
     }
-  return done;
+  return true;
   }
 
 
-// Return values: 1 write error, 0 OK, -1 interrupted.
+// Return values: 1 write error, 0 OK.
 // If !OK, copied_size and error_size are set to 0.
 // If OK && copied_size + error_size < b.size(), it means EOF has been reached.
 //
 int Rescuebook::copy_block( const Block & b, int & copied_size, int & error_size )
   {
-  current_pos( b.pos() );
-  copied_size = 0; error_size = 0;
-  if( interrupted ) return -1;
   if( b.size() <= 0 ) internal_error( "bad size copying a Block" );
   copied_size = readblock( ides_, iobuf(), b.size(), b.pos() );
   if( errno ) error_size = b.size() - copied_size;
@@ -275,10 +263,11 @@ int Rescuebook::copy_block( const Block & b, int & copied_size, int & error_size
   if( copied_size > 0 )
     {
     const long long pos = b.pos() + offset();
-    const long long end = pos + copied_size;
-    if( sparse_ && block_is_zero( iobuf(), copied_size ) &&
-        lseek( odes_, end, SEEK_SET ) >= 0 )
-      { if( end > sparse_size ) sparse_size = end; }
+    if( sparse_size >= 0 && block_is_zero( iobuf(), copied_size ) )
+      {
+      const long long end = pos + copied_size;
+      if( end > sparse_size ) sparse_size = end;
+      }
     else if( writeblock( odes_, iobuf(), copied_size, pos ) != copied_size ||
              ( synchronous_ && fsync( odes_ ) < 0 && errno != EINVAL ) )
       {
@@ -291,7 +280,7 @@ int Rescuebook::copy_block( const Block & b, int & copied_size, int & error_size
   }
 
 
-void Rescuebook::update_status() throw()
+void Rescuebook::update_status( const bool force ) throw()
   {
   if( t0 == 0 )
     {
@@ -302,19 +291,21 @@ void Rescuebook::update_status() throw()
     if( verbosity >= 0 ) std::printf( "\n\n\n" );
     }
 
-  const long t2 = std::time( 0 );
-  if( max_error_rate_ >= 0 )
-    {
-    long long e_rate = errsize - last_errsize;
-    if( t2 > t1 ) { e_rate /= ( t2 - t1 ); last_errsize = errsize; }
-    if( e_rate > max_error_rate_ ) e_code |= 1;
-    }
+  long t2 = std::time( 0 );
+  if( force && t2 <= t1 ) t2 = t1 + 1;
   if( t2 > t1 )
     {
     a_rate = ( recsize - first_size ) / ( t2 - t0 );
     c_rate = ( recsize - last_size ) / ( t2 - t1 );
     if( recsize > last_size ) ts = t2;
     last_size = recsize;
+    if( max_error_rate_ >= 0 )
+      {
+      long long e_rate = errsize - last_errsize;
+      last_errsize = errsize;
+      e_rate /= ( t2 - t1 );
+      if( e_rate > max_error_rate_ ) e_code |= 1;
+      }
     t1 = t2;
     status_changed = true;
     }
@@ -341,12 +332,13 @@ void Rescuebook::show_status( const long long ipos, const char * const msg,
       std::printf( "   opos: %10sB,", format_num( last_ipos + offset() ) );
       std::printf( "     time from last successful read: %9s\n",
                    format_time( t1 - ts ) );
-      int len = oldlen;
-      if( msg && !too_many_errors() )
-        { len = std::strlen( msg ); if( len ) std::printf( "%s", msg ); }
-      for( int i = len; i < oldlen; ++i ) std::fputc( ' ', stdout );
-      if( len || oldlen ) std::fputc( '\r', stdout );
-      oldlen = len;
+      if( msg && msg[0] && !too_many_errors() )
+        {
+        const int len = std::strlen( msg ); std::printf( "%s", msg );
+        for( int i = len; i < oldlen; ++i ) std::fputc( ' ', stdout );
+        std::fputc( '\r', stdout );
+        oldlen = len;
+        }
       std::fflush( stdout );
       }
     status_changed = false;
@@ -354,9 +346,12 @@ void Rescuebook::show_status( const long long ipos, const char * const msg,
   }
 
 
+bool interrupted() throw() { return interrupted_; }
+
+
 void set_signals() throw()
   {
-  interrupted = false;
+  interrupted_ = false;
   std::signal( SIGINT, sighandler );
   std::signal( SIGHUP, sighandler );
   std::signal( SIGTERM, sighandler );

@@ -45,12 +45,12 @@ void input_pos_error( const long long pos, const long long isize )
 
 // Align pos to next boundary if size is big enough
 //
-void Block::align_pos( const int hardbs ) throw()
+void Block::align_pos( const int alignment ) throw()
   {
-  if( hardbs > 1 )
+  if( alignment > 1 )
     {
-    const int disp = hardbs - ( pos_ % hardbs );
-    if( disp < hardbs && size_ > disp )
+    const int disp = alignment - ( pos_ % alignment );
+    if( disp < alignment && disp < size_ )
       { pos_ += disp; size_ -= disp; }
     }
   }
@@ -58,11 +58,11 @@ void Block::align_pos( const int hardbs ) throw()
 
 // Align end to previous boundary if size is big enough
 //
-void Block::align_end( const int hardbs ) throw()
+void Block::align_end( const int alignment ) throw()
   {
-  if( hardbs > 1 && size_ > 0 )
+  if( alignment > 1 && size_ > 0 )
     {
-    const long long new_end = end() - ( end() % hardbs );
+    const long long new_end = end() - ( end() % alignment );
     if( pos_ < new_end ) size_ = new_end - pos_;
     }
   }

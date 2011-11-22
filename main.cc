@@ -62,8 +62,8 @@ void show_help( const int cluster, const int hardbs ) throw()
   {
   std::printf( "%s - Data recovery tool.\n", Program_name );
   std::printf( "Copies data from one file or block device to another,\n"
-               "trying hard to rescue data in case of read errors.\n" );
-  std::printf( "\nUsage: %s [options] infile outfile [logfile]\n", invocation_name );
+               "trying hard to rescue data in case of read errors.\n"
+               "\nUsage: %s [options] infile outfile [logfile]\n", invocation_name );
   std::printf( "You should use a logfile unless you know what you are doing.\n"
                "\nOptions:\n"
                "  -h, --help                     display this help and exit\n"
@@ -81,6 +81,7 @@ void show_help( const int cluster, const int hardbs ) throw()
                "  -F, --fill=<types>             fill given type blocks with infile data (?*/-+)\n"
                "  -g, --generate-logfile         generate approximate logfile from partial copy\n"
                "  -i, --input-position=<bytes>   starting position in input file [0]\n"
+               "  -I, --verify-input-size        verify input file size with size in logfile\n"
                "  -m, --domain-logfile=<file>    restrict domain to finished blocks in file\n"
                "  -M, --retrim                   mark all failed blocks as non-trimmed\n"
                "  -n, --no-split                 do not try to split or retry failed blocks\n"
@@ -93,47 +94,77 @@ void show_help( const int cluster, const int hardbs ) throw()
                "  -S, --sparse                   use sparse writes for output file\n"
                "  -t, --truncate                 truncate output file to zero size\n"
                "  -T, --try-again                mark non-split, non-trimmed blocks as non-tried\n"
-               "  -v, --verbose                  verbose operation\n" );
-  std::printf( "Numbers may be followed by a multiplier: b = blocks, k = kB = 10^3 = 1000,\n"
-               "Ki = KiB = 2^10 = 1024, M = 10^6, Mi = 2^20, G = 10^9, Gi = 2^30, etc...\n" );
-  std::printf( "\nReport bugs to bug-ddrescue@gnu.org\n"
+               "  -v, --verbose                  verbose operation\n"
+               "  -x, --extend-outfile=<bytes>   extend outfile size to be at least this long\n"
+               "Numbers may be followed by a multiplier: b = blocks, k = kB = 10^3 = 1000,\n"
+               "Ki = KiB = 2^10 = 1024, M = 10^6, Mi = 2^20, G = 10^9, Gi = 2^30, etc...\n"
+               "\nReport bugs to bug-ddrescue@gnu.org\n"
                "Ddrescue home page: http://www.gnu.org/software/ddrescue/ddrescue.html\n"
                "General help using GNU software: http://www.gnu.org/gethelp\n" );
   }
 
 
-bool check_identical( const char * const name1, const char * const name2 ) throw()
+bool check_identical( const char * const iname, const char * const oname,
+                      const char * const logname ) throw()
   {
-  if( !std::strcmp( name1, name2 ) ) return true;
-  struct stat stat1, stat2;
-  if( stat( name1, &stat1 ) || stat( name2, &stat2 ) ) return false;
-  return ( stat1.st_ino == stat2.st_ino && stat1.st_dev == stat2.st_dev );
+  struct stat istat, ostat, logstat;
+  bool iexists = false, oexists = false, logexists = false;
+  bool same = ( std::strcmp( iname, oname ) == 0 );
+  if( !same )
+    {
+    iexists = ( stat( iname, &istat ) == 0 );
+    oexists = ( stat( oname, &ostat ) == 0 );
+    if( iexists && oexists && istat.st_ino == ostat.st_ino &&
+        istat.st_dev == ostat.st_dev ) same = true;
+    }
+  if( same )
+    { show_error( "Infile and outfile are the same." ); return true; }
+  if( logname )
+    {
+    same = ( std::strcmp( iname, logname ) == 0 );
+    if( !same )
+      {
+      logexists = ( stat( logname, &logstat ) == 0 );
+      if( iexists && logexists && istat.st_ino == logstat.st_ino &&
+          istat.st_dev == logstat.st_dev ) same = true;
+      }
+    if( same )
+      { show_error( "Infile and logfile are the same." ); return true; }
+    if( std::strcmp( oname, logname ) == 0 ||
+        ( oexists && logexists && ostat.st_ino == logstat.st_ino &&
+          ostat.st_dev == logstat.st_dev ) )
+      { show_error( "Outfile and logfile are the same." ); return true; }
+    }
+  return false;
   }
 
 
 bool check_files( const char * const iname, const char * const oname,
-                  const bool force, const bool preallocate ) throw()
+                  const char * const logname,
+                  const long long min_outfile_size, const bool force,
+                  const bool preallocate, const bool sparse ) throw()
   {
   if( !iname || !oname )
     {
     show_error( "Both input and output files must be specified.", 0, true );
     return false;
     }
-  if( check_identical( iname, oname ) )
-    { show_error( "Infile and outfile are the same." ); return false; }
-  if( !force || preallocate )
+  if( check_identical( iname, oname, logname ) ) return false;
+  if( min_outfile_size > 0 || !force || preallocate || sparse )
     {
     struct stat st;
     if( stat( oname, &st ) == 0 && !S_ISREG( st.st_mode ) )
       {
       show_error( "Output file exists and is not a regular file." );
       if( !force )
-        {
         show_error( "Use `--force' if you really want to overwrite it, but be\n"
                     "aware that all existing data in output file will be lost.", 0, true );
-        }
+      else if( min_outfile_size > 0 )
+        show_error( "Only regular files can be extended.", 0, true );
       else if( preallocate )
         show_error( "Only regular files can be preallocated.", 0, true );
+      else if( sparse )
+        show_error( "Only regular files can be sparse.", 0, true );
       return false;
       }
     }
@@ -243,13 +274,15 @@ int do_rescue( const long long offset, Domain & domain,
                const char * const iname, const char * const oname,
                const char * const logname, const int cluster,
                const int hardbs, const long long max_error_rate,
+               const long long min_outfile_size,
                const int max_errors, const int max_retries,
                const long long min_read_rate, const int o_direct,
                const int o_trunc, const bool complete_only,
                const bool new_errors_only, const bool nosplit,
                const bool preallocate, const bool retrim,
                const bool reverse, const bool sparse,
-               const bool synchronous, const bool try_again )
+               const bool synchronous, const bool try_again,
+               const bool verify_input_size )
   {
   const int ides = open( iname, O_RDONLY | o_direct | o_binary );
   if( ides < 0 )
@@ -258,11 +291,26 @@ int do_rescue( const long long offset, Domain & domain,
   if( isize < 0 )
     { show_error( "Input file is not seekable." ); return 1; }
 
-  Rescuebook rescuebook( offset, isize, max_error_rate, min_read_rate,
-                         domain, iname, logname, cluster, hardbs,
-                         max_errors, max_retries, complete_only,
+  Rescuebook rescuebook( offset, isize, max_error_rate, min_outfile_size,
+                         min_read_rate, domain, iname, logname, cluster,
+                         hardbs, max_errors, max_retries, complete_only,
                          new_errors_only, nosplit, retrim, sparse,
                          synchronous, try_again );
+  if( verify_input_size )
+    {
+    if( !rescuebook.logfile_exists() || isize <= 0 ||
+        rescuebook.logfile_isize() >= LLONG_MAX )
+      {
+      show_error( "Can't verify input file size. "
+                  "Unfinished logfile or other error." );
+      return 1;
+      }
+    if( rescuebook.logfile_isize() != isize )
+      {
+      show_error( "Input file size differs from size calculated from logfile." );
+      return 1;
+      }
+    }
   if( rescuebook.domain().size() == 0 )
     { show_error( "Nothing to do." ); return 0; }
   if( o_trunc && !rescuebook.blank() )
@@ -343,6 +391,7 @@ int main( const int argc, const char * const argv[] )
   long long opos = -1;
   long long max_error_rate = -1;
   long long max_size = -1;
+  long long min_outfile_size = -1;
   long long min_read_rate = -1;
   const char * domain_logfile_name = 0;
   const int cluster_bytes = 65536;
@@ -364,6 +413,7 @@ int main( const int argc, const char * const argv[] )
   bool sparse = false;
   bool synchronous = false;
   bool try_again = false;
+  bool verify_input_size = false;
   std::string filltypes;
   invocation_name = argv[0];
   command_line = argv[0];
@@ -372,35 +422,37 @@ int main( const int argc, const char * const argv[] )
 
   const Arg_parser::Option options[] =
     {
-    { 'a', "min-read-rate",    Arg_parser::yes },
-    { 'b', "block-size",       Arg_parser::yes },
-    { 'B', "binary-prefixes",  Arg_parser::no  },
-    { 'c', "cluster-size",     Arg_parser::yes },
-    { 'C', "complete-only",    Arg_parser::no  },
-    { 'd', "direct",           Arg_parser::no  },
-    { 'D', "synchronous",      Arg_parser::no  },
-    { 'e', "max-errors",       Arg_parser::yes },
-    { 'E', "max-error-rate",   Arg_parser::yes },
-    { 'f', "force",            Arg_parser::no  },
-    { 'F', "fill",             Arg_parser::yes },
-    { 'g', "generate-logfile", Arg_parser::no  },
-    { 'h', "help",             Arg_parser::no  },
-    { 'i', "input-position",   Arg_parser::yes },
-    { 'm', "domain-logfile",   Arg_parser::yes },
-    { 'M', "retrim",           Arg_parser::no  },
-    { 'n', "no-split",         Arg_parser::no  },
-    { 'o', "output-position",  Arg_parser::yes },
-    { 'p', "preallocate",      Arg_parser::no  },
-    { 'q', "quiet",            Arg_parser::no  },
-    { 'r', "max-retries",      Arg_parser::yes },
-    { 'R', "reverse",          Arg_parser::no  },
-    { 's', "max-size",         Arg_parser::yes },
-    { 'S', "sparse",           Arg_parser::no  },
-    { 't', "truncate",         Arg_parser::no  },
-    { 'T', "try-again",        Arg_parser::no  },
-    { 'v', "verbose",          Arg_parser::no  },
-    { 'V', "version",          Arg_parser::no  },
-    {  0 , 0,                  Arg_parser::no  } };
+    { 'a', "min-read-rate",     Arg_parser::yes },
+    { 'b', "block-size",        Arg_parser::yes },
+    { 'B', "binary-prefixes",   Arg_parser::no  },
+    { 'c', "cluster-size",      Arg_parser::yes },
+    { 'C', "complete-only",     Arg_parser::no  },
+    { 'd', "direct",            Arg_parser::no  },
+    { 'D', "synchronous",       Arg_parser::no  },
+    { 'e', "max-errors",        Arg_parser::yes },
+    { 'E', "max-error-rate",    Arg_parser::yes },
+    { 'f', "force",             Arg_parser::no  },
+    { 'F', "fill",              Arg_parser::yes },
+    { 'g', "generate-logfile",  Arg_parser::no  },
+    { 'h', "help",              Arg_parser::no  },
+    { 'i', "input-position",    Arg_parser::yes },
+    { 'I', "verify-input-size", Arg_parser::no  },
+    { 'm', "domain-logfile",    Arg_parser::yes },
+    { 'M', "retrim",            Arg_parser::no  },
+    { 'n', "no-split",          Arg_parser::no  },
+    { 'o', "output-position",   Arg_parser::yes },
+    { 'p', "preallocate",       Arg_parser::no  },
+    { 'q', "quiet",             Arg_parser::no  },
+    { 'r', "max-retries",       Arg_parser::yes },
+    { 'R', "reverse",           Arg_parser::no  },
+    { 's', "max-size",          Arg_parser::yes },
+    { 'S', "sparse",            Arg_parser::no  },
+    { 't', "truncate",          Arg_parser::no  },
+    { 'T', "try-again",         Arg_parser::no  },
+    { 'v', "verbose",           Arg_parser::no  },
+    { 'V', "version",           Arg_parser::no  },
+    { 'x', "extend-outfile",    Arg_parser::yes },
+    {  0 , 0,                   Arg_parser::no  } };
 
   const Arg_parser parser( argc, argv, options );
   if( parser.error().size() )				// bad option
@@ -437,6 +489,7 @@ int main( const int argc, const char * const argv[] )
       case 'h': show_help( cluster_bytes / default_hardbs, default_hardbs );
                 return 0;
       case 'i': ipos = getnum( arg, hardbs, 0 ); break;
+      case 'I': verify_input_size = true; break;
       case 'm': domain_logfile_name = arg; break;
       case 'M': retrim = true; break;
       case 'n': nosplit = true; break;
@@ -451,6 +504,7 @@ int main( const int argc, const char * const argv[] )
       case 'T': try_again = true; break;
       case 'v': verbosity = 1; break;
       case 'V': show_version(); return 0;
+      case 'x': min_outfile_size = getnum( arg, hardbs, 1 ); break;
       default : internal_error( "uncaught option" );
       }
     } // end process options
@@ -470,7 +524,8 @@ int main( const int argc, const char * const argv[] )
 
   // end scan arguments
 
-  if( !check_files( iname, oname, force, preallocate ) ) return 1;
+  if( !check_files( iname, oname, logname, min_outfile_size, force,
+                    preallocate, sparse ) ) return 1;
 
   Domain domain( ipos, max_size, domain_logfile_name );
 
@@ -478,25 +533,28 @@ int main( const int argc, const char * const argv[] )
     {
     case m_fill:
       if( min_read_rate >= 0 || max_error_rate >= 0 || max_errors >= 0 ||
-          max_retries || o_direct || o_trunc || complete_only ||
-          nosplit || preallocate || retrim || reverse || sparse || try_again )
-        show_error( "warning: Options -a -C -d -e -E -M -n -p -r -R -S -t and -T\n"
+          min_outfile_size > 0 || max_retries || o_direct || o_trunc ||
+          complete_only || nosplit || preallocate || retrim || reverse ||
+          sparse || try_again || verify_input_size )
+        show_error( "warning: Options -a -C -d -e -E -I -M -n -p -r -R -S -t -T and -x\n"
                     "are ignored in fill mode." );
       return do_fill( opos - ipos, domain, iname, oname, logname, cluster,
                       hardbs, filltypes, synchronous );
     case m_generate:
       if( min_read_rate >= 0 || max_error_rate >= 0 || max_errors >= 0 ||
-          max_retries || o_direct || o_trunc || complete_only || nosplit ||
-          preallocate || retrim || reverse || sparse || synchronous || try_again )
-        show_error( "warning: Options -a -C -d -D -e -E -M -n -p -r -R -S -t and -T\n"
+          min_outfile_size > 0 || max_retries || o_direct || o_trunc ||
+          complete_only || nosplit || preallocate || retrim || reverse ||
+          sparse || synchronous || try_again || verify_input_size )
+        show_error( "warning: Options -a -C -d -D -e -E -I -M -n -p -r -R -S -t -T and -x\n"
                     "are ignored in generate-logfile mode." );
       return do_generate( opos - ipos, domain, iname, oname, logname,
                           cluster, hardbs );
     case m_none:
       return do_rescue( opos - ipos, domain, iname, oname, logname, cluster,
-                        hardbs, max_error_rate, max_errors, max_retries,
-                        min_read_rate, o_direct, o_trunc, complete_only,
-                        new_errors_only, nosplit, preallocate, retrim, reverse,
-                        sparse, synchronous, try_again );
+                        hardbs, max_error_rate, min_outfile_size, max_errors,
+                        max_retries, min_read_rate, o_direct, o_trunc,
+                        complete_only, new_errors_only, nosplit, preallocate,
+                        retrim, reverse, sparse, synchronous, try_again,
+                        verify_input_size );
     }
   }

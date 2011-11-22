@@ -58,7 +58,7 @@ $(VPATH)/doc/$(progname).1 : $(progname)
 	  -o $@ ./$(progname)
 
 $(VPATH)/doc/ddrescuelog.1 : ddrescuelog
-	help2man -n 'manipulates ddrescue logfiles' \
+	help2man -n 'tool for ddrescue logfiles' \
 	  -o $@ --no-info ./ddrescuelog
 
 Makefile : $(VPATH)/configure $(VPATH)/Makefile.in

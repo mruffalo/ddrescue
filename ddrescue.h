@@ -26,6 +26,7 @@ public:
 private:
   const long long offset_;		// outfile offset (opos - ipos);
   long long current_pos_;
+  long long logfile_isize_;
   Status current_status_;
   Domain & domain_;			// rescue domain
   uint8_t *iobuf_base, *iobuf_;		// iobuf is aligned to page and hardbs
@@ -36,7 +37,6 @@ private:
   mutable int index_;			// cached index of last find or change
   std::vector< Sblock > sblock_vector;	// note: blocks are consecutive
   long ul_t1;				// variable for update_logfile
-  bool logfile_exists_;
 
   void erase_sblock( const int i )
     { sblock_vector.erase( sblock_vector.begin() + i ); }
@@ -67,7 +67,8 @@ public:
   long long offset() const throw() { return offset_; }
   const char * final_msg() const throw() { return final_msg_; }
   int final_errno() const throw() { return final_errno_; }
-  bool logfile_exists() const throw() { return logfile_exists_; }
+  bool logfile_exists() const throw() { return ( logfile_isize_ > 0 ); }
+  long long logfile_isize() const throw() { return logfile_isize_; }
 
   void current_pos( const long long pos ) throw() { current_pos_ = pos; }
   void current_status( const Status st ) throw() { current_status_ = st; }
@@ -87,8 +88,10 @@ public:
   void truncate_vector( const long long pos );
 
   int find_index( const long long pos ) const throw();
-  void find_chunk( Block & b, const Sblock::Status st ) const;
-  void rfind_chunk( Block & b, const Sblock::Status st ) const;
+  void find_chunk( Block & b, const Sblock::Status st,
+                   const int alignment = 0 ) const;
+  void rfind_chunk( Block & b, const Sblock::Status st,
+                    const int alignment = 0 ) const;
   int change_chunk_status( const Block & b, const Sblock::Status st );
 
   static bool isstatus( const int st ) throw()
@@ -141,7 +144,7 @@ class Genbook : public Logbook
   long t0, t1;
   int oldlen;
 
-  int check_block( const Block & b, int & copied_size, int & error_size );
+  void check_block( const Block & b, int & copied_size, int & error_size );
   int check_all();
   void show_status( const long long ipos, const char * const msg = 0,
                     bool force = false ) throw();
@@ -160,6 +163,7 @@ public:
 class Rescuebook : public Logbook
   {
   const long long max_error_rate_;
+  const long long min_outfile_size_;
   long long min_read_rate_;
   long long sparse_size;		// end position of pending writes
   long long recsize, errsize;		// total recovered and error sizes
@@ -169,7 +173,7 @@ class Rescuebook : public Logbook
   int e_code;				// error code for too many errors
   int errors;				// error areas found so far
   int ides_, odes_;			// input and output file descriptors
-  const bool nosplit_, sparse_, synchronous_;
+  const bool nosplit_, synchronous_;
 					// variables for update_status
   long long a_rate, c_rate, first_size, last_size, last_errsize;
   long long last_ipos;
@@ -178,7 +182,7 @@ class Rescuebook : public Logbook
   bool status_changed;
 
   int skipbs() const throw() { return skipbs_; }
-  bool sync_sparse_file() throw();
+  bool extend_outfile_size() throw();
   int copy_block( const Block & b, int & copied_size, int & error_size );
   void count_errors() throw();
   bool too_many_errors() throw()
@@ -200,12 +204,13 @@ class Rescuebook : public Logbook
   int rsplit_errors();
   int copy_errors();
   int rcopy_errors();
-  void update_status() throw();
+  void update_status( const bool force = false ) throw();
   void show_status( const long long ipos, const char * const msg = 0,
                     const bool force = false ) throw();
 public:
   Rescuebook( const long long offset, const long long isize,
               const long long max_error_rate,
+              const long long min_outfile_size,
               const long long min_read_rate, Domain & dom,
               const char * const iname, const char * const logname,
               const int cluster, const int hardbs,
@@ -221,6 +226,7 @@ public:
 
 // Defined in io.cc
 //
+bool interrupted() throw();
 void set_signals() throw();
 
 

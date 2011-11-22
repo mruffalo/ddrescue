@@ -48,17 +48,15 @@ int Genbook::check_all()
     if( b.size() <= 0 ) break;
     pos = b.end();
     current_status( generating );
+    current_pos( b.pos() );
     if( verbosity >= 0 )
       { show_status( b.pos(), "Generating logfile...", first_post );
         first_post = false; }
-    int copied_size, error_size;
-    const int retval = check_block( b, copied_size, error_size );
-    if( !retval )
-      {
-      if( copied_size + error_size < b.size() )		// EOF
-        truncate_vector( b.pos() + copied_size + error_size );
-      }
-    if( retval ) return retval;
+    if( interrupted() ) return -1;
+    int copied_size = 0, error_size = 0;
+    check_block( b, copied_size, error_size );
+    if( copied_size + error_size < b.size() )		// EOF
+      truncate_vector( b.pos() + copied_size + error_size );
     if( !update_logfile() ) return -2;
     }
   return 0;

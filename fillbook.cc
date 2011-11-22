@@ -46,8 +46,10 @@ int Fillbook::fill_areas( const std::string & filltypes )
     current_status( filling );
     while( b.size() > 0 )
       {
+      current_pos( b.pos() );
       if( verbosity >= 0 )
         { show_status( b.pos(), first_post ); first_post = false; }
+      if( interrupted() ) return -1;
       const int retval = fill_block( b );
       if( retval ) return retval;
       if( !update_logfile( odes_ ) ) return -2;

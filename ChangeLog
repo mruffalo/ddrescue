@@ -1,3 +1,14 @@
+2011-11-22  Antonio Diaz Diaz  <ant_diaz@teleline.es>
+
+	* Version 1.15-rc1 released.
+	* Added new option `-I, --verify-input-size'.
+	* Added new option `-x, --extend-outfile'.
+	* main.cc: Verify that infile, outfile and logfile are all
+	  different.
+	* Non-tried blocks are now read aligned to cluster-size sectors.
+	* rescuebook.cc: Improved skip algorithm for the split pass.
+	* ddrescuelog.cc: Set default block size to 512 same as ddrescue.
+
 2011-10-23  Antonio Diaz Diaz  <ant_diaz@teleline.es>
 
 	* Version 1.15-pre3 released.

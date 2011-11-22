@@ -4,6 +4,12 @@ GNU ddrescue is a data recovery tool. It copies data from one file or
 block device (hard disc, cdrom, etc) to another, trying hard to rescue
 data in case of read errors.
 
+Ddrescuelog is a tool that manipulates ddrescue logfiles, shows logfile
+contents, converts logfiles to/from other formats, compares logfiles,
+tests rescue status, and can delete a logfile if the rescue is done.
+Ddrescuelog operations can be restricted to one or several parts of the
+logfile if the domain setting options are used.
+
 The basic operation of ddrescue is fully automatic. That is, you don't
 have to wait for an error, stop the program, read the log, run it in
 reverse mode, etc.

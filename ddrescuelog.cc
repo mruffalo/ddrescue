@@ -1,4 +1,4 @@
-/*  GNU ddrescuelog - Conversion tool for ddrescue logfiles
+/*  GNU ddrescuelog - Tool for ddrescue logfiles
     Copyright (C) 2011 Antonio Diaz Diaz.
 
     This program is free software: you can redistribute it and/or modify
@@ -48,10 +48,10 @@ enum Mode { m_none, m_and, m_change, m_compare, m_create, m_delete,
 
 void show_help( const int hardbs ) throw()
   {
-  std::printf( "%s - Conversion tool for ddrescue logfiles.\n", Program_name );
-  std::printf( "Manipulates ddrescue logfiles, shows their contents,\n"
-               "and converts them to/from other formats.\n" );
-  std::printf( "\nUsage: %s [options] logfile\n", invocation_name );
+  std::printf( "%s - Tool for ddrescue logfiles.\n", Program_name );
+  std::printf( "Manipulates ddrescue logfiles, shows their contents, converts them to/from\n"
+               "other formats, compares them, and tests rescue status.\n"
+               "\nUsage: %s [options] logfile\n", invocation_name );
   std::printf( "\nOptions:\n"
                "  -h, --help                     display this help and exit\n"
                "  -V, --version                  output version information and exit\n"
@@ -152,7 +152,7 @@ int do_logic_ops( Domain & domain, const char * const logname,
   Domain domain2( domain );
   Logbook logbook( 0, 0, domain, logname, 1, 1, true );
   verify_logname_and_domain( logbook );
-  Logbook logbook2( 0, 0, domain2, second_logname, 1, 1, true );
+  const Logbook logbook2( 0, 0, domain2, second_logname, 1, 1, true );
   verify_logname_and_domain( logbook2 );
 
   for( int i = 0; i < logbook.sblocks(); ++i )
@@ -237,9 +237,9 @@ int compare_logfiles( Domain & domain, const char * const logname,
                       const char * const second_logname )
   {
   Domain domain2( domain );
-  Logbook logbook( 0, 0, domain, logname, 1, 1, true );
+  const Logbook logbook( 0, 0, domain, logname, 1, 1, true );
   verify_logname_and_domain( logbook );
-  Logbook logbook2( 0, 0, domain2, second_logname, 1, 1, true );
+  const Logbook logbook2( 0, 0, domain2, second_logname, 1, 1, true );
   verify_logname_and_domain( logbook2 );
 
   int retval = 0;
@@ -309,7 +309,7 @@ int create_logfile( Domain & domain, const char * const logname,
 int test_if_done( Domain & domain, const char * const logname, const bool del )
   {
   char buf[80];
-  Logbook logbook( 0, 0, domain, logname, 1, 1, true );
+  const Logbook logbook( 0, 0, domain, logname, 1, 1, true );
   verify_logname_and_domain( logbook );
 
   for( int i = 0; i < logbook.sblocks(); ++i )
@@ -348,7 +348,7 @@ int to_badblocks( const long long offset, Domain & domain,
                   const std::string & blocktypes )
   {
   long long last_block = -1;
-  Logbook logbook( offset, 0, domain, logname, 1, hardbs, true );
+  const Logbook logbook( offset, 0, domain, logname, 1, hardbs, true );
   verify_logname_and_domain( logbook );
 
   for( int i = 0; i < logbook.sblocks(); ++i )
@@ -424,7 +424,7 @@ int do_show_status( Domain & domain, const char * const logname )
   int errors = 0;
   Sblock::Status old_status = Sblock::non_tried;
   bool first_block = true, good = true;
-  Logbook logbook( 0, 0, domain, logname, 1, 1, true );
+  const Logbook logbook( 0, 0, domain, logname, 1, 1, true );
   verify_logname_and_domain( logbook );
 
   for( int i = 0; i < logbook.sblocks(); ++i )
@@ -498,7 +498,7 @@ int main( const int argc, const char * const argv[] )
   long long max_size = -1;
   const char * domain_logfile_name = 0;
   const char * second_logname = 0;
-  const int default_hardbs = 4096;
+  const int default_hardbs = 512;
   int hardbs = default_hardbs;
   Mode program_mode = m_none;
   bool force = false;

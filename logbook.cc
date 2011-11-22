@@ -218,11 +218,11 @@ Logbook::Logbook( const long long offset, const long long isize,
                   Domain & dom, const char * const logname,
                   const int cluster, const int hardbs,
                   const bool complete_only, const bool do_not_read )
-  : offset_( offset ), current_pos_( 0 ), current_status_( copying ),
-    domain_( dom ), filename_( logname ),
+  : offset_( offset ), current_pos_( 0 ), logfile_isize_( 0 ),
+    current_status_( copying ), domain_( dom ), filename_( logname ),
     hardbs_( hardbs ), softbs_( cluster * hardbs ),
     final_msg_( 0 ), final_errno_( 0 ), index_( 0 ),
-    ul_t1( std::time( 0 ) ), logfile_exists_( false )
+    ul_t1( std::time( 0 ) )
   {
   int alignment = sysconf( _SC_PAGESIZE );
   if( alignment < hardbs_ || alignment % hardbs_ ) alignment = hardbs_;
@@ -235,9 +235,10 @@ Logbook::Logbook( const long long offset, const long long isize,
     }
 
   if( !domain_.crop_by_file_size( isize ) ) std::exit( 1 );
-  if( filename_ && !do_not_read )
-    logfile_exists_ = read_logfile( filename_, sblock_vector, current_pos_,
-                                    current_status_ );
+  if( filename_ && !do_not_read &&
+      read_logfile( filename_, sblock_vector, current_pos_, current_status_ ) &&
+      sblock_vector.size() )
+    logfile_isize_ = sblock_vector.back().end();
   if( !complete_only ) extend_sblock_vector( sblock_vector, isize );
   else if( sblock_vector.size() )  // limit domain to blocks read from logfile
     {
@@ -278,7 +279,7 @@ bool Logbook::update_logfile( const int odes, const bool force,
                               const bool retry )
   {
   if( !filename_ ) return true;
-  const int interval = 30 + std::min( 270, sblocks() / 40 );
+  const int interval = 30 + std::min( 270, sblocks() / 38 );
   const long t2 = std::time( 0 );
   if( !force && t2 - ul_t1 < interval ) return true;
   ul_t1 = t2;
@@ -367,7 +368,8 @@ int Logbook::find_index( const long long pos ) const throw()
 // Find chunk from b.pos of size <= b.size and status st.
 // if not found, puts b.size to 0.
 //
-void Logbook::find_chunk( Block & b, const Sblock::Status st ) const
+void Logbook::find_chunk( Block & b, const Sblock::Status st,
+                          const int alignment ) const
   {
   if( b.size() <= 0 ) return;
   if( b.pos() < sblock_vector.front().pos() )
@@ -385,14 +387,15 @@ void Logbook::find_chunk( Block & b, const Sblock::Status st ) const
   if( !sblock_vector[index_].includes( b ) )
     b.crop( sblock_vector[index_] );
   if( b.end() != sblock_vector[index_].end() )
-    b.align_end( hardbs_ );
+    b.align_end( alignment ? alignment : hardbs_ );
   }
 
 
 // Find chunk from b.end backwards of size <= b.size and status st.
 // if not found, puts b.size to 0.
 //
-void Logbook::rfind_chunk( Block & b, const Sblock::Status st ) const
+void Logbook::rfind_chunk( Block & b, const Sblock::Status st,
+                           const int alignment ) const
   {
   if( b.size() <= 0 ) return;
   b.fix_size();
@@ -409,7 +412,7 @@ void Logbook::rfind_chunk( Block & b, const Sblock::Status st ) const
   if( !sblock_vector[index_].includes( b ) )
     b.crop( sblock_vector[index_] );
   if( b.pos() != sblock_vector[index_].pos() )
-    b.align_pos( hardbs_ );
+    b.align_pos( alignment ? alignment : hardbs_ );
   }
 
 

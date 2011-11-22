@@ -22,95 +22,108 @@ if [ -d tmp ] ; then rm -rf tmp ; fi
 mkdir tmp
 cd "${objdir}"/tmp
 
-cat "${testdir}"/test.txt > in || framework_failure
-cat "${testdir}"/test1.txt > in1 || framework_failure
-cat "${testdir}"/test2.txt > in2 || framework_failure
-cat "${testdir}"/logfile1 > logfile1 || framework_failure
-cat "${testdir}"/logfile2 > logfile2 || framework_failure
+in="${testdir}"/test.txt
+in1="${testdir}"/test1.txt
+in2="${testdir}"/test2.txt
+logfile1="${testdir}"/logfile1
+logfile2="${testdir}"/logfile2
 fail=0
 
 printf "testing ddrescue-%s..." "$2"
-"${DDRESCUE}" -q in
+
+"${DDRESCUE}" -q ${in}
 if [ $? = 0 ] ; then fail=1 ; printf - ; else printf . ; fi
-"${DDRESCUE}" -q -g in out
+"${DDRESCUE}" -q ${in} out logfile extra
 if [ $? = 0 ] ; then fail=1 ; printf - ; else printf . ; fi
-"${DDRESCUE}" -q -F- in out
+"${DDRESCUE}" -q ${in} ${in} logfile
 if [ $? = 0 ] ; then fail=1 ; printf - ; else printf . ; fi
-"${DDRESCUE}" -q -F in out logfile
+"${DDRESCUE}" -q ${in} out ${in}
 if [ $? = 0 ] ; then fail=1 ; printf - ; else printf . ; fi
-"${DDRESCUE}" -q -F- -g in out logfile
+"${DDRESCUE}" -q ${in} out out
+if [ $? = 0 ] ; then fail=1 ; printf - ; else printf . ; fi
+"${DDRESCUE}" -q -g ${in} out
+if [ $? = 0 ] ; then fail=1 ; printf - ; else printf . ; fi
+"${DDRESCUE}" -q -F- ${in} out
+if [ $? = 0 ] ; then fail=1 ; printf - ; else printf . ; fi
+"${DDRESCUE}" -q -F ${in} out logfile
+if [ $? = 0 ] ; then fail=1 ; printf - ; else printf . ; fi
+"${DDRESCUE}" -q -F- -g ${in} out logfile
 if [ $? = 0 ] ; then fail=1 ; printf - ; else printf . ; fi
 
-"${DDRESCUE}" -t -pq -i15000 in out logfile > /dev/null || fail=1
-"${DDRESCUE}" -D -fn -s15000 in out logfile > /dev/null || fail=1
-cmp in out || fail=1
+"${DDRESCUE}" -t -pq -i15000 ${in} out logfile || fail=1
+"${DDRESCUE}" -D -fnq -s15000 ${in} out logfile || fail=1
+cmp ${in} out || fail=1
 printf .
 
 rm out || framework_failure
 rm logfile || framework_failure
-"${DDRESCUE}" -R -i15000 in out logfile > /dev/null || fail=1
-"${DDRESCUE}" -R -s15000 in out logfile > /dev/null || fail=1
-cmp in out || fail=1
+"${DDRESCUE}" -qR -i15000 ${in} out logfile || fail=1
+"${DDRESCUE}" -qR -s15000 ${in} out logfile || fail=1
+cmp ${in} out || fail=1
 printf .
 
 rm out || framework_failure
-"${DDRESCUE}" -F+ -o15000 in out2 logfile > /dev/null || fail=1
-"${DDRESCUE}" -RS -i15000 -o0 out2 out > /dev/null || fail=1
-cmp in out || fail=1
+"${DDRESCUE}" -qF+ -o15000 ${in} out2 logfile || fail=1
+"${DDRESCUE}" -qRS -i15000 -o0 out2 out || fail=1
+cmp ${in} out || fail=1
 printf .
 
 printf "garbage" >> out || framework_failure
-"${DDRESCUE}" -Rt -i15000 -o0 out2 out > /dev/null || fail=1
-cmp in out || fail=1
+"${DDRESCUE}" -qRt -i15000 -o0 out2 out || fail=1
+cmp ${in} out || fail=1
 printf .
 
 rm out || framework_failure
-"${DDRESCUE}" -m logfile1 in out > /dev/null || fail=1
-cmp in1 out || fail=1
+"${DDRESCUE}" -q -m ${logfile1} ${in} out || fail=1
+cmp ${in1} out || fail=1
 printf .
-"${DDRESCUE}" -m logfile2 in out > /dev/null || fail=1
-cmp in out || fail=1
-printf .
-
-rm out || framework_failure
-"${DDRESCUE}" -Rm logfile2 in out > /dev/null || fail=1
-cmp in2 out || fail=1
-printf .
-"${DDRESCUE}" -Rm logfile1 in out > /dev/null || fail=1
-cmp in out || fail=1
+"${DDRESCUE}" -q -m ${logfile2} ${in} out || fail=1
+cmp ${in} out || fail=1
 printf .
 
 rm out || framework_failure
-cat logfile1 > logfile || framework_failure
-"${DDRESCUE}" in out logfile > /dev/null || fail=1
-cat logfile2 > logfile || framework_failure
-"${DDRESCUE}" in out logfile > /dev/null || fail=1
-cmp in out || fail=1
+"${DDRESCUE}" -qRm ${logfile2} ${in} out || fail=1
+cmp ${in2} out || fail=1
+printf .
+"${DDRESCUE}" -qRm ${logfile1} ${in} out || fail=1
+cmp ${in} out || fail=1
 printf .
 
 rm out || framework_failure
-cat logfile1 > logfile || framework_failure
-"${DDRESCUE}" -R in out logfile > /dev/null || fail=1
-cat logfile2 > logfile || framework_failure
-"${DDRESCUE}" -R in out logfile > /dev/null || fail=1
-cmp in out || fail=1
+cat ${logfile1} > logfile || framework_failure
+"${DDRESCUE}" -qI ${in} out logfile || fail=1
+cat ${logfile2} > logfile || framework_failure
+"${DDRESCUE}" -qI ${in} out logfile || fail=1
+cmp ${in} out || fail=1
 printf .
 
-cat in1 > out || framework_failure
+rm out || framework_failure
+cat ${logfile1} > logfile || framework_failure
+"${DDRESCUE}" -qR ${in} out logfile || fail=1
+cat ${logfile2} > logfile || framework_failure
+"${DDRESCUE}" -qR ${in} out logfile || fail=1
+cmp ${in} out || fail=1
+printf .
+
+cat ${in1} > out || framework_failure
 rm logfile || framework_failure
-"${DDRESCUE}" -g in out logfile > /dev/null || fail=1
-"${DDRESCUE}" in2 out logfile > /dev/null || fail=1
-cmp in out || fail=1
+"${DDRESCUE}" -qg ${in} out logfile || fail=1
+"${DDRESCUE}" -q ${in2} out logfile || fail=1
+cmp ${in} out || fail=1
 printf .
 
-cat in2 > out || framework_failure
+cat ${in} > copy || framework_failure
+printf "garbage" >> copy || framework_failure
+cat ${in2} > out || framework_failure
 rm logfile || framework_failure
-"${DDRESCUE}" -g -s34816 in out logfile > /dev/null || fail=1
-"${DDRESCUE}" -R in1 out logfile > /dev/null || fail=1
-cmp in out || fail=1
+"${DDRESCUE}" -qt -x 35744 ${in1} copy || fail=1
+"${DDRESCUE}" -qg ${in} out logfile || fail=1
+"${DDRESCUE}" -qR copy out logfile || fail=1
+cmp ${in} out || fail=1
 printf .
 
 printf "\ntesting ddrescuelog-%s..." "$2"
+
 "${DDRESCUELOG}" -q logfile
 if [ $? = 0 ] ; then fail=1 ; printf - ; else printf . ; fi
 "${DDRESCUELOG}" -q -d
@@ -118,21 +131,21 @@ if [ $? = 0 ] ; then fail=1 ; printf - ; else printf . ; fi
 "${DDRESCUELOG}" -q -t -d logfile
 if [ $? = 0 ] ; then fail=1 ; printf - ; else printf . ; fi
 
-"${DDRESCUELOG}" -b2048 -l+ logfile1 > out || fail=1
+"${DDRESCUELOG}" -b2048 -l+ ${logfile1} > out || fail=1
 cat out | "${DDRESCUELOG}" -b2048 -fc logfile || fail=1
 "${DDRESCUELOG}" -b2048 -l+ logfile > copy || fail=1
 cmp out copy || fail=1
 printf .
 cat out | "${DDRESCUELOG}" -b2048 -s35744 -fc?+ logfile || fail=1
-"${DDRESCUELOG}" -p logfile2 logfile || fail=1
+"${DDRESCUELOG}" -p ${logfile2} logfile || fail=1
 printf .
 cat out | "${DDRESCUELOG}" -b2048 -fc?+ logfile || fail=1
-"${DDRESCUELOG}" -s35744 -p logfile2 logfile || fail=1
+"${DDRESCUELOG}" -s35744 -p ${logfile2} logfile || fail=1
 printf .
-"${DDRESCUELOG}" -s35745 -q -p logfile2 logfile
+"${DDRESCUELOG}" -s35745 -q -p ${logfile2} logfile
 if [ $? = 0 ] ; then fail=1 ; printf - ; else printf . ; fi
 
-cat logfile1 > logfile || framework_failure
+cat ${logfile1} > logfile || framework_failure
 "${DDRESCUELOG}" -i1024 -s2048 -d logfile
 if [ $? = 0 ] ; then fail=1 ; printf - ; else printf . ; fi
 "${DDRESCUELOG}" -i1024 -s1024 -d logfile || fail=1
@@ -140,17 +153,17 @@ printf .
 "${DDRESCUELOG}" -i1024 -s1024 -d -q logfile
 if [ $? = 0 ] ; then fail=1 ; printf - ; else printf . ; fi
 
-cat logfile2 > logfile || framework_failure
-"${DDRESCUELOG}" -m logfile1 -D logfile
+cat ${logfile2} > logfile || framework_failure
+"${DDRESCUELOG}" -m ${logfile1} -D logfile
 if [ $? = 0 ] ; then fail=1 ; printf - ; else printf . ; fi
-"${DDRESCUELOG}" -m logfile2 -D logfile || fail=1
+"${DDRESCUELOG}" -m ${logfile2} -D logfile || fail=1
 printf .
 "${DDRESCUELOG}" -i1024 -s2048 -d logfile
 if [ $? = 0 ] ; then fail=1 ; printf - ; else printf . ; fi
 "${DDRESCUELOG}" -i2048 -s2048 -d logfile || fail=1
 printf .
 
-cat logfile1 > logfile || framework_failure
+cat ${logfile1} > logfile || framework_failure
 "${DDRESCUELOG}" -b2048 -l+ logfile > out || fail=1
 printf "0\n2\n4\n6\n8\n10\n12\n14\n16\n" > copy || framework_failure
 cmp out copy || fail=1
@@ -164,7 +177,7 @@ printf "1\n3\n5\n7\n" > copy || framework_failure
 cmp out copy || fail=1
 printf .
 
-"${DDRESCUELOG}" -n logfile2 > logfile || framework_failure
+"${DDRESCUELOG}" -n ${logfile2} > logfile || framework_failure
 "${DDRESCUELOG}" -b2048 -l+ logfile > out || fail=1
 printf "0\n2\n4\n6\n8\n10\n12\n14\n16\n" > copy || framework_failure
 cmp out copy || fail=1
@@ -178,16 +191,16 @@ printf "1\n3\n5\n7\n" > copy || framework_failure
 cmp out copy || fail=1
 printf .
 
-"${DDRESCUELOG}" -b2048 -l+ logfile1 > out || fail=1
-"${DDRESCUELOG}" -x logfile1 logfile1 > logfile || fail=1
+"${DDRESCUELOG}" -b2048 -l+ ${logfile1} > out || fail=1
+"${DDRESCUELOG}" -x ${logfile1} ${logfile1} > logfile || fail=1
 "${DDRESCUELOG}" -b2048 -l- logfile > copy || fail=1
 cmp out copy || fail=1
 printf .
-"${DDRESCUELOG}" -y logfile2 logfile1 > logfile || fail=1
+"${DDRESCUELOG}" -y ${logfile2} ${logfile1} > logfile || fail=1
 "${DDRESCUELOG}" -b2048 -l- logfile > copy || fail=1
 cmp out copy || fail=1
 printf .
-"${DDRESCUELOG}" -z logfile1 logfile2 > logfile || fail=1
+"${DDRESCUELOG}" -z ${logfile1} ${logfile2} > logfile || fail=1
 "${DDRESCUELOG}" -d logfile || fail=1
 printf .
 

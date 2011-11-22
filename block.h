@@ -45,8 +45,8 @@ public:
     { if( size_ < 0 || size_ > LLONG_MAX - pos_ ) size_ = LLONG_MAX - pos_; }
   void end( const long long e ) throw()
     { pos_ = e - size_; if( pos_ < 0 ) { size_ += pos_; pos_ = 0; } }
-  void align_pos( const int hardbs ) throw();
-  void align_end( const int hardbs ) throw();
+  void align_pos( const int alignment ) throw();
+  void align_end( const int alignment ) throw();
   void inc_size( const long long delta ) throw() { size_ += delta; }
 
   bool operator==( const Block & b ) const throw()
