@@ -1,44 +1,19 @@
-2011-11-22  Antonio Diaz Diaz  <ant_diaz@teleline.es>
+2012-01-01  Antonio Diaz Diaz  <ant_diaz@teleline.es>
 
-	* Version 1.15-rc1 released.
+	* Version 1.15 released.
+	* Added new option `-a, --min-read-rate'.
 	* Added new option `-I, --verify-input-size'.
 	* Added new option `-x, --extend-outfile'.
 	* main.cc: Verify that infile, outfile and logfile are all
 	  different.
 	* Non-tried blocks are now read aligned to cluster-size sectors.
 	* rescuebook.cc: Improved skip algorithm for the split pass.
-	* ddrescuelog.cc: Set default block size to 512 same as ddrescue.
-
-2011-10-23  Antonio Diaz Diaz  <ant_diaz@teleline.es>
-
-	* Version 1.15-pre3 released.
-	* Added additional passes if option `-a, --min-read-rate' is used.
-	* Added new option `-a, --change-types' to ddrescuelog.
-	* Added new option `-c, --create-logfile' to ddrescuelog.
-	* Added new option `-d, --delete-if-done' to ddrescuelog.
-	* Added new option `-D, --done-status' to ddrescuelog.
-	* Added new option `-m, --domain-logfile' to ddrescuelog.
-	* Added new option `-n, --invert-logfile' to ddrescuelog.
-	* Added new option `-p, --compare-logfile' to ddrescuelog.
-	* Added new option `-t, --show-status' to ddrescuelog.
-	* Added new option `-x, --xor-logfile' to ddrescuelog.
-	* Added new option `-y, --and-logfile' to ddrescuelog.
-	* Added new option `-z, --or-logfile' to ddrescuelog.
-
-2011-10-06  Antonio Diaz Diaz  <ant_diaz@teleline.es>
-
-	* Version 1.15-pre2 released.
-	* Added new option `-a, --min-read-rate'.
 	* main.cc: Removed spurious warning about `-D' ignored in fill mode.
 	* ddrescue.texinfo: Improved description of algorithm.
 	* logbook.cc (change_chunk_status): Return an adjust value (-1, 0, 1)
 	  to keep "errors" updated without calling count_errors every time.
-
-2011-01-28  Antonio Diaz Diaz  <ant_diaz@teleline.es>
-
-	* Version 1.15-pre1 released.
-	* Added `ddrescuelog', a program for logfile manipulation.
 	* ddrescue.cc: Renamed to io.cc.
+	* Added `ddrescuelog', a program for logfile manipulation.
 
 2011-01-10  Antonio Diaz Diaz  <ant_diaz@teleline.es>
 
@@ -248,7 +223,7 @@
 	* Version 0.1 released.
 
 
-Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
+Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012
 Antonio Diaz Diaz.
 
 This file is a collection of facts, and thus it is not copyrightable,

@@ -1,5 +1,5 @@
 /*  GNU ddrescuelog - Tool for ddrescue logfiles
-    Copyright (C) 2011 Antonio Diaz Diaz.
+    Copyright (C) 2011, 2012 Antonio Diaz Diaz.
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -39,7 +39,7 @@ namespace {
 
 const char * const Program_name = "GNU ddrescuelog";
 const char * const program_name = "ddrescuelog";
-const char * const program_year = "2011";
+const char * const program_year = "2012";
 const char * invocation_name = 0;
 
 enum Mode { m_none, m_and, m_change, m_compare, m_create, m_delete,

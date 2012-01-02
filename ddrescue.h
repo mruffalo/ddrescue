@@ -1,5 +1,5 @@
 /*  GNU ddrescue - Data recovery tool
-    Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
+    Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012
     Antonio Diaz Diaz.
 
     This program is free software: you can redistribute it and/or modify
@@ -37,6 +37,9 @@ private:
   mutable int index_;			// cached index of last find or change
   std::vector< Sblock > sblock_vector;	// note: blocks are consecutive
   long ul_t1;				// variable for update_logfile
+
+  Logbook( const Logbook & );
+  void operator=( const Logbook & );
 
   void erase_sblock( const int i )
     { sblock_vector.erase( sblock_vector.begin() + i ); }
@@ -233,7 +236,7 @@ void set_signals() throw();
 // Defined in main_common.cc
 //
 extern int verbosity;
-void internal_error( const char * const msg ) __attribute__ ((noreturn));
+void internal_error( const char * const msg ) throw();
 void show_error( const char * const msg,
                  const int errcode = 0, const bool help = false ) throw();
 void write_logfile_header( FILE * const f ) throw();

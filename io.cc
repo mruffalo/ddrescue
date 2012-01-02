@@ -1,5 +1,5 @@
 /*  GNU ddrescue - Data recovery tool
-    Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
+    Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012
     Antonio Diaz Diaz.
 
     This program is free software: you can redistribute it and/or modify
@@ -100,7 +100,7 @@ int writeblock( const int fd, const uint8_t * const buf, const int size,
       errno = 0;
       const int n = write( fd, buf + size - rest, rest );
       if( n > 0 ) rest -= n;
-      else if( errno && errno != EINTR && errno != EAGAIN ) break;
+      else if( n < 0 && errno != EINTR && errno != EAGAIN ) break;
       }
   return ( rest > 0 ) ? size - rest : size;
   }

@@ -12,7 +12,7 @@ File: ddrescue.info,  Node: Top,  Next: Introduction,  Up: (dir)
 GNU ddrescue Manual
 *******************
 
-This manual is for GNU ddrescue (version 1.15-rc1, 22 November 2011).
+This manual is for GNU ddrescue (version 1.15, 1 January 2012).
 
 * Menu:
 
@@ -31,8 +31,8 @@ This manual is for GNU ddrescue (version 1.15-rc1, 22 November 2011).
 * Concept Index::         Index of concepts
 
 
-   Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011 Antonio
-Diaz Diaz.
+   Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012
+Antonio Diaz Diaz.
 
    This manual is free documentation: you have unlimited permission to
 copy, distribute and modify it.
@@ -246,7 +246,8 @@ The format for running ddrescue is:
      Note that specifying a minimum read rate above the posibilities of
      the input device will result in a very low average rate because
      all reads will be considered slow reads and continuous skipping
-     will occur.
+     will occur. This will also make the logfile grow
+     disproportionately.
 
 `-b BYTES'
 `--block-size=BYTES'
@@ -506,7 +507,7 @@ Character   Meaning
 
 And here is an example logfile:
 
-# Rescue Logfile. Created by GNU ddrescue version 1.15-rc1
+# Rescue Logfile. Created by GNU ddrescue version 1.15
 # Command line: ddrescue /dev/fd0 fdimage logfile
 # current_pos  current_status
 0x00120000     ?
@@ -1092,15 +1093,20 @@ Node: Introduction1304
 Node: Basic Concepts3787
 Node: Algorithm5249
 Node: Invoking Ddrescue8661
-Node: Logfile Structure17885
-Node: Examples20139
-Ref: lziprecover-example23802
-Node: Direct Disc Access25195
-Node: Fill Mode27072
-Node: Generate Mode31168
-Node: Ddrescuelog32843
-Node: Invoking Ddrescuelog34992
-Node: Problems40437
-Node: Concept Index40994
+Node: Logfile Structure17947
+Node: Examples20197
+Ref: lziprecover-example23860
+Node: Direct Disc Access25253
+Node: Fill Mode27130
+Node: Generate Mode31226
+Node: Ddrescuelog32901
+Node: Invoking Ddrescuelog35050
+Node: Problems40495
+Node: Concept Index41052
 
 End Tag Table
+
+
+Local Variables:
+coding: iso-8859-15
+End:

@@ -1,6 +1,6 @@
 #! /bin/sh
 # configure script for GNU ddrescue - Data recovery tool
-# Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
+# Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012
 # Antonio Diaz Diaz.
 #
 # This configure script is free software: you have unlimited permission
@@ -9,7 +9,7 @@
 args=
 no_create=
 pkgname=ddrescue
-pkgversion=1.15-rc1
+pkgversion=1.15
 progname=ddrescue
 srctrigger=ddrescue.h
 
@@ -166,7 +166,7 @@ echo "LDFLAGS = ${LDFLAGS}"
 rm -f Makefile
 cat > Makefile << EOF
 # Makefile for GNU ddrescue - Data recovery tool
-# Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
+# Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012
 # Antonio Diaz Diaz.
 # This file was generated automatically by configure. Do not edit.
 #

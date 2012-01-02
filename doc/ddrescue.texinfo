@@ -1,12 +1,13 @@
 \input texinfo @c -*-texinfo-*-
 @c %**start of header
 @setfilename ddrescue.info
+@documentencoding ISO-8859-15
 @settitle GNU ddrescue Manual
 @finalout
 @c %**end of header
 
-@set UPDATED 22 November 2011
-@set VERSION 1.15-rc1
+@set UPDATED 1 January 2012
+@set VERSION 1.15
 
 @dircategory GNU Packages
 @direntry
@@ -50,8 +51,8 @@ This manual is for GNU ddrescue (version @value{VERSION}, @value{UPDATED}).
 @end menu
 
 @sp 1
-Copyright @copyright{} 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
-Antonio Diaz Diaz.
+Copyright @copyright{} 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011,
+2012 Antonio Diaz Diaz.
 
 This manual is free documentation: you have unlimited permission
 to copy, distribute and modify it.
@@ -274,7 +275,8 @@ for each block read as @w{(average_rate / 10)}.
 
 Note that specifying a minimum read rate above the posibilities of the
 input device will result in a very low average rate because all reads
-will be considered slow reads and continuous skipping will occur.
+will be considered slow reads and continuous skipping will occur. This
+will also make the logfile grow disproportionately.
 
 @item -b @var{bytes}
 @itemx --block-size=@var{bytes}
@@ -668,8 +670,14 @@ ddrescue -d -r1 -b2048 /dev/cdrom cdimage logfile
 @noindent
 Example 5: Rescue a lzip compressed backup from two copies on CD-ROM
 with error-checked merging of copies
-(@xref{Top,lziprecover manual,,lziprecover}, for details about
-lziprecover).
+@ifnothtml
+(@xref{Top,lziprecover manual,,lziprecover},
+@end ifnothtml
+@ifhtml
+(See the
+@uref{http://www.nongnu.org/lzip/manual/lziprecover_manual.html,,lziprecover manual}
+@end ifhtml
+for details about lziprecover).
 
 @example
 ddrescue -b2048 /dev/cdrom cdimage1 logfile1

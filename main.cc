@@ -1,5 +1,5 @@
 /*  GNU ddrescue - Data recovery tool
-    Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
+    Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012
     Antonio Diaz Diaz.
 
     This program is free software: you can redistribute it and/or modify
@@ -45,7 +45,7 @@ namespace {
 
 const char * const Program_name = "GNU ddrescue";
 const char * const program_name = "ddrescue";
-const char * const program_year = "2011";
+const char * const program_year = "2012";
 const char * invocation_name = 0;
 
 enum Mode { m_none, m_fill, m_generate };
@@ -203,6 +203,7 @@ int do_fill( const long long offset, Domain & domain,
   if( verbosity >= 0 ) std::printf( "\n\n" );
   if( verbosity > 0 )
     {
+    std::printf( "%s %s\n", Program_name, PROGVERSION );
     std::printf( "About to fill with data from %s blocks of %s marked %s\n",
                  iname, oname, filltypes.c_str() );
     std::printf( "    Maximum size to fill: %sBytes\n",
@@ -256,6 +257,7 @@ int do_generate( const long long offset, Domain & domain,
   if( verbosity >= 0 ) std::printf( "\n\n" );
   if( verbosity > 0 )
     {
+    std::printf( "%s %s\n", Program_name, PROGVERSION );
     std::printf( "About to generate an approximate logfile for %s and %s\n",
                  iname, oname );
     std::printf( "    Starting positions: infile = %sB",
@@ -342,6 +344,7 @@ int do_rescue( const long long offset, Domain & domain,
   if( verbosity >= 0 ) std::printf( "\n\n" );
   if( verbosity > 0 )
     {
+    std::printf( "%s %s\n", Program_name, PROGVERSION );
     std::printf( "About to copy %sBytes from %s to %s\n",
                  format_num( rescuebook.domain().in_size() ), iname, oname );
     std::printf( "    Starting positions: infile = %sB",

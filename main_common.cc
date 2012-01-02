@@ -1,5 +1,5 @@
 /*  GNU ddrescue - Data recovery tool
-    Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
+    Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012
     Antonio Diaz Diaz.
 
     This program is free software: you can redistribute it and/or modify
@@ -139,7 +139,7 @@ void show_error( const char * const msg, const int errcode, const bool help ) th
   }
 
 
-void internal_error( const char * const msg )
+void internal_error( const char * const msg ) throw()
   {
   if( verbosity >= 0 )
     std::fprintf( stderr, "%s: internal error: %s.\n", program_name, msg );
