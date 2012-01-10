@@ -167,6 +167,7 @@ class Rescuebook : public Logbook
   {
   const long long max_error_rate_;
   const long long min_outfile_size_;
+  long long error_rate;
   long long min_read_rate_;
   long long sparse_size;		// end position of pending writes
   long long recsize, errsize;		// total recovered and error sizes
@@ -178,7 +179,7 @@ class Rescuebook : public Logbook
   int ides_, odes_;			// input and output file descriptors
   const bool nosplit_, synchronous_;
 					// variables for update_status
-  long long a_rate, c_rate, first_size, last_size, last_errsize;
+  long long a_rate, c_rate, first_size, last_size;
   long long last_ipos;
   long t0, t1, ts;
   int oldlen;

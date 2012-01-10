@@ -9,7 +9,7 @@
 args=
 no_create=
 pkgname=ddrescue
-pkgversion=1.15
+pkgversion=1.16-rc1
 progname=ddrescue
 srctrigger=ddrescue.h
 

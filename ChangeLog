@@ -1,53 +1,60 @@
+2012-01-10  Antonio Diaz Diaz  <ant_diaz@teleline.es>
+
+	* Version 1.16-rc1 released.
+	* The '-E, --max-error-rate' option now checks the rate of
+	  actually failed reads, not the growth of error size.
+	* Changed quote characters in messages as advised by GNU Standards.
+
 2012-01-01  Antonio Diaz Diaz  <ant_diaz@teleline.es>
 
 	* Version 1.15 released.
-	* Added new option `-a, --min-read-rate'.
-	* Added new option `-I, --verify-input-size'.
-	* Added new option `-x, --extend-outfile'.
+	* Added new option '-a, --min-read-rate'.
+	* Added new option '-I, --verify-input-size'.
+	* Added new option '-x, --extend-outfile'.
 	* main.cc: Verify that infile, outfile and logfile are all
 	  different.
 	* Non-tried blocks are now read aligned to cluster-size sectors.
 	* rescuebook.cc: Improved skip algorithm for the split pass.
-	* main.cc: Removed spurious warning about `-D' ignored in fill mode.
+	* main.cc: Removed spurious warning about '-D' ignored in fill mode.
 	* ddrescue.texinfo: Improved description of algorithm.
 	* logbook.cc (change_chunk_status): Return an adjust value (-1, 0, 1)
 	  to keep "errors" updated without calling count_errors every time.
 	* ddrescue.cc: Renamed to io.cc.
-	* Added `ddrescuelog', a program for logfile manipulation.
+	* Added 'ddrescuelog', a program for logfile manipulation.
 
 2011-01-10  Antonio Diaz Diaz  <ant_diaz@teleline.es>
 
 	* Version 1.14 released.
-	* Added new option `-R, --reverse'.
-	* Added new option `-E, --max-error-rate'.
-	* Extended syntax `--max-errors=+N' to specify new errors.
-	* Changed short name of option `--retrim' to `-M'.
-	* Removed spurious warning about `preallocation not available'.
-	* Code reorganization. New class `Genbook'.
+	* Added new option '-R, --reverse'.
+	* Added new option '-E, --max-error-rate'.
+	* Extended syntax '--max-errors=+N' to specify new errors.
+	* Changed short name of option '--retrim' to '-M'.
+	* Removed spurious warning about 'preallocation not available'.
+	* Code reorganization. New class 'Genbook'.
 
 2010-08-27  Antonio Diaz Diaz  <ant_diaz@teleline.es>
 
 	* Version 1.13 released.
 	* Non-regular output files are no more overwritten by default.
-	* Added new option `-f, --force'.
-	* Added new option `-p, --preallocate'.
+	* Added new option '-f, --force'.
+	* Added new option '-p, --preallocate'.
 	* main.cc (write_logfile_header): Write command line to logfile.
 	* ddrescue.texinfo: Added info about logfile and recoverable formats.
 	* ddrescue.texinfo: Added a couple more warnings to the tutorial.
-	* testsuite: `test1' renamed to `test.txt'
-	* Revert to use `long' instead of `time_t' for time variables.
-	  Ddrescue only needs counting seconds and `time_t' causes
+	* testsuite: 'test1' renamed to 'test.txt'
+	* Revert to use 'long' instead of 'time_t' for time variables.
+	  Ddrescue only needs counting seconds and 'time_t' causes
 	  warnings on some systems.
 
 2010-04-06  Antonio Diaz Diaz  <ant_diaz@teleline.es>
 
 	* Version 1.12 released.
 	* main.cc: Outfile is now created with mode 0666 if umask allows it.
-	* main.cc: New constant `o_binary'.
+	* main.cc: New constant 'o_binary'.
 	* Makefile.in: Added quotes to directory names.
-	* Makefile.in: Added `--name' option to help2man invocation.
-	* testsuite/check.sh: Use `test1' instead of `COPYING' for testing.
-	* Use `time_t' instead of `long' for time variables.
+	* Makefile.in: Added '--name' option to help2man invocation.
+	* testsuite/check.sh: Use 'test1' instead of 'COPYING' for testing.
+	* Use 'time_t' instead of 'long' for time variables.
 
 2009-07-10  Antonio Diaz Diaz  <ant_diaz@teleline.es>
 
@@ -59,36 +66,36 @@
 	* ddrescue.cc (Rescuebook::show_status): Show the time elapsed
 	  from last successful read.
 	* ddrescue.cc (set_signals): Ignore SIGUSR1 and SIGUSR2.
-	* ddrescue.texinfo: Improved description of `-d', `-D' and `-S'.
+	* ddrescue.texinfo: Improved description of '-d', '-D' and '-S'.
 	* ddrescue.texinfo: Improved description of algorithm.
 	* testsuite/check.sh: Verify that files are open in binary mode.
-	* Added logfile usage warning to `ddrescue --help' output.
+	* Added logfile usage warning to 'ddrescue --help' output.
 
 2009-02-19  Antonio Diaz Diaz  <ant_diaz@teleline.es>
 
 	* Version 1.10 released.
-	* Added new option `-T, --try-again'.
-	* rescuebook.cc: `skip_size' has been made independent of `softbs'.
-	* `change_chunk_status' is now faster for large logfiles.
+	* Added new option '-T, --try-again'.
+	* rescuebook.cc: 'skip_size' has been made independent of 'softbs'.
+	* 'change_chunk_status' is now faster for large logfiles.
 	* Fixed overflow when reading from devices of undefined size.
 	* Block does no more admit negative sizes.
-	* `make install-info' should now work on Debian and OS X.
+	* 'make install-info' should now work on Debian and OS X.
 	* New file testsuite/check.sh.
 
 2008-11-17  Antonio Diaz Diaz  <ant_diaz@teleline.es>
 
 	* Version 1.9 released.
-	* Added new option `-m, --domain-logfile'.
+	* Added new option '-m, --domain-logfile'.
 	* Verbosity control of messages has been simplified.
 	* Changed LONG_LONG_MAX to LLONG_MAX.
 
 2008-02-24  Antonio Diaz Diaz  <ant_diaz@teleline.es>
 
 	* Version 1.8 released.
-	* Added new option `-g, --generate-logfile'.
-	* Added new option `-D, --synchronous'.
+	* Added new option '-g, --generate-logfile'.
+	* Added new option '-D, --synchronous'.
 	* Fill mode now works when outfile offset differs from 0.
-	* Updated `Fill Mode' chapter of the manual.
+	* Updated 'Fill Mode' chapter of the manual.
 
 2008-01-04  Antonio Diaz Diaz  <ant_diaz@teleline.es>
 
@@ -96,25 +103,25 @@
 	* Skips faster over damaged areas (small read, big jump).
 	* Logfile is maintaned minimized at all times.
 	* Rescuebook::errors now counts the error areas found.
-	* Target `check' added to Makefile.
-	* rescuebook.cc (split_errors): Added new variable `error_counter'.
-	* Added new option `-R, --retrim'.
+	* Target 'check' added to Makefile.
+	* rescuebook.cc (split_errors): Added new variable 'error_counter'.
+	* Added new option '-R, --retrim'.
 
 2007-11-16  Antonio Diaz Diaz  <ant_diaz@teleline.es>
 
 	* Version 1.6 released.
-	* Code reorganization. New classes `Fillbook' and `Rescuebook'.
-	* logbook.cc (copy_non_tried): Added new variable `skip_counter'.
+	* Code reorganization. New classes 'Fillbook' and 'Rescuebook'.
+	* logbook.cc (copy_non_tried): Added new variable 'skip_counter'.
 	* Added new pass that trims error areas backward before splitting.
 	* Added support for sparse output files.
 	* Blocks longer than hardbs are now split at sector boundaries.
-	* Added new option `-F, --fill'.
-	* Added new chapter `Fill Mode' to the manual.
+	* Added new option '-F, --fill'.
+	* Added new chapter 'Fill Mode' to the manual.
 	* Added status line to logfile.
 	* An interrupted retry pass is now resumed instead of reinitiated.
 	* Perfect resumability if interrupted during trimming or splitting.
 	* ddrescue.cc (set_signals): Handle also SIGHUP and SIGTERM.
-	* `--quiet' option also quiets error messages.
+	* '--quiet' option also quiets error messages.
 	* Print a more informative error message when reading an old logfile.
 	* Added note to ddrescue.texinfo about old logfiles.
 	* Added some consistency checks.
@@ -127,7 +134,7 @@
 2007-06-18  Antonio Diaz Diaz  <ant_diaz@teleline.es>
 
 	* Version 1.4 released.
-	* Added new option `-d, --direct'.
+	* Added new option '-d, --direct'.
 	* Fixed a bug showing bad initial error size.
 	* Fixed error counting.
 	* Small changes to documentation.
@@ -135,21 +142,21 @@
 2006-12-13  Antonio Diaz Diaz  <ant_diaz@teleline.es>
 
 	* Version 1.3 released.
-	* Some fixes made to `configure' script.
-	* Added `sddrescue' target to Makefile.in.
+	* Some fixes made to 'configure' script.
+	* Added 'sddrescue' target to Makefile.in.
 
 2006-04-03  Antonio Diaz Diaz  <ant_diaz@teleline.es>
 
 	* Version 1.2 released.
-	* Added new option `-C, --complete-only'.
-	* Added new argument parser that replaces `getopt_long'.
+	* Added new option '-C, --complete-only'.
+	* Added new argument parser that replaces 'getopt_long'.
 	* Logfile save interval is now dependent on logfile size.
 	* Small changes to documentation.
 
 2005-10-10  Antonio Diaz Diaz  <ant_diaz@teleline.es>
 
 	* Version 1.1 released.
-	* `iobuf' is aligned to the sector size for use with raw devices.
+	* 'iobuf' is aligned to the sector size for use with raw devices.
 	* Added a small tutorial to the info file.
 	* Added two missing headers.
 
@@ -169,16 +176,16 @@
 	* ddrescue is now part of the GNU project.
 	* Added configure script and info file.
 	* Two small bugs corrected.
-	* Added new option `-B, --binary-prefixes' to show binary
+	* Added new option '-B, --binary-prefixes' to show binary
 	  multipliers in numbers (SI prefixes are used by default).
 	* Numbers are accepted with decimal (SI) or binary multipliers.
-	* `badblocks file' renamed to `logfile'.
+	* 'badblocks file' renamed to 'logfile'.
 	* Logfile is now also saved if max_errors are exceeded.
 
 2004-12-14  Antonio Diaz Diaz  <ant_diaz@teleline.es>
 
 	* Version 0.8 released.
-	* Added new option `-n, --no-split' to disable splitting of
+	* Added new option '-n, --no-split' to disable splitting of
 	  damaged areas.
 
 2004-10-30  Antonio Diaz Diaz  <ant_diaz@teleline.es>
@@ -203,7 +210,7 @@
 2004-09-03  Antonio Diaz Diaz  <ant_diaz@teleline.es>
 
 	* Version 0.4 released.
-	* The project name has been changed to `ddrescue' to meet
+	* The project name has been changed to 'ddrescue' to meet
 	  command name standards.
 	* Added long option names.
 

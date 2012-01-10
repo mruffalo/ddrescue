@@ -1,20 +1,8 @@
-Changes in version 1.15:
+Changes in version 1.16:
 
-The new option "-a, --min-read-rate" has been added.
+The "-E, --max-error-rate" option now checks the rate of actually failed
+reads, not the growth of error size, and shows the error rate in the
+error message.
 
-The new option "-I, --verify-input-size" has been added.
-
-The new option "-x, --extend-outfile" has been added.
-
-Ddrescue now verifies that infile, outfile and logfile are all
-different.
-
-Non-tried blocks are now read aligned to cluster-size sectors.
-
-The "split or skip" algorithm of the split pass has been improved.
-
-A spurious warning about "-D" being ignored in fill mode has been
-removed.
-
-Ddrescuelog, a tool for manipulation, display, conversion, comparison
-and testing of ddrescue logfiles, has been added.
+Quote characters in messages have been changed as advised by GNU Coding
+Standards.

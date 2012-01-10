@@ -105,7 +105,7 @@ void set_types( const std::string & arg,
   if( error )
     {
     char buf[80];
-    snprintf( buf, sizeof buf, "Invalid type for `change-types' option." );
+    snprintf( buf, sizeof buf, "Invalid type for 'change-types' option." );
     show_error( buf, 0, true );
     std::exit( 1 );
     }
@@ -122,7 +122,7 @@ void set_types( const std::string & arg,
       !Sblock::isstatus( arg[0] ) || !Sblock::isstatus( arg[1] ) )
     {
     char buf[80];
-    snprintf( buf, sizeof buf, "Invalid type for `create-logfile' option." );
+    snprintf( buf, sizeof buf, "Invalid type for 'create-logfile' option." );
     show_error( buf, 0, true );
     std::exit( 1 );
     }
@@ -136,7 +136,7 @@ void verify_logname_and_domain( const Logbook & logbook ) throw()
   if( !logbook.logfile_exists() )
     {
     char buf[80];
-    snprintf( buf, sizeof buf, "Logfile `%s' does not exist.",
+    snprintf( buf, sizeof buf, "Logfile '%s' does not exist.",
               logbook.filename() );
     show_error( buf );
     std::exit( 1 );
@@ -255,7 +255,7 @@ int compare_logfiles( Domain & domain, const char * const logname,
   if( retval )
     {
     char buf[80];
-    snprintf( buf, sizeof buf, "Logfiles `%s' and `%s' differ.",
+    snprintf( buf, sizeof buf, "Logfiles '%s' and '%s' differ.",
               logbook.filename(), logbook2.filename() );
     show_error( buf );
     }
@@ -272,7 +272,7 @@ int create_logfile( Domain & domain, const char * const logname,
   if( logbook.logfile_exists() )
     {
     snprintf( buf, sizeof buf,
-              "Logfile `%s' exists. Use `--force' to overwrite it.", logname );
+              "Logfile '%s' exists. Use '--force' to overwrite it.", logname );
     show_error( buf );
     return 1;
     }
@@ -321,7 +321,7 @@ int test_if_done( Domain & domain, const char * const logname, const bool del )
       {
       if( verbosity >= 1 )
         {
-        snprintf( buf, sizeof buf, "Logfile `%s' not done.", logname );
+        snprintf( buf, sizeof buf, "Logfile '%s' not done.", logname );
         show_error( buf );
         }
       return 1;
@@ -330,13 +330,13 @@ int test_if_done( Domain & domain, const char * const logname, const bool del )
   if( !del ) return 0;
   if( std::remove( logname ) != 0 )
     {
-    snprintf( buf, sizeof buf, "Error deleting logfile `%s'", logname );
+    snprintf( buf, sizeof buf, "Error deleting logfile '%s'", logname );
     show_error( buf, errno );
     return 1;
     }
   if( verbosity >= 1 )
     {
-    snprintf( buf, sizeof buf, "Logfile `%s' successfully deleted.", logname );
+    snprintf( buf, sizeof buf, "Logfile '%s' successfully deleted.", logname );
     show_error( buf );
     }
   return 0;

@@ -12,7 +12,7 @@ File: ddrescue.info,  Node: Top,  Next: Introduction,  Up: (dir)
 GNU ddrescue Manual
 *******************
 
-This manual is for GNU ddrescue (version 1.15, 1 January 2012).
+This manual is for GNU ddrescue (version 1.16-rc1, 10 January 2012).
 
 * Menu:
 
@@ -302,8 +302,12 @@ The format for running ddrescue is:
 
 `-E BYTES'
 `--max-error-rate=BYTES'
-     Maximum growth per second of error size, in bytes, allowed before
-     giving up. Defaults to infinity.
+     Maximum rate of errors allowed before giving up, in bytes per
+     second.  Defaults to infinity. The rate being measured is that of
+     actually failed reads, so the rescue may finish because of this
+     rate being exceeded even if the total error size (errsize) does
+     not change because the areas being tried are already marked as
+     errors.
 
 `-f'
 `--force'
@@ -507,7 +511,7 @@ Character   Meaning
 
 And here is an example logfile:
 
-# Rescue Logfile. Created by GNU ddrescue version 1.15
+# Rescue Logfile. Created by GNU ddrescue version 1.16-rc1
 # Command line: ddrescue /dev/fd0 fdimage logfile
 # current_pos  current_status
 0x00120000     ?
@@ -1089,20 +1093,20 @@ Concept Index
 
 Tag Table:
 Node: Top203
-Node: Introduction1304
-Node: Basic Concepts3787
-Node: Algorithm5249
-Node: Invoking Ddrescue8661
-Node: Logfile Structure17947
-Node: Examples20197
-Ref: lziprecover-example23860
-Node: Direct Disc Access25253
-Node: Fill Mode27130
-Node: Generate Mode31226
-Node: Ddrescuelog32901
-Node: Invoking Ddrescuelog35050
-Node: Problems40495
-Node: Concept Index41052
+Node: Introduction1309
+Node: Basic Concepts3792
+Node: Algorithm5254
+Node: Invoking Ddrescue8666
+Node: Logfile Structure18200
+Node: Examples20454
+Ref: lziprecover-example24117
+Node: Direct Disc Access25510
+Node: Fill Mode27387
+Node: Generate Mode31483
+Node: Ddrescuelog33158
+Node: Invoking Ddrescuelog35307
+Node: Problems40752
+Node: Concept Index41309
 
 End Tag Table
 

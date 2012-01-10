@@ -185,7 +185,7 @@ Domain::Domain( const long long p, const long long s,
     {
     char buf[80];
     snprintf( buf, sizeof buf,
-              "Logfile `%s' does not exist or is not readable.", logname );
+              "Logfile '%s' does not exist or is not readable.", logname );
     show_error( buf );
     std::exit( 1 );
     }
@@ -296,8 +296,8 @@ bool Logbook::update_logfile( const int odes, const bool force,
   if( verbosity >= 0 )
     {
     char buf[80];
-    const char * const s = ( f ? "Error writing logfile `%s'" :
-                                 "Error opening logfile `%s' for writing" );
+    const char * const s = ( f ? "Error writing logfile '%s'" :
+                                 "Error opening logfile '%s' for writing" );
     snprintf( buf, sizeof buf, s, filename_ );
     if( retry ) std::fprintf( stderr, "\n" );
     show_error( buf, errno );

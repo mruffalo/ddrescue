@@ -124,6 +124,7 @@ int Rescuebook::copy_non_tried()
       else if( skip_size > 0 && copied_size > 0 )
         { skip_size -= copied_size; if( skip_size < 0 ) skip_size = 0; }
       if( retval ) return retval;
+      if( error_size > 0 ) error_rate += error_size;
       if( error_size > 0 || slow_read() )
         {
         if( pos >= 0 && skip_size > 0 )
@@ -190,6 +191,7 @@ int Rescuebook::rcopy_non_tried()
       else if( skip_size > 0 && copied_size > 0 )
         { skip_size -= copied_size; if( skip_size < 0 ) skip_size = 0; }
       if( retval ) return retval;
+      if( error_size > 0 ) error_rate += error_size;
       if( error_size > 0 || slow_read() )
         {
         if( end > 0 && skip_size > 0 )
@@ -240,6 +242,7 @@ int Rescuebook::trim_errors()
                                         first_post );
     if( copied_size > 0 ) errsize -= copied_size;
     if( retval ) return retval;
+    if( error_size > 0 ) error_rate += error_size;
     if( error_size > 0 && end > 0 )
       {
       const int index = find_index( end - 1 );
@@ -275,6 +278,7 @@ int Rescuebook::rtrim_errors()
                                         first_post );
     if( copied_size > 0 ) errsize -= copied_size;
     if( retval ) return retval;
+    if( error_size > 0 ) error_rate += error_size;
     if( error_size > 0 && pos >= 0 )
       {
       const int index = find_index( pos );
@@ -320,6 +324,7 @@ int Rescuebook::split_errors()
                                           first_post );
       if( copied_size > 0 ) errsize -= copied_size;
       if( retval ) return retval;
+      if( error_size > 0 ) error_rate += error_size;
       if( error_size <= 0 ) error_counter = 0;
       else if( pos >= 0 && ++error_counter >= 8 )
         {			// skip after enough consecutive errors
@@ -383,6 +388,7 @@ int Rescuebook::rsplit_errors()
                                           first_post );
       if( copied_size > 0 ) errsize -= copied_size;
       if( retval ) return retval;
+      if( error_size > 0 ) error_rate += error_size;
       if( error_size <= 0 ) error_counter = 0;
       else if( end > 0 && ++error_counter >= 8 )
         {			// skip after enough consecutive errors
@@ -442,6 +448,7 @@ int Rescuebook::copy_errors()
                                           error_size, msgbuf, first_post );
       if( copied_size > 0 ) errsize -= copied_size;
       if( retval ) return retval;
+      if( error_size > 0 ) error_rate += error_size;
       update_status();
       if( !update_logfile( odes_ ) ) return -2;
       }
@@ -483,6 +490,7 @@ int Rescuebook::rcopy_errors()
                                           error_size, msgbuf, first_post );
       if( copied_size > 0 ) errsize -= copied_size;
       if( retval ) return retval;
+      if( error_size > 0 ) error_rate += error_size;
       update_status();
       if( !update_logfile( odes_ ) ) return -2;
       }
@@ -505,8 +513,11 @@ Rescuebook::Rescuebook( const long long offset, const long long isize,
   : Logbook( offset, isize, dom, logname, cluster, hardbs, complete_only ),
     max_error_rate_( max_error_rate ),
     min_outfile_size_( min_outfile_size ),
+    error_rate( 0 ),
     min_read_rate_( min_read_rate ),
     sparse_size( sparse ? 0 : -1 ),
+    recsize( 0 ),
+    errsize( 0 ),
     iname_( ( access( iname, F_OK ) == 0 ) ? iname : 0 ),
     max_retries_( max_retries ),
     skipbs_( std::max( 65536, 16 * hardbs ) ),
@@ -514,7 +525,7 @@ Rescuebook::Rescuebook( const long long offset, const long long isize,
     e_code( 0 ),
     nosplit_( nosplit ), synchronous_( synchronous ),
     a_rate( 0 ), c_rate( 0 ), first_size( 0 ), last_size( 0 ),
-    last_errsize( 0 ), last_ipos( 0 ), t0( 0 ), t1( 0 ), ts( 0 ), oldlen( 0 ),
+    last_ipos( 0 ), t0( 0 ), t1( 0 ), ts( 0 ), oldlen( 0 ),
     status_changed( false )
   {
   if( retrim )
@@ -547,7 +558,6 @@ Rescuebook::Rescuebook( const long long offset, const long long isize,
 int Rescuebook::do_rescue( const int ides, const int odes, const bool reverse )
   {
   bool copy_pending = false, trim_pending = false, split_pending = false;
-  recsize = 0; errsize = 0;
   ides_ = ides; odes_ = odes;
 
   for( int i = 0; i < sblocks(); ++i )
@@ -596,8 +606,10 @@ int Rescuebook::do_rescue( const int ides, const int odes, const bool reverse )
     else if( retval < 0 ) std::printf( "\nInterrupted by user" );
     else
       {
-      if( e_code & 1 ) std::printf("\nToo high error rate reading input file" );
-      if( e_code & 2 ) std::printf("\nToo many errors in input file" );
+      if( e_code & 1 )
+        std::printf( "\nToo high error rate reading input file (%sB/s)",
+                     format_num( error_rate ) );
+      if( e_code & 2 ) std::printf( "\nToo many errors in input file" );
       }
     std::fputc( '\n', stdout );
     }

@@ -18,7 +18,7 @@ This creates the directory ./ddrescue[version] containing the source from
 the main archive.
 
 2. Change to ddrescue directory and run configure.
-   (Try `configure --help' for usage instructions).
+   (Try 'configure --help' for usage instructions).
 
 	cd ddrescue[version]
 	./configure
@@ -27,26 +27,26 @@ the main archive.
 
 	make
 
-4. Optionally, type `make check' to run the tests that come with ddrescue.
+4. Optionally, type 'make check' to run the tests that come with ddrescue.
 
-5. Type `make install' to install the program and any data files and
+5. Type 'make install' to install the program and any data files and
    documentation.
 
 
 Another way
 -----------
 You can also compile ddrescue into a separate directory. To do this, you
-must use a version of `make' that supports the `VPATH' variable, such
-as GNU `make'. `cd' to the directory where you want the object files
-and executables to go and run the `configure' script. `configure'
-automatically checks for the source code in `.', in `..' and in the
-directory that `configure' is in.
+must use a version of 'make' that supports the 'VPATH' variable, such
+as GNU 'make'. 'cd' to the directory where you want the object files
+and executables to go and run the 'configure' script. 'configure'
+automatically checks for the source code in '.', in '..' and in the
+directory that 'configure' is in.
 
-`configure' recognizes the option `--srcdir=DIR' to control where to
-look for the sources. Usually `configure' can determine that directory
+'configure' recognizes the option '--srcdir=DIR' to control where to
+look for the sources. Usually 'configure' can determine that directory
 automatically.
 
-After running `configure', you can run `make' and `make install' as
+After running 'configure', you can run 'make' and 'make install' as
 explained above.
 
 

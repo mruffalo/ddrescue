@@ -98,7 +98,7 @@ void check_types( const std::string & types, const char * const opt_name ) throw
   if( !types.size() || error )
     {
     char buf[80];
-    snprintf( buf, sizeof buf, "Invalid type for `%s' option.", opt_name );
+    snprintf( buf, sizeof buf, "Invalid type for '%s' option.", opt_name );
     show_error( buf, 0, true );
     std::exit( 1 );
     }
@@ -133,7 +133,7 @@ void show_error( const char * const msg, const int errcode, const bool help ) th
       std::fprintf( stderr, "\n" );
       }
     if( help && invocation_name && invocation_name[0] )
-      std::fprintf( stderr, "Try `%s --help' for more information.\n",
+      std::fprintf( stderr, "Try '%s --help' for more information.\n",
                     invocation_name );
     }
   }

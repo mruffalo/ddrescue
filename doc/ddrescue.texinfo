@@ -6,8 +6,8 @@
 @finalout
 @c %**end of header
 
-@set UPDATED 1 January 2012
-@set VERSION 1.15
+@set UPDATED 10 January 2012
+@set VERSION 1.16-rc1
 
 @dircategory GNU Packages
 @direntry
@@ -330,8 +330,11 @@ the @var{logfile}.
 
 @item -E @var{bytes}
 @itemx --max-error-rate=@var{bytes}
-Maximum growth per second of error size, in bytes, allowed before giving
-up. Defaults to infinity.
+Maximum rate of errors allowed before giving up, in bytes per second.
+Defaults to infinity. The rate being measured is that of actually failed
+reads, so the rescue may finish because of this rate being exceeded even
+if the total error size (errsize) does not change because the areas
+being tried are already marked as errors.
 
 @item -f
 @itemx --force

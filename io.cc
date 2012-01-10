@@ -286,7 +286,6 @@ void Rescuebook::update_status( const bool force ) throw()
     {
     t0 = t1 = ts = std::time( 0 );
     first_size = last_size = recsize;
-    last_errsize = errsize;
     status_changed = true;
     if( verbosity >= 0 ) std::printf( "\n\n\n" );
     }
@@ -299,12 +298,11 @@ void Rescuebook::update_status( const bool force ) throw()
     c_rate = ( recsize - last_size ) / ( t2 - t1 );
     if( recsize > last_size ) ts = t2;
     last_size = recsize;
-    if( max_error_rate_ >= 0 )
+    if( max_error_rate_ >= 0 && !( e_code & 1 ) )
       {
-      long long e_rate = errsize - last_errsize;
-      last_errsize = errsize;
-      e_rate /= ( t2 - t1 );
-      if( e_rate > max_error_rate_ ) e_code |= 1;
+      error_rate /= ( t2 - t1 );
+      if( error_rate > max_error_rate_ ) e_code |= 1;
+      else error_rate = 0;
       }
     t1 = t2;
     status_changed = true;

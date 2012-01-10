@@ -76,7 +76,7 @@ void show_help( const int cluster, const int hardbs ) throw()
                "  -d, --direct                   use direct disc access for input file\n"
                "  -D, --synchronous              use synchronous writes for output file\n"
                "  -e, --max-errors=[+]<n>        maximum number of [new] error areas allowed\n"
-               "  -E, --max-error-rate=<bytes>   maximum growth per second of error size\n"
+               "  -E, --max-error-rate=<bytes>   maximum allowed rate of read errors per second\n"
                "  -f, --force                    overwrite output device or partition\n"
                "  -F, --fill=<types>             fill given type blocks with infile data (?*/-+)\n"
                "  -g, --generate-logfile         generate approximate logfile from partial copy\n"
@@ -157,7 +157,7 @@ bool check_files( const char * const iname, const char * const oname,
       {
       show_error( "Output file exists and is not a regular file." );
       if( !force )
-        show_error( "Use `--force' if you really want to overwrite it, but be\n"
+        show_error( "Use '--force' if you really want to overwrite it, but be\n"
                     "aware that all existing data in output file will be lost.", 0, true );
       else if( min_outfile_size > 0 )
         show_error( "Only regular files can be extended.", 0, true );
