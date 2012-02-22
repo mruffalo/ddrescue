@@ -46,7 +46,7 @@ enum Mode { m_none, m_and, m_change, m_compare, m_create, m_delete,
             m_done_st, m_invert, m_list, m_or, m_status, m_xor };
 
 
-void show_help( const int hardbs ) throw()
+void show_help( const int hardbs )
   {
   std::printf( "%s - Tool for ddrescue logfiles.\n", Program_name );
   std::printf( "Manipulates ddrescue logfiles, shows their contents, converts them to/from\n"
@@ -83,7 +83,7 @@ void show_help( const int hardbs ) throw()
 
 
 void set_types( const std::string & arg,
-                std::string & types1, std::string & types2 ) throw()
+                std::string & types1, std::string & types2 )
   {
   std::string * p = &types1;
   bool error = false, comma_found = false;
@@ -115,7 +115,7 @@ void set_types( const std::string & arg,
 
 
 void set_types( const std::string & arg,
-                Sblock::Status & type1, Sblock::Status & type2 ) throw()
+                Sblock::Status & type1, Sblock::Status & type2 )
   {
   if( arg.size() == 0 ) return;
   if( arg.size() != 2 || arg[0] == arg[1] ||
@@ -131,7 +131,7 @@ void set_types( const std::string & arg,
   }
 
 
-void verify_logname_and_domain( const Logbook & logbook ) throw()
+void verify_logname_and_domain( const Logbook & logbook )
   {
   if( !logbook.logfile_exists() )
     {
@@ -376,7 +376,7 @@ int to_badblocks( const long long offset, Domain & domain,
 // If 'prec' is negative, only the needed decimals are shown.
 //
 const char * format_percentage( long long num, long long den,
-                                const int iwidth = 3, int prec = -2 ) throw()
+                                const int iwidth = 3, int prec = -2 )
   {
   static char buf[80];
 
@@ -558,7 +558,7 @@ int main( const int argc, const char * const argv[] )
       case 'i': ipos = getnum( arg, hardbs, 0 ); break;
       case 'l': set_mode( program_mode, m_list ); types1 = arg;
                 check_types( types1, "list-blocks" ); break;
-      case 'm': domain_logfile_name = arg; break;
+      case 'm': set_name( &domain_logfile_name, arg ); break;
       case 'n': set_mode( program_mode, m_invert ); break;
       case 'o': opos = getnum( arg, hardbs, 0 ); break;
       case 'p': set_mode( program_mode, m_compare );

@@ -45,7 +45,7 @@ void input_pos_error( const long long pos, const long long isize )
 
 // Align pos to next boundary if size is big enough
 //
-void Block::align_pos( const int alignment ) throw()
+void Block::align_pos( const int alignment )
   {
   if( alignment > 1 )
     {
@@ -58,7 +58,7 @@ void Block::align_pos( const int alignment ) throw()
 
 // Align end to previous boundary if size is big enough
 //
-void Block::align_end( const int alignment ) throw()
+void Block::align_end( const int alignment )
   {
   if( alignment > 1 && size_ > 0 )
     {
@@ -68,7 +68,7 @@ void Block::align_end( const int alignment ) throw()
   }
 
 
-void Block::crop( const Block & b ) throw()
+void Block::crop( const Block & b )
   {
   const long long p = std::max( pos_, b.pos_ );
   const long long s = std::max( 0LL, std::min( end(), b.end() ) - p );

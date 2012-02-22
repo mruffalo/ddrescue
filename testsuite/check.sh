@@ -49,7 +49,10 @@ if [ $? = 0 ] ; then fail=1 ; printf - ; else printf . ; fi
 if [ $? = 0 ] ; then fail=1 ; printf - ; else printf . ; fi
 "${DDRESCUE}" -q -F- -g ${in} out logfile
 if [ $? = 0 ] ; then fail=1 ; printf - ; else printf . ; fi
+"${DDRESCUE}" -q -m ${logfile1} -m ${logfile1} ${in} out logfile
+if [ $? = 0 ] ; then fail=1 ; printf - ; else printf . ; fi
 
+if [ -r logfile ] ; then rm logfile || framework_failure ; fi
 "${DDRESCUE}" -t -pq -i15000 ${in} out logfile || fail=1
 "${DDRESCUE}" -D -fnq -s15000 ${in} out logfile || fail=1
 cmp ${in} out || fail=1

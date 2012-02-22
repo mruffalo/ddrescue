@@ -58,7 +58,7 @@ const int o_binary = 0;
 #endif
 
 
-void show_help( const int cluster, const int hardbs ) throw()
+void show_help( const int cluster, const int hardbs )
   {
   std::printf( "%s - Data recovery tool.\n", Program_name );
   std::printf( "Copies data from one file or block device to another,\n"
@@ -105,7 +105,7 @@ void show_help( const int cluster, const int hardbs ) throw()
 
 
 bool check_identical( const char * const iname, const char * const oname,
-                      const char * const logname ) throw()
+                      const char * const logname )
   {
   struct stat istat, ostat, logstat;
   bool iexists = false, oexists = false, logexists = false;
@@ -142,7 +142,7 @@ bool check_identical( const char * const iname, const char * const oname,
 bool check_files( const char * const iname, const char * const oname,
                   const char * const logname,
                   const long long min_outfile_size, const bool force,
-                  const bool preallocate, const bool sparse ) throw()
+                  const bool preallocate, const bool sparse )
   {
   if( !iname || !oname )
     {
@@ -493,7 +493,7 @@ int main( const int argc, const char * const argv[] )
                 return 0;
       case 'i': ipos = getnum( arg, hardbs, 0 ); break;
       case 'I': verify_input_size = true; break;
-      case 'm': domain_logfile_name = arg; break;
+      case 'm': set_name( &domain_logfile_name, arg ); break;
       case 'M': retrim = true; break;
       case 'n': nosplit = true; break;
       case 'o': opos = getnum( arg, hardbs, 0 ); break;

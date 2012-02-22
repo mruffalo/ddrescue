@@ -18,16 +18,16 @@ logobjs = arg_parser.o block.o logbook.o ddrescuelog.o
 all : $(progname) ddrescuelog
 
 $(progname) : $(objs)
-	$(CXX) $(LDFLAGS) -o $@ $^
+	$(CXX) $(LDFLAGS) -o $@ $+
 
 $(progname)_profiled : $(objs)
-	$(CXX) $(LDFLAGS) -pg -o $@ $^
+	$(CXX) $(LDFLAGS) -pg -o $@ $+
 
 ddrescuelog : $(logobjs)
-	$(CXX) $(LDFLAGS) -o $@ $^
+	$(CXX) $(LDFLAGS) -o $@ $+
 
 static_$(progname) : $(objs)
-	$(CXX) $(LDFLAGS) -static -o $@ $^
+	$(CXX) $(LDFLAGS) -static -o $@ $+
 
 main.o : main.cc
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -DPROGVERSION=\"$(pkgversion)\" -c -o $@ $<

@@ -21,7 +21,7 @@ namespace {
 std::string command_line;
 
 
-void show_version() throw()
+void show_version()
   {
   std::printf( "%s %s\n", Program_name, PROGVERSION );
   std::printf( "Copyright (C) %s Antonio Diaz Diaz.\n", program_year );
@@ -33,7 +33,7 @@ void show_version() throw()
 
 long long getnum( const char * const ptr, const int bs,
                   const long long min = LLONG_MIN + 1,
-                  const long long max = LLONG_MAX ) throw()
+                  const long long max = LLONG_MAX )
   {
   errno = 0;
   char *tail;
@@ -89,7 +89,7 @@ long long getnum( const char * const ptr, const int bs,
   }
 
 
-void check_types( const std::string & types, const char * const opt_name ) throw()
+void check_types( const std::string & types, const char * const opt_name )
   {
   bool error = false;
   for( unsigned int i = 0; i < types.size(); ++i )
@@ -105,7 +105,7 @@ void check_types( const std::string & types, const char * const opt_name ) throw
   }
 
 
-void set_mode( Mode & program_mode, const Mode new_mode ) throw()
+void set_mode( Mode & program_mode, const Mode new_mode )
   {
   if( program_mode != m_none && program_mode != new_mode )
     {
@@ -115,13 +115,24 @@ void set_mode( Mode & program_mode, const Mode new_mode ) throw()
   program_mode = new_mode;
   }
 
+
+void set_name( const char ** domain_logfile_name, const char * new_name )
+  {
+  if( *domain_logfile_name )
+    {
+    show_error( "Only one domain logfile can be specified.", 0, true );
+    std::exit( 1 );
+    }
+  *domain_logfile_name = new_name;
+  }
+
 } // end namespace
 
 
 int verbosity = 0;
 
 
-void show_error( const char * const msg, const int errcode, const bool help ) throw()
+void show_error( const char * const msg, const int errcode, const bool help )
   {
   if( verbosity >= 0 )
     {
@@ -139,7 +150,7 @@ void show_error( const char * const msg, const int errcode, const bool help ) th
   }
 
 
-void internal_error( const char * const msg ) throw()
+void internal_error( const char * const msg )
   {
   if( verbosity >= 0 )
     std::fprintf( stderr, "%s: internal error: %s.\n", program_name, msg );
@@ -147,7 +158,7 @@ void internal_error( const char * const msg ) throw()
   }
 
 
-void write_logfile_header( FILE * const f ) throw()
+void write_logfile_header( FILE * const f )
   {
   std::fprintf( f, "# Rescue Logfile. Created by %s version %s\n",
                 Program_name, PROGVERSION );
@@ -156,7 +167,7 @@ void write_logfile_header( FILE * const f ) throw()
 
 
 const char * format_num( long long num, long long limit,
-                         const int set_prefix ) throw()
+                         const int set_prefix )
   {
   const char * const si_prefix[8] =
     { "k", "M", "G", "T", "P", "E", "Z", "Y" };

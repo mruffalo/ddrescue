@@ -9,7 +9,7 @@
 args=
 no_create=
 pkgname=ddrescue
-pkgversion=1.16-rc1
+pkgversion=1.16-rc2
 progname=ddrescue
 srctrigger=ddrescue.h
 
@@ -20,10 +20,9 @@ srcdir=
 prefix=/usr/local
 exec_prefix='$(prefix)'
 bindir='$(exec_prefix)/bin'
-datadir='$(prefix)/share'
-infodir='$(datadir)/info'
-mandir='$(datadir)/man'
-sysconfdir='$(prefix)/etc'
+datarootdir='$(prefix)/share'
+infodir='$(datarootdir)/info'
+mandir='$(datarootdir)/man'
 CXX=
 CPPFLAGS=
 CXXFLAGS='-Wall -W -O2'
@@ -41,12 +40,12 @@ while [ -n "$1" ] ; do
 
 	# Split out the argument for options that take them
 	case ${option} in
-	*=*) optarg=`echo ${option} | sed -e 's,^[^=]*=,,'` ;;
+	*=*) optarg=`echo ${option} | sed -e 's,^[^=]*=,,;s,/$,,'` ;;
 	esac
 
 	# Process the options
 	case ${option} in
-	--help | --he* | -h)
+	--help | -h)
 		echo "Usage: configure [options]"
 		echo
 		echo "Options: [defaults in brackets]"
@@ -56,42 +55,31 @@ while [ -n "$1" ] ; do
 		echo "  --prefix=DIR          install into DIR [${prefix}]"
 		echo "  --exec-prefix=DIR     base directory for arch-dependent files [${exec_prefix}]"
 		echo "  --bindir=DIR          user executables directory [${bindir}]"
-		echo "  --datadir=DIR         base directory for doc and data [${datadir}]"
+		echo "  --datarootdir=DIR     base directory for doc and data [${datarootdir}]"
 		echo "  --infodir=DIR         info files directory [${infodir}]"
 		echo "  --mandir=DIR          man pages directory [${mandir}]"
-		echo "  --sysconfdir=DIR      read-only single-machine data directory [${sysconfdir}]"
 		echo "  CXX=COMPILER          C++ compiler to use [g++]"
 		echo "  CPPFLAGS=OPTIONS      command line options for the preprocessor [${CPPFLAGS}]"
 		echo "  CXXFLAGS=OPTIONS      command line options for the C++ compiler [${CXXFLAGS}]"
 		echo "  LDFLAGS=OPTIONS       command line options for the linker [${LDFLAGS}]"
 		echo
 		exit 0 ;;
-	--version | --ve* | -V)
+	--version | -V)
 		echo "Configure script for GNU ${pkgname} version ${pkgversion}"
 		exit 0 ;;
-	--srcdir* | --sr*)
-		srcdir=`echo ${optarg} | sed -e 's,/$,,'` ;;
-	--prefix* | --pr*)
-		prefix=`echo ${optarg} | sed -e 's,/$,,'` ;;
-	--exec-prefix* | --ex*)
-		exec_prefix=`echo ${optarg} | sed -e 's,/$,,'` ;;
-	--bindir* | --bi*)
-		bindir=`echo ${optarg} | sed -e 's,/$,,'` ;;
-	--datadir* | --da*)
-		datadir=`echo ${optarg} | sed -e 's,/$,,'` ;;
-	--infodir* | --inf*)
-		infodir=`echo ${optarg} | sed -e 's,/$,,'` ;;
-	--mandir* | --ma*)
-		mandir=`echo ${optarg} | sed -e 's,/$,,'` ;;
-	--sysconfdir* | --sy*)
-		sysconfdir=`echo ${optarg} | sed -e 's,/$,,'` ;;
-	--no-create | --no-c*)
-		no_create=yes ;;
+	--srcdir=*)            srcdir=${optarg} ;;
+	--prefix=*)            prefix=${optarg} ;;
+	--exec-prefix=*)  exec_prefix=${optarg} ;;
+	--bindir=*)            bindir=${optarg} ;;
+	--datarootdir=*)  datarootdir=${optarg} ;;
+	--infodir=*)          infodir=${optarg} ;;
+	--mandir=*)            mandir=${optarg} ;;
+	--no-create)              no_create=yes ;;
 
-	CXX=*)      CXX=${optarg} ;;
+	CXX=*)           CXX=${optarg} ;;
 	CPPFLAGS=*) CPPFLAGS=${optarg} ;;
 	CXXFLAGS=*) CXXFLAGS=${optarg} ;;
-	LDFLAGS=*)  LDFLAGS=${optarg} ;;
+	LDFLAGS=*)   LDFLAGS=${optarg} ;;
 
 	--* | *=* | *-*-*) ;;
 	*)
@@ -155,10 +143,9 @@ echo "VPATH = ${srcdir}"
 echo "prefix = ${prefix}"
 echo "exec_prefix = ${exec_prefix}"
 echo "bindir = ${bindir}"
-echo "datadir = ${datadir}"
+echo "datarootdir = ${datarootdir}"
 echo "infodir = ${infodir}"
 echo "mandir = ${mandir}"
-echo "sysconfdir = ${sysconfdir}"
 echo "CXX = ${CXX}"
 echo "CPPFLAGS = ${CPPFLAGS}"
 echo "CXXFLAGS = ${CXXFLAGS}"
@@ -180,10 +167,9 @@ VPATH = ${srcdir}
 prefix = ${prefix}
 exec_prefix = ${exec_prefix}
 bindir = ${bindir}
-datadir = ${datadir}
+datarootdir = ${datarootdir}
 infodir = ${infodir}
 mandir = ${mandir}
-sysconfdir = ${sysconfdir}
 CXX = ${CXX}
 CPPFLAGS = ${CPPFLAGS}
 CXXFLAGS = ${CXXFLAGS}

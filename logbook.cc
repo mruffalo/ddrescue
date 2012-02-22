@@ -36,7 +36,7 @@
 
 namespace {
 
-int my_fgetc( FILE * const f ) throw()
+int my_fgetc( FILE * const f )
   {
   int ch;
   bool comment = false;
@@ -53,13 +53,13 @@ int my_fgetc( FILE * const f ) throw()
 
 // Read a line discarding comments, leading whitespace and blank lines.
 //
-const char * my_fgets( FILE * const f, int & linenum ) throw()
+const char * my_fgets( FILE * const f, int & linenum )
   {
   const int maxlen = 127;
   static char buf[maxlen+1];
   int ch, len = 1;
 
-  while( len == 1 )
+  while( len == 1 )			// while line is blank
     {
     do { ch = my_fgetc( f ); if( ch == '\n' ) ++linenum; }
     while( std::isspace( ch ) );
@@ -252,7 +252,7 @@ Logbook::Logbook( const long long offset, const long long isize,
   }
 
 
-bool Logbook::blank() const throw()
+bool Logbook::blank() const
   {
   for( unsigned int i = 0; i < sblock_vector.size(); ++i )
     if( sblock_vector[i].status() != Sblock::non_tried )
@@ -321,7 +321,7 @@ bool Logbook::update_logfile( const int odes, const bool force,
   }
 
 
-void Logbook::write_logfile( FILE * const f ) const throw()
+void Logbook::write_logfile( FILE * const f ) const
   {
   write_logfile_header( f );
   std::fprintf( f, "# current_pos  current_status\n" );
@@ -353,7 +353,7 @@ void Logbook::truncate_vector( const long long pos )
   }
 
 
-int Logbook::find_index( const long long pos ) const throw()
+int Logbook::find_index( const long long pos ) const
   {
   if( index_ < 0 || index_ >= sblocks() ) index_ = sblocks() / 2;
   while( index_ + 1 < sblocks() && pos >= sblock_vector[index_].end() )
@@ -494,7 +494,7 @@ int Logbook::change_chunk_status( const Block & b, const Sblock::Status st )
   }
 
 
-const char * Logbook::status_name( const Logbook::Status st ) throw()
+const char * Logbook::status_name( const Logbook::Status st )
   {
   switch( st )
     {

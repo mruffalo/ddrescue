@@ -38,17 +38,17 @@
 namespace {
 
 bool volatile interrupted_ = false;		// user pressed Ctrl-C
-extern "C" void sighandler( int ) throw() { interrupted_ = true; }
+extern "C" void sighandler( int ) { interrupted_ = true; }
 
 
-bool block_is_zero( const uint8_t * const buf, const int size ) throw()
+bool block_is_zero( const uint8_t * const buf, const int size )
   {
   for( int i = 0; i < size; ++i ) if( buf[i] != 0 ) return false;
   return true;
   }
 
 
-const char * format_time( long t ) throw()
+const char * format_time( long t )
   {
   static char buf[16];
   int fraction = 0;
@@ -69,7 +69,7 @@ const char * format_time( long t ) throw()
 // If (returned value < size) and (errno == 0), means EOF was reached.
 //
 int readblock( const int fd, uint8_t * const buf, const int size,
-               const long long pos ) throw()
+               const long long pos )
   {
   int rest = size;
   errno = 0;
@@ -90,7 +90,7 @@ int readblock( const int fd, uint8_t * const buf, const int size,
 // If (returned value < size), it is always an error.
 //
 int writeblock( const int fd, const uint8_t * const buf, const int size,
-                const long long pos ) throw()
+                const long long pos )
   {
   int rest = size;
   errno = 0;
@@ -123,7 +123,7 @@ int Fillbook::fill_block( const Block & b )
   }
 
 
-void Fillbook::show_status( const long long ipos, bool force ) throw()
+void Fillbook::show_status( const long long ipos, bool force )
   {
   const char * const up = "\x1b[A";
   if( t0 == 0 )
@@ -157,7 +157,7 @@ void Fillbook::show_status( const long long ipos, bool force ) throw()
   }
 
 
-bool Fillbook::read_buffer( const int ides ) throw()
+bool Fillbook::read_buffer( const int ides )
   {
   const int rd = readblock( ides, iobuf(), softbs(), 0 );
   if( rd <= 0 ) return false;
@@ -193,7 +193,7 @@ void Genbook::check_block( const Block & b, int & copied_size, int & error_size 
 
 
 void Genbook::show_status( const long long ipos, const char * const msg,
-                           bool force ) throw()
+                           bool force )
   {
   const char * const up = "\x1b[A";
   if( t0 == 0 )
@@ -232,7 +232,7 @@ void Genbook::show_status( const long long ipos, const char * const msg,
   }
 
 
-bool Rescuebook::extend_outfile_size() throw()
+bool Rescuebook::extend_outfile_size()
   {
   if( min_outfile_size_ > 0 || sparse_size > 0 )
     {
@@ -280,7 +280,7 @@ int Rescuebook::copy_block( const Block & b, int & copied_size, int & error_size
   }
 
 
-void Rescuebook::update_status( const bool force ) throw()
+void Rescuebook::update_status( const bool force )
   {
   if( t0 == 0 )
     {
@@ -311,7 +311,7 @@ void Rescuebook::update_status( const bool force ) throw()
 
 
 void Rescuebook::show_status( const long long ipos, const char * const msg,
-                              const bool force ) throw()
+                              const bool force )
   {
   const char * const up = "\x1b[A";
 
@@ -344,10 +344,10 @@ void Rescuebook::show_status( const long long ipos, const char * const msg,
   }
 
 
-bool interrupted() throw() { return interrupted_; }
+bool interrupted() { return interrupted_; }
 
 
-void set_signals() throw()
+void set_signals()
   {
   interrupted_ = false;
   std::signal( SIGINT, sighandler );

@@ -31,7 +31,7 @@
 #include "ddrescue.h"
 
 
-void Rescuebook::count_errors() throw()
+void Rescuebook::count_errors()
   {
   bool good = true;
   errors = 0;
@@ -57,10 +57,11 @@ void Rescuebook::count_errors() throw()
 //
 int Rescuebook::copy_and_update( const Block & b, const Sblock::Status st,
                                  int & copied_size, int & error_size,
-                                 const char * const msg, bool & first_post )
+                                 const char * const msg, bool & first_post,
+                                 const bool forward )
   {
-  current_pos( b.pos() );
-  show_status( b.pos(), msg, first_post );
+  current_pos( forward ? b.pos() : b.end() );
+  show_status( current_pos(), msg, first_post );
   first_post = false;
   if( too_many_errors() ) return 1;
   if( interrupted() ) return -1;
@@ -94,15 +95,20 @@ int Rescuebook::copy_and_update( const Block & b, const Sblock::Status st,
 int Rescuebook::copy_non_tried()
   {
   bool first_post = true;
-  bool resume = ( current_status() == copying &&
-                  domain().includes( current_pos() ) );
 
-  while( true )
+  for( bool first_pass = true; ; first_pass = false )
     {
     long long pos = 0;
     long long skip_size = 0;		// size to skip on error
     bool block_found = false;
-    if( resume ) { resume = false; pos = current_pos(); block_found = true; }
+
+    if( first_pass && current_status() == copying &&
+        domain().includes( current_pos() ) )
+      {
+      Block b( current_pos(), 1 );
+      find_chunk( b, Sblock::non_tried );
+      if( b.size() > 0 ) pos = b.pos();		// resume
+      }
 
     while( pos >= 0 )
       {
@@ -119,7 +125,7 @@ int Rescuebook::copy_non_tried()
       int copied_size = 0, error_size = 0;
       const int retval = copy_and_update( b, st, copied_size, error_size,
                                           "Copying non-tried blocks...",
-                                          first_post );
+                                          first_post, true );
       if( error_size > 0 ) errsize += error_size;
       else if( skip_size > 0 && copied_size > 0 )
         { skip_size -= copied_size; if( skip_size < 0 ) skip_size = 0; }
@@ -159,15 +165,20 @@ int Rescuebook::copy_non_tried()
 int Rescuebook::rcopy_non_tried()
   {
   bool first_post = true;
-  bool resume = ( current_status() == copying &&
-                  domain().includes( current_pos() - 1 ) );
 
-  while( true )
+  for( bool first_pass = true; ; first_pass = false )
     {
     long long end = LLONG_MAX;
     long long skip_size = 0;		// size to skip on error
     bool block_found = false;
-    if( resume ) { resume = false; end = current_pos(); block_found = true; }
+
+    if( first_pass && current_status() == copying &&
+        domain().includes( current_pos() - 1 ) )
+      {
+      Block b( current_pos() - 1, 1 );
+      rfind_chunk( b, Sblock::non_tried );
+      if( b.size() > 0 ) end = b.end();		// resume
+      }
 
     while( end > 0 )
       {
@@ -186,7 +197,7 @@ int Rescuebook::rcopy_non_tried()
       int copied_size = 0, error_size = 0;
       const int retval = copy_and_update( b, st, copied_size, error_size,
                                           "Copying non-tried blocks...",
-                                          first_post );
+                                          first_post, false );
       if( error_size > 0 ) errsize += error_size;
       else if( skip_size > 0 && copied_size > 0 )
         { skip_size -= copied_size; if( skip_size < 0 ) skip_size = 0; }
@@ -239,7 +250,7 @@ int Rescuebook::trim_errors()
     int copied_size = 0, error_size = 0;
     const int retval = copy_and_update( b, Sblock::bad_sector, copied_size,
                                         error_size, "Trimming failed blocks...",
-                                        first_post );
+                                        first_post, false );
     if( copied_size > 0 ) errsize -= copied_size;
     if( retval ) return retval;
     if( error_size > 0 ) error_rate += error_size;
@@ -275,7 +286,7 @@ int Rescuebook::rtrim_errors()
     int copied_size = 0, error_size = 0;
     const int retval = copy_and_update( b, Sblock::bad_sector, copied_size,
                                         error_size, "Trimming failed blocks...",
-                                        first_post );
+                                        first_post, true );
     if( copied_size > 0 ) errsize -= copied_size;
     if( retval ) return retval;
     if( error_size > 0 ) error_rate += error_size;
@@ -299,15 +310,20 @@ int Rescuebook::rtrim_errors()
 int Rescuebook::split_errors()
   {
   bool first_post = true;
-  bool resume = ( current_status() == splitting &&
-                  domain().includes( current_pos() ) );
 
   for( bool first_pass = true; ; first_pass = false )
     {
     long long pos = 0;
     int error_counter = 0;
     bool block_found = false;
-    if( resume ) { resume = false; pos = current_pos(); block_found = true; }
+
+    if( first_pass && current_status() == splitting &&
+        domain().includes( current_pos() ) )
+      {
+      Block b( current_pos(), 1 );
+      find_chunk( b, Sblock::non_split );
+      if( b.size() > 0 ) pos = b.pos();		// resume
+      }
 
     while( pos >= 0 )
       {
@@ -321,7 +337,7 @@ int Rescuebook::split_errors()
       int copied_size = 0, error_size = 0;
       const int retval = copy_and_update( b, Sblock::bad_sector, copied_size,
                                           error_size, "Splitting failed blocks...",
-                                          first_post );
+                                          first_post, true );
       if( copied_size > 0 ) errsize -= copied_size;
       if( retval ) return retval;
       if( error_size > 0 ) error_rate += error_size;
@@ -361,15 +377,20 @@ int Rescuebook::split_errors()
 int Rescuebook::rsplit_errors()
   {
   bool first_post = true;
-  bool resume = ( current_status() == splitting &&
-                  domain().includes( current_pos() - 1 ) );
 
   for( bool first_pass = true; ; first_pass = false )
     {
     long long end = LLONG_MAX;
     int error_counter = 0;
     bool block_found = false;
-    if( resume ) { resume = false; end = current_pos(); block_found = true; }
+
+    if( first_pass && current_status() == splitting &&
+        domain().includes( current_pos() - 1 ) )
+      {
+      Block b( current_pos() - 1, 1 );
+      rfind_chunk( b, Sblock::non_split );
+      if( b.size() > 0 ) end = b.end();		// resume
+      }
 
     while( end > 0 )
       {
@@ -385,7 +406,7 @@ int Rescuebook::rsplit_errors()
       int copied_size = 0, error_size = 0;
       const int retval = copy_and_update( b, Sblock::bad_sector, copied_size,
                                           error_size, "Splitting failed blocks...",
-                                          first_post );
+                                          first_post, false );
       if( copied_size > 0 ) errsize -= copied_size;
       if( retval ) return retval;
       if( error_size > 0 ) error_rate += error_size;
@@ -425,15 +446,20 @@ int Rescuebook::copy_errors()
   {
   char msgbuf[80] = "Retrying bad sectors... Retry ";
   const int msglen = std::strlen( msgbuf );
-  bool resume = ( current_status() == retrying &&
-                  domain().includes( current_pos() ) );
 
   for( int retry = 1; max_retries_ < 0 || retry <= max_retries_; ++retry )
     {
     long long pos = 0;
     bool first_post = true, block_found = false;
-    if( resume ) { resume = false; pos = current_pos(); block_found = true; }
     snprintf( msgbuf + msglen, ( sizeof msgbuf ) - msglen, "%d", retry );
+
+    if( retry == 1 && current_status() == retrying &&
+        domain().includes( current_pos() ) )
+      {
+      Block b( current_pos(), 1 );
+      find_chunk( b, Sblock::bad_sector );
+      if( b.size() > 0 ) pos = b.pos();		// resume
+      }
 
     while( pos >= 0 )
       {
@@ -445,14 +471,14 @@ int Rescuebook::copy_errors()
       block_found = true;
       int copied_size = 0, error_size = 0;
       const int retval = copy_and_update( b, Sblock::bad_sector, copied_size,
-                                          error_size, msgbuf, first_post );
+                                          error_size, msgbuf, first_post, true );
       if( copied_size > 0 ) errsize -= copied_size;
       if( retval ) return retval;
       if( error_size > 0 ) error_rate += error_size;
       update_status();
       if( !update_logfile( odes_ ) ) return -2;
       }
-    if( !block_found ) break;
+    if( !block_found || retry >= INT_MAX ) break;
     }
   return 0;
   }
@@ -465,15 +491,20 @@ int Rescuebook::rcopy_errors()
   {
   char msgbuf[80] = "Retrying bad sectors... Retry ";
   const int msglen = std::strlen( msgbuf );
-  bool resume = ( current_status() == retrying &&
-                  domain().includes( current_pos() - 1 ) );
 
   for( int retry = 1; max_retries_ < 0 || retry <= max_retries_; ++retry )
     {
     long long end = LLONG_MAX;
     bool first_post = true, block_found = false;
-    if( resume ) { resume = false; end = current_pos(); block_found = true; }
     snprintf( msgbuf + msglen, ( sizeof msgbuf ) - msglen, "%d", retry );
+
+    if( retry == 1 && current_status() == retrying &&
+        domain().includes( current_pos() - 1 ) )
+      {
+      Block b( current_pos() - 1, 1 );
+      rfind_chunk( b, Sblock::bad_sector );
+      if( b.size() > 0 ) end = b.end();		// resume
+      }
 
     while( end > 0 )
       {
@@ -487,14 +518,14 @@ int Rescuebook::rcopy_errors()
       block_found = true;
       int copied_size = 0, error_size = 0;
       const int retval = copy_and_update( b, Sblock::bad_sector, copied_size,
-                                          error_size, msgbuf, first_post );
+                                          error_size, msgbuf, first_post, false );
       if( copied_size > 0 ) errsize -= copied_size;
       if( retval ) return retval;
       if( error_size > 0 ) error_rate += error_size;
       update_status();
       if( !update_logfile( odes_ ) ) return -2;
       }
-    if( !block_found ) break;
+    if( !block_found || retry >= INT_MAX ) break;
     }
   return 0;
   }

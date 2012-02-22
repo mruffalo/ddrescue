@@ -1,5 +1,8 @@
 Changes in version 1.16:
 
+The current position is now set to the end of the block when reading
+backwards, allowing perfect resumability also in reverse mode.
+
 The "-E, --max-error-rate" option now checks the rate of actually failed
 reads, not the growth of error size, and shows the error rate in the
 error message.
