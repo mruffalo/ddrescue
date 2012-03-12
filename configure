@@ -9,7 +9,7 @@
 args=
 no_create=
 pkgname=ddrescue
-pkgversion=1.16-rc2
+pkgversion=1.16-rc3
 progname=ddrescue
 srctrigger=ddrescue.h
 
@@ -92,14 +92,14 @@ done
 srcdirtext=
 if [ -z "${srcdir}" ] ; then
 	srcdirtext="or . or .." ; srcdir=.
-	if [ ! -r ${srcdir}/${srctrigger} ] ; then srcdir=.. ; fi
-	if [ ! -r ${srcdir}/${srctrigger} ] ; then
+	if [ ! -r "${srcdir}/${srctrigger}" ] ; then srcdir=.. ; fi
+	if [ ! -r "${srcdir}/${srctrigger}" ] ; then
 		## the sed command below emulates the dirname command
 		srcdir=`echo $0 | sed -e 's,[^/]*$,,;s,/$,,;s,^$,.,'`
 	fi
 fi
 
-if [ ! -r ${srcdir}/${srctrigger} ] ; then
+if [ ! -r "${srcdir}/${srctrigger}" ] ; then
 	exec 1>&2
 	echo
 	echo "configure: Can't find sources in ${srcdir} ${srcdirtext}"
@@ -108,7 +108,7 @@ if [ ! -r ${srcdir}/${srctrigger} ] ; then
 fi
 
 # Set srcdir to . if that's what it is.
-if [ "`pwd`" = "`cd ${srcdir} ; pwd`" ] ; then srcdir=. ; fi
+if [ "`pwd`" = "`cd "${srcdir}" ; pwd`" ] ; then srcdir=. ; fi
 
 # checking whether we are using GNU C++.
 if [ -z "${CXX}" ] ; then		# Let the user override the test.
@@ -175,6 +175,6 @@ CPPFLAGS = ${CPPFLAGS}
 CXXFLAGS = ${CXXFLAGS}
 LDFLAGS = ${LDFLAGS}
 EOF
-cat ${srcdir}/Makefile.in >> Makefile
+cat "${srcdir}/Makefile.in" >> Makefile
 
 echo "OK. Now you can run make."

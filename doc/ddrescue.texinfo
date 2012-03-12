@@ -6,8 +6,8 @@
 @finalout
 @c %**end of header
 
-@set UPDATED 22 February 2012
-@set VERSION 1.16-rc2
+@set UPDATED 12 March 2012
+@set VERSION 1.16-rc3
 
 @dircategory GNU Packages
 @direntry
@@ -371,6 +371,13 @@ of blocks contained in the @var{logfile}, and exit with status 1 if they
 differ. This is not enabled by default because the size of some devices
 can't be known and because the size derived from the @var{logfile} may
 be incomplete, for example after doing a partial rescue.
+
+@item -K @var{bytes}
+@itemx --skip-size=@var{bytes}
+Set the initial size to skip on the first read error or slow read. For
+subsequent read errors or slow reads, ddrescue will modify the skip size
+depending on error rate and error history. Valid values range from 64KiB
+to INT_MAX. Defaults to 64KiB.
 
 @item -m @var{file}
 @itemx --domain-logfile=@var{file}

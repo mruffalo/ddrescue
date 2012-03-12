@@ -41,7 +41,7 @@ public:
 
   void pos( const long long p ) { pos_ = p; }
   void size( const long long s ) { size_ = s; }
-  void fix_size()	// limit size_ to largest possible value
+  void fix_size()		// limit size_ to largest possible value
     { if( size_ < 0 || size_ > LLONG_MAX - pos_ ) size_ = LLONG_MAX - pos_; }
   void end( const long long e )
     { pos_ = e - size_; if( pos_ < 0 ) { size_ += pos_; pos_ = 0; } }

@@ -280,13 +280,13 @@ int Rescuebook::copy_block( const Block & b, int & copied_size, int & error_size
   }
 
 
-void Rescuebook::update_status( const bool force )
+void Rescuebook::update_rates( const bool force )
   {
   if( t0 == 0 )
     {
     t0 = t1 = ts = std::time( 0 );
     first_size = last_size = recsize;
-    status_changed = true;
+    rates_updated = true;
     if( verbosity >= 0 ) std::printf( "\n\n\n" );
     }
 
@@ -296,8 +296,7 @@ void Rescuebook::update_status( const bool force )
     {
     a_rate = ( recsize - first_size ) / ( t2 - t0 );
     c_rate = ( recsize - last_size ) / ( t2 - t1 );
-    if( recsize > last_size ) ts = t2;
-    last_size = recsize;
+    if( recsize != last_size ) { last_size = recsize; ts = t2; }
     if( max_error_rate_ >= 0 && !( e_code & 1 ) )
       {
       error_rate /= ( t2 - t1 );
@@ -305,7 +304,7 @@ void Rescuebook::update_status( const bool force )
       else error_rate = 0;
       }
     t1 = t2;
-    status_changed = true;
+    rates_updated = true;
     }
   }
 
@@ -316,7 +315,7 @@ void Rescuebook::show_status( const long long ipos, const char * const msg,
   const char * const up = "\x1b[A";
 
   if( ipos >= 0 ) last_ipos = ipos;
-  if( status_changed || force )
+  if( rates_updated || force )
     {
     if( verbosity >= 0 )
       {
@@ -339,7 +338,7 @@ void Rescuebook::show_status( const long long ipos, const char * const msg,
         }
       std::fflush( stdout );
       }
-    status_changed = false;
+    rates_updated = false;
     }
   }
 

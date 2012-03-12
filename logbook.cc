@@ -52,6 +52,7 @@ int my_fgetc( FILE * const f )
 
 
 // Read a line discarding comments, leading whitespace and blank lines.
+// Returns 0 if at EOF.
 //
 const char * my_fgets( FILE * const f, int & linenum )
   {

@@ -12,7 +12,7 @@ File: ddrescue.info,  Node: Top,  Next: Introduction,  Up: (dir)
 GNU ddrescue Manual
 *******************
 
-This manual is for GNU ddrescue (version 1.16-rc2, 22 February 2012).
+This manual is for GNU ddrescue (version 1.16-rc3, 12 March 2012).
 
 * Menu:
 
@@ -345,6 +345,13 @@ The format for running ddrescue is:
      LOGFILE may be incomplete, for example after doing a partial
      rescue.
 
+`-K BYTES'
+`--skip-size=BYTES'
+     Set the initial size to skip on the first read error or slow read.
+     For subsequent read errors or slow reads, ddrescue will modify the
+     skip size depending on error rate and error history. Valid values
+     range from 64KiB to INT_MAX. Defaults to 64KiB.
+
 `-m FILE'
 `--domain-logfile=FILE'
      Restrict the rescue domain to the blocks marked as finished in the
@@ -511,7 +518,7 @@ Character   Meaning
 
 And here is an example logfile:
 
-# Rescue Logfile. Created by GNU ddrescue version 1.16-rc2
+# Rescue Logfile. Created by GNU ddrescue version 1.16-rc3
 # Command line: ddrescue /dev/fd0 fdimage logfile
 # current_pos  current_status
 0x00120000     ?
@@ -1093,20 +1100,20 @@ Concept Index
 
 Tag Table:
 Node: Top203
-Node: Introduction1310
-Node: Basic Concepts3793
-Node: Algorithm5255
-Node: Invoking Ddrescue8667
-Node: Logfile Structure18201
-Node: Examples20455
-Ref: lziprecover-example24118
-Node: Direct Disc Access25511
-Node: Fill Mode27388
-Node: Generate Mode31484
-Node: Ddrescuelog33159
-Node: Invoking Ddrescuelog35308
-Node: Problems40753
-Node: Concept Index41310
+Node: Introduction1307
+Node: Basic Concepts3790
+Node: Algorithm5252
+Node: Invoking Ddrescue8664
+Node: Logfile Structure18498
+Node: Examples20752
+Ref: lziprecover-example24415
+Node: Direct Disc Access25808
+Node: Fill Mode27685
+Node: Generate Mode31781
+Node: Ddrescuelog33456
+Node: Invoking Ddrescuelog35605
+Node: Problems41050
+Node: Concept Index41607
 
 End Tag Table
 

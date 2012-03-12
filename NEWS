@@ -1,5 +1,7 @@
 Changes in version 1.16:
 
+The new option "-K, --skip-size" has been added.
+
 The current position is now set to the end of the block when reading
 backwards, allowing perfect resumability also in reverse mode.
 
@@ -9,3 +11,6 @@ error message.
 
 Quote characters in messages have been changed as advised by GNU Coding
 Standards.
+
+Configure option "--datadir" has been renamed to "--datarootdir" to
+follow GNU Standards.

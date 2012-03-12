@@ -58,7 +58,7 @@ const int o_binary = 0;
 #endif
 
 
-void show_help( const int cluster, const int hardbs )
+void show_help( const int cluster, const int hardbs, const int skipbs )
   {
   std::printf( "%s - Data recovery tool.\n", Program_name );
   std::printf( "Copies data from one file or block device to another,\n"
@@ -82,7 +82,9 @@ void show_help( const int cluster, const int hardbs )
                "  -g, --generate-logfile         generate approximate logfile from partial copy\n"
                "  -i, --input-position=<bytes>   starting position in input file [0]\n"
                "  -I, --verify-input-size        verify input file size with size in logfile\n"
-               "  -m, --domain-logfile=<file>    restrict domain to finished blocks in file\n"
+               "  -K, --skip-size=<bytes>        initial size to skip on read error [%sB]\n",
+               format_num( skipbs, 9999, -1 ) );
+  std::printf( "  -m, --domain-logfile=<file>    restrict domain to finished blocks in file\n"
                "  -M, --retrim                   mark all failed blocks as non-trimmed\n"
                "  -n, --no-split                 do not try to split or retry failed blocks\n"
                "  -o, --output-position=<bytes>  starting position in output file [ipos]\n"
@@ -158,7 +160,7 @@ bool check_files( const char * const iname, const char * const oname,
       show_error( "Output file exists and is not a regular file." );
       if( !force )
         show_error( "Use '--force' if you really want to overwrite it, but be\n"
-                    "aware that all existing data in output file will be lost.", 0, true );
+                    "aware that all existing data in the output file will be lost.", 0, true );
       else if( min_outfile_size > 0 )
         show_error( "Only regular files can be extended.", 0, true );
       else if( preallocate )
@@ -276,7 +278,7 @@ int do_rescue( const long long offset, Domain & domain,
                const char * const iname, const char * const oname,
                const char * const logname, const int cluster,
                const int hardbs, const long long max_error_rate,
-               const long long min_outfile_size,
+               const long long min_outfile_size, const int skipbs,
                const int max_errors, const int max_retries,
                const long long min_read_rate, const int o_direct,
                const int o_trunc, const bool complete_only,
@@ -295,9 +297,10 @@ int do_rescue( const long long offset, Domain & domain,
 
   Rescuebook rescuebook( offset, isize, max_error_rate, min_outfile_size,
                          min_read_rate, domain, iname, logname, cluster,
-                         hardbs, max_errors, max_retries, complete_only,
-                         new_errors_only, nosplit, retrim, sparse,
-                         synchronous, try_again );
+                         hardbs, skipbs, max_errors, max_retries,
+                         complete_only, new_errors_only, nosplit,
+                         retrim, sparse, synchronous, try_again );
+
   if( verify_input_size )
     {
     if( !rescuebook.logfile_exists() || isize <= 0 ||
@@ -399,8 +402,10 @@ int main( const int argc, const char * const argv[] )
   const char * domain_logfile_name = 0;
   const int cluster_bytes = 65536;
   const int default_hardbs = 512;
+  const int default_skipbs = 65536;
   int cluster = 0;
   int hardbs = default_hardbs;
+  int skipbs = default_skipbs;
   int max_errors = -1;
   int max_retries = 0;
   int o_direct = 0;
@@ -440,6 +445,7 @@ int main( const int argc, const char * const argv[] )
     { 'h', "help",              Arg_parser::no  },
     { 'i', "input-position",    Arg_parser::yes },
     { 'I', "verify-input-size", Arg_parser::no  },
+    { 'K', "skip-size",         Arg_parser::yes },
     { 'm', "domain-logfile",    Arg_parser::yes },
     { 'M', "retrim",            Arg_parser::no  },
     { 'n', "no-split",          Arg_parser::no  },
@@ -489,10 +495,12 @@ int main( const int argc, const char * const argv[] )
       case 'F': set_mode( program_mode, m_fill ); filltypes = arg;
                 check_types( filltypes, "fill" ); break;
       case 'g': set_mode( program_mode, m_generate ); break;
-      case 'h': show_help( cluster_bytes / default_hardbs, default_hardbs );
+      case 'h': show_help( cluster_bytes / default_hardbs, default_hardbs,
+                default_skipbs );
                 return 0;
       case 'i': ipos = getnum( arg, hardbs, 0 ); break;
       case 'I': verify_input_size = true; break;
+      case 'K': skipbs = getnum( arg, hardbs, default_skipbs, INT_MAX ); break;
       case 'm': set_name( &domain_logfile_name, arg ); break;
       case 'M': retrim = true; break;
       case 'n': nosplit = true; break;
@@ -554,10 +562,11 @@ int main( const int argc, const char * const argv[] )
                           cluster, hardbs );
     case m_none:
       return do_rescue( opos - ipos, domain, iname, oname, logname, cluster,
-                        hardbs, max_error_rate, min_outfile_size, max_errors,
-                        max_retries, min_read_rate, o_direct, o_trunc,
-                        complete_only, new_errors_only, nosplit, preallocate,
-                        retrim, reverse, sparse, synchronous, try_again,
+                        hardbs, max_error_rate, min_outfile_size,
+                        skipbs, max_errors, max_retries, min_read_rate,
+                        o_direct, o_trunc, complete_only,
+                        new_errors_only, nosplit, preallocate, retrim,
+                        reverse, sparse, synchronous, try_again,
                         verify_input_size );
     }
   }

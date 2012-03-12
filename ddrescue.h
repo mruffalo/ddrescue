@@ -38,8 +38,8 @@ private:
   std::vector< Sblock > sblock_vector;	// note: blocks are consecutive
   long ul_t1;				// variable for update_logfile
 
-  Logbook( const Logbook & );
-  void operator=( const Logbook & );
+  Logbook( const Logbook & );		// declared as private
+  void operator=( const Logbook & );	// declared as private
 
   void erase_sblock( const int i )
     { sblock_vector.erase( sblock_vector.begin() + i ); }
@@ -172,20 +172,20 @@ class Rescuebook : public Logbook
   long long sparse_size;		// end position of pending writes
   long long recsize, errsize;		// total recovered and error sizes
   const char * const iname_;
-  const int max_retries_, skipbs_;
+  const int max_retries_;
+  const int skipbs_;			// initial size to skip on read error
   int max_errors_;
   int e_code;				// error code for too many errors
   int errors;				// error areas found so far
   int ides_, odes_;			// input and output file descriptors
   const bool nosplit_, synchronous_;
-					// variables for update_status
+					// variables for update_rates
   long long a_rate, c_rate, first_size, last_size;
   long long last_ipos;
   long t0, t1, ts;
   int oldlen;
-  bool status_changed;
+  bool rates_updated;
 
-  int skipbs() const { return skipbs_; }
   bool extend_outfile_size();
   int copy_block( const Block & b, int & copied_size, int & error_size );
   void count_errors();
@@ -209,7 +209,7 @@ class Rescuebook : public Logbook
   int rsplit_errors();
   int copy_errors();
   int rcopy_errors();
-  void update_status( const bool force = false );
+  void update_rates( const bool force = false );
   void show_status( const long long ipos, const char * const msg = 0,
                     const bool force = false );
 public:
@@ -218,7 +218,7 @@ public:
               const long long min_outfile_size,
               const long long min_read_rate, Domain & dom,
               const char * const iname, const char * const logname,
-              const int cluster, const int hardbs,
+              const int cluster, const int hardbs, const int skipbs,
               const int max_errors, const int max_retries,
               const bool complete_only = false,
               const bool new_errors_only = false, const bool nosplit = false,
