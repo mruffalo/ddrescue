@@ -12,7 +12,7 @@ File: ddrescue.info,  Node: Top,  Next: Introduction,  Up: (dir)
 GNU ddrescue Manual
 *******************
 
-This manual is for GNU ddrescue (version 1.16-rc3, 12 March 2012).
+This manual is for GNU ddrescue (version 1.16-rc4, 4 June 2012).
 
 * Menu:
 
@@ -49,7 +49,7 @@ data in case of read errors.
 
    The basic operation of ddrescue is fully automatic. That is, you
 don't have to wait for an error, stop the program, read the log, run it
-in reverse mode, etc.
+backwards, etc.
 
    If you use the logfile feature of ddrescue, the data is rescued very
 efficiently, (only the needed blocks are read). Also you can interrupt
@@ -201,12 +201,12 @@ different areas of the input file, and for multiple recovery attempts
 over different subsets. See this example:
 
 Rescue the most important part of the disc first.
-     ddrescue -i0 -s50M /dev/hdc hdimage logfile
-     ddrescue -i0 -s1M -d -r3 /dev/hdc hdimage logfile
+     ddrescue -i0 -s50MiB /dev/hdc hdimage logfile
+     ddrescue -i0 -s1MiB -d -r3 /dev/hdc hdimage logfile
 
 Then rescue some key disc areas.
-     ddrescue -i30G -s10G /dev/hdc hdimage logfile
-     ddrescue -i230G -s5G /dev/hdc hdimage logfile
+     ddrescue -i30GiB -s10GiB /dev/hdc hdimage logfile
+     ddrescue -i230GiB -s5GiB /dev/hdc hdimage logfile
 
 Now rescue the rest (does not recopy what is already done).
      ddrescue /dev/hdc hdimage logfile
@@ -240,8 +240,9 @@ The format for running ddrescue is:
      variable amount depending on rate and error history. The skipped
      blocks are tried in additional passes (before trimming) where the
      minimum read rate is divided by ten before each pass, until there
-     are no more non-tried blocks left. If BYTES is 0, the minimum read
-     rate is calculated for each block read as (average_rate / 10).
+     are no more non-tried blocks left. If BYTES is 0 (auto), the
+     minimum read rate is recalculated for each block read as
+     (average_rate / 10).
 
      Note that specifying a minimum read rate above the posibilities of
      the input device will result in a very low average rate because
@@ -264,7 +265,7 @@ The format for running ddrescue is:
 `-c SECTORS'
 `--cluster-size=SECTORS'
      Number of sectors to copy at a time. Defaults to
-     64KiB / sector_size.  Try smaller values for slow drives. The
+     64 KiB / sector_size.  Try smaller values for slow drives. The
      number of sectors per track (18 or 9) is a good value for floppies.
 
 `-C'
@@ -341,16 +342,17 @@ The format for running ddrescue is:
      Compare the size of INFILE with the size calculated from the list
      of blocks contained in the LOGFILE, and exit with status 1 if they
      differ. This is not enabled by default because the size of some
-     devices can't be known and because the size derived from the
-     LOGFILE may be incomplete, for example after doing a partial
-     rescue.
+     devices can't be known in advance and because the size derived
+     from the LOGFILE may be incomplete, for example after doing a
+     partial rescue.
 
 `-K BYTES'
 `--skip-size=BYTES'
      Set the initial size to skip on the first read error or slow read.
-     For subsequent read errors or slow reads, ddrescue will modify the
-     skip size depending on error rate and error history. Valid values
-     range from 64KiB to INT_MAX. Defaults to 64KiB.
+     The value given will be rounded to the next multiple of sector
+     size. For subsequent read errors or slow reads, ddrescue will
+     modify the skip size depending on error rate and error history.
+     Valid values range from 64 KiB to 1 GiB. Defaults to 64 KiB.
 
 `-m FILE'
 `--domain-logfile=FILE'
@@ -376,6 +378,14 @@ The format for running ddrescue is:
      `--input-position'. The bytes below BYTES aren't touched if they
      exist and truncation is not requested. Else they are set to 0.
 
+`-O INTERVAL'
+`--timeout=INTERVAL'
+     Maximum time since last successful read allowed before giving up.
+     Defaults to infinity. INTERVAL is a rational number (like 1.5 or
+     1/2) optionally followed by one of `s', `m', `h' or `d', meaning
+     seconds, minutes, hours and days respectively. If no unit is
+     specified, it defaults to seconds.
+
 `-p'
 `--preallocate'
      Preallocate space on disc for OUTFILE. Only space for regular
@@ -398,9 +408,9 @@ The format for running ddrescue is:
 
 `-R'
 `--reverse'
-     Reverse direction of all copy operations. This means the copy of
-     the non-tried blocks, splitting and retrying are run backwards,
-     while trimming is run forwards.
+     Reverse direction of all copy operations. This makes copying,
+     splitting and retrying to be run backwards, and trimming to be run
+     forwards.
 
 `-s BYTES'
 `--max-size=BYTES'
@@ -435,7 +445,7 @@ The format for running ddrescue is:
 
 `-v'
 `--verbose'
-     Verbose mode.
+     Verbose mode. Further -v's (up to 4) increase the verbosity level.
 
 `-x BYTES'
 `--extend-outfile=BYTES'
@@ -518,7 +528,7 @@ Character   Meaning
 
 And here is an example logfile:
 
-# Rescue Logfile. Created by GNU ddrescue version 1.16-rc3
+# Rescue Logfile. Created by GNU ddrescue version 1.16-rc4
 # Command line: ddrescue /dev/fd0 fdimage logfile
 # current_pos  current_status
 0x00120000     ?
@@ -544,7 +554,7 @@ those things to, in order to use it safely.
 
    A failing drive tends to develop more and more errors as time passes.
 Because of this, you should rescue the data from a drive as soon as you
-notice the first error. Be diligent because every time a physicaly
+notice the first error. Be diligent because every time a physically
 damaged drive powers up and is able to output some data, it may be the
 very last time that it ever will.
 
@@ -755,7 +765,7 @@ examined in an hex editor. For example, the following command line fills
 all blocks marked as `-' (bad-sector) with copies of the string
 `BAD SECTOR ':
 
-     echo -n "BAD SECTOR " > tmpfile
+     printf "BAD SECTOR " > tmpfile
      ddrescue --fill=- tmpfile outfile logfile
 
 Example 2: Wipe only the good sectors, leaving the bad sectors alone.
@@ -799,7 +809,7 @@ file with zeros to restore the disc image.
 Example 4: Figure out what files are in the bad areas of the disc.
 
      ddrescue -b2048 /dev/cdrom cdimage logfile
-     echo -n "DEADBEEF" > tmpfile
+     printf "DEADBEEF" > tmpfile
      ddrescue --fill=- tmpfile cdimage logfile
      rm tmpfile
      mount -t iso9660 -o loop,ro cdimage /mnt/cdimage
@@ -1022,7 +1032,7 @@ The format for running ddrescuelog is:
 
 `-v'
 `--verbose'
-     Verbose mode.
+     Verbose mode. Further -v's (up to 4) increase the verbosity level.
 
 `-x FILE'
 `--xor-logfile=FILE'
@@ -1100,20 +1110,20 @@ Concept Index
 
 Tag Table:
 Node: Top203
-Node: Introduction1307
-Node: Basic Concepts3790
-Node: Algorithm5252
-Node: Invoking Ddrescue8664
-Node: Logfile Structure18498
-Node: Examples20752
-Ref: lziprecover-example24415
-Node: Direct Disc Access25808
-Node: Fill Mode27685
-Node: Generate Mode31781
-Node: Ddrescuelog33456
-Node: Invoking Ddrescuelog35605
-Node: Problems41050
-Node: Concept Index41607
+Node: Introduction1305
+Node: Basic Concepts3782
+Node: Algorithm5244
+Node: Invoking Ddrescue8668
+Node: Logfile Structure18986
+Node: Examples21240
+Ref: lziprecover-example24904
+Node: Direct Disc Access26297
+Node: Fill Mode28174
+Node: Generate Mode32268
+Node: Ddrescuelog33943
+Node: Invoking Ddrescuelog36092
+Node: Problems41590
+Node: Concept Index42147
 
 End Tag Table
 

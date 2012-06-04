@@ -120,7 +120,7 @@ public:
   long long in_size() const
     {
     long long s = 0;
-    for( unsigned int i = 0; i < block_vector.size(); ++i )
+    for( unsigned i = 0; i < block_vector.size(); ++i )
       s += block_vector[i].size();
     return s;
     }
@@ -132,7 +132,7 @@ public:
   bool operator!=( const Domain & d ) const
     {
     if( block_vector.size() != d.block_vector.size() ) return true;
-    for( unsigned int i = 0; i < block_vector.size(); ++i )
+    for( unsigned i = 0; i < block_vector.size(); ++i )
       if( block_vector[i] != d.block_vector[i] ) return true;
     return false;
     }
@@ -142,7 +142,7 @@ public:
 
   long long breaks_block_by( const Block & b ) const
     {
-    for( unsigned int i = 0; i < block_vector.size(); ++i )
+    for( unsigned i = 0; i < block_vector.size(); ++i )
       {
       const Block & db = block_vector[i];
       if( b.includes( db.pos() ) && b.pos() < db.pos() ) return db.pos();
@@ -154,14 +154,14 @@ public:
 
   bool includes( const Block & b ) const
     {
-    for( unsigned int i = 0; i < block_vector.size(); ++i )
+    for( unsigned i = 0; i < block_vector.size(); ++i )
       if( block_vector[i].includes( b ) ) return true;
     return false;
     }
 
   bool includes( const long long pos ) const
     {
-    for( unsigned int i = 0; i < block_vector.size(); ++i )
+    for( unsigned i = 0; i < block_vector.size(); ++i )
       if( block_vector[i].includes( pos ) ) return true;
     return false;
     }

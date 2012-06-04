@@ -70,13 +70,13 @@ void show_help( const int hardbs )
                "  -q, --quiet                    suppress all messages\n"
                "  -s, --max-size=<bytes>         maximum size of rescue domain to be processed\n"
                "  -t, --show-status              show a summary of logfile contents\n"
-               "  -v, --verbose                  verbose operation\n"
+               "  -v, --verbose                  be verbose (a 2nd -v gives more)\n"
                "  -x, --xor-logfile=<file>       XOR the finished blocks in file with logfile\n"
                "  -y, --and-logfile=<file>       AND the finished blocks in file with logfile\n"
-               "  -z, --or-logfile=<file>        OR the finished blocks in file with logfile\n" );
-  std::printf( "Numbers may be followed by a multiplier: b = blocks, k = kB = 10^3 = 1000,\n"
-               "Ki = KiB = 2^10 = 1024, M = 10^6, Mi = 2^20, G = 10^9, Gi = 2^30, etc...\n" );
-  std::printf( "\nReport bugs to bug-ddrescue@gnu.org\n"
+               "  -z, --or-logfile=<file>        OR the finished blocks in file with logfile\n"
+               "Numbers may be followed by a multiplier: b = blocks, k = kB = 10^3 = 1000,\n"
+               "Ki = KiB = 2^10 = 1024, M = 10^6, Mi = 2^20, G = 10^9, Gi = 2^30, etc...\n"
+               "\nReport bugs to bug-ddrescue@gnu.org\n"
                "Ddrescue home page: http://www.gnu.org/software/ddrescue/ddrescue.html\n"
                "General help using GNU software: http://www.gnu.org/gethelp\n" );
   }
@@ -90,7 +90,7 @@ void set_types( const std::string & arg,
   types1.clear();
   types2.clear();
 
-  for( unsigned int i = 0; i < arg.size(); ++i )
+  for( unsigned i = 0; i < arg.size(); ++i )
     {
     const char ch = arg[i];
     if( ch == ',' )
@@ -221,7 +221,7 @@ int change_types( Domain & domain, const char * const logname,
     const Sblock & sb = logbook.sblock( i );
     if( !logbook.domain().includes( sb ) )
       { if( logbook.domain() < sb ) break; else continue; }
-    const unsigned int j = types1.find( sb.status() );
+    const unsigned j = types1.find( sb.status() );
     if( j < types1.size() )
       logbook.change_sblock_status( i, Sblock::Status( types2[j] ) );
     }
@@ -393,7 +393,7 @@ const char * format_percentage( long long num, long long den,
   const bool trunc = ( prec < 0 );
   if( prec < 0 ) prec = -prec;
 
-  unsigned int i;
+  unsigned i;
   if( num < 0 && num / den == 0 )
     i = snprintf( buf, sizeof( buf ), "%*s", iwidth, "-0" );
   else i = snprintf( buf, sizeof( buf ), "%*lld", iwidth, num / den );
@@ -566,7 +566,7 @@ int main( const int argc, const char * const argv[] )
       case 'q': verbosity = -1; break;
       case 's': max_size = getnum( arg, hardbs, -1 ); break;
       case 't': set_mode( program_mode, m_status ); break;
-      case 'v': verbosity = 1; break;
+      case 'v': if( verbosity < 4 ) ++verbosity; break;
       case 'V': show_version(); return 0;
       case 'x': set_mode( program_mode, m_xor );
                 second_logname = arg; break;

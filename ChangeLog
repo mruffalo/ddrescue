@@ -1,3 +1,13 @@
+2012-06-04  Antonio Diaz Diaz  <ant_diaz@teleline.es>
+
+	* Version 1.16-rc4 released.
+	* Added new option '-O, --timeout'.
+	* The option '-v, --verbose' now increases verbosity if repeated.
+	* Maximum skip size is now limited to 1% of infile size or 1 GiB
+	  (whichever is smaller), rounded to the next multiple of sector
+	  size.
+	* New files rational.h, rational.cc.
+
 2012-03-12  Antonio Diaz Diaz  <ant_diaz@teleline.es>
 
 	* Version 1.16-rc3 released.
@@ -75,7 +85,7 @@
 	* rescuebook.cc (copy_and_update): Verify after every read error
 	  that the input file does still exist.
 	* ddrescue.cc (Rescuebook::show_status): Show the time elapsed
-	  from last successful read.
+	  since last successful read.
 	* ddrescue.cc (set_signals): Ignore SIGUSR1 and SIGUSR2.
 	* ddrescue.texinfo: Improved description of '-d', '-D' and '-S'.
 	* ddrescue.texinfo: Improved description of algorithm.

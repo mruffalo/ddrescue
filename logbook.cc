@@ -83,7 +83,7 @@ void extend_sblock_vector( std::vector< Sblock > & sblock_vector,
   {
   if( sblock_vector.size() == 0 )
     {
-    Sblock sb( 0, (isize > 0) ? isize : -1, Sblock::non_tried );
+    Sblock sb( 0, ( isize > 0 ) ? isize : -1, Sblock::non_tried );
     sb.fix_size();
     sblock_vector.push_back( sb );
     return;
@@ -190,7 +190,7 @@ Domain::Domain( const long long p, const long long s,
     show_error( buf );
     std::exit( 1 );
     }
-  for( unsigned int i = 0; i < sblock_vector.size(); ++i )
+  for( unsigned i = 0; i < sblock_vector.size(); ++i )
     {
     const Sblock & sb = sblock_vector[i];
     if( sb.status() == Sblock::finished ) block_vector.push_back( sb );
@@ -201,7 +201,7 @@ Domain::Domain( const long long p, const long long s,
 
 void Logbook::split_domain_border_sblocks()
   {
-  for( unsigned int i = 0; i < sblock_vector.size(); ++i )
+  for( unsigned i = 0; i < sblock_vector.size(); ++i )
     {
     Sblock & sb = sblock_vector[i];
     const long long pos = domain_.breaks_block_by( sb );
@@ -255,7 +255,7 @@ Logbook::Logbook( const long long offset, const long long isize,
 
 bool Logbook::blank() const
   {
-  for( unsigned int i = 0; i < sblock_vector.size(); ++i )
+  for( unsigned i = 0; i < sblock_vector.size(); ++i )
     if( sblock_vector[i].status() != Sblock::non_tried )
       return false;
   return true;
@@ -264,7 +264,7 @@ bool Logbook::blank() const
 
 void Logbook::compact_sblock_vector()
   {
-  for( unsigned int i = sblock_vector.size(); i >= 2; )
+  for( unsigned i = sblock_vector.size(); i >= 2; )
     {
     --i;
     if( sblock_vector[i-1].join( sblock_vector[i] ) )
@@ -328,7 +328,7 @@ void Logbook::write_logfile( FILE * const f ) const
   std::fprintf( f, "# current_pos  current_status\n" );
   std::fprintf( f, "0x%08llX     %c\n", current_pos_, current_status_ );
   std::fprintf( f, "#      pos        size  status\n" );
-  for( unsigned int i = 0; i < sblock_vector.size(); ++i )
+  for( unsigned i = 0; i < sblock_vector.size(); ++i )
     {
     const Sblock & sb = sblock_vector[i];
     std::fprintf( f, "0x%08llX  0x%08llX  %c\n", sb.pos(), sb.size(), sb.status() );

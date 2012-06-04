@@ -31,6 +31,22 @@
 #include "ddrescue.h"
 
 
+namespace {
+
+int calculate_max_skip_size( const long long isize,
+                             const int hardbs, const int skipbs )
+  {
+  int skip;
+
+  if( isize > 0 && isize / 100 < Rescuebook::max_skipbs ) skip = isize / 100;
+  else skip = Rescuebook::max_skipbs;
+  if( skip < hardbs || skip < skipbs ) skip = skipbs;
+  return round_up( skip, hardbs );
+  }
+
+} // end namespace
+
+
 void Rescuebook::count_errors()
   {
   bool good = true;
@@ -63,7 +79,7 @@ int Rescuebook::copy_and_update( const Block & b, const Sblock::Status st,
   current_pos( forward ? b.pos() : b.end() );
   show_status( current_pos(), msg, first_post );
   first_post = false;
-  if( too_many_errors() ) return 1;
+  if( errors_or_timeout() ) return 1;
   if( interrupted() ) return -1;
   int retval = copy_block( b, copied_size, error_size );
   if( !retval )
@@ -99,7 +115,7 @@ int Rescuebook::copy_non_tried()
   for( bool first_pass = true; ; first_pass = false )
     {
     long long pos = 0;
-    long long skip_size = 0;		// size to skip on error
+    int skip_size = 0;				// size to skip on error
     bool block_found = false;
 
     if( first_pass && current_status() == copying &&
@@ -147,7 +163,8 @@ int Rescuebook::copy_non_tried()
             }
           }
         if( skip_size < skipbs_ ) skip_size = skipbs_;
-        else if( skip_size < LLONG_MAX / 4 ) skip_size *= 2;
+        else if( skip_size <= max_skip_size / 2 ) skip_size *= 2;
+        else skip_size = max_skip_size;
         }
       if( !update_logfile( odes_ ) ) return -2;
       }
@@ -169,7 +186,7 @@ int Rescuebook::rcopy_non_tried()
   for( bool first_pass = true; ; first_pass = false )
     {
     long long end = LLONG_MAX;
-    long long skip_size = 0;		// size to skip on error
+    int skip_size = 0;				// size to skip on error
     bool block_found = false;
 
     if( first_pass && current_status() == copying &&
@@ -219,7 +236,8 @@ int Rescuebook::rcopy_non_tried()
             }
           }
         if( skip_size < skipbs_ ) skip_size = skipbs_;
-        else if( skip_size < LLONG_MAX / 4 ) skip_size *= 2;
+        else if( skip_size <= max_skip_size / 2 ) skip_size *= 2;
+        else skip_size = max_skip_size;
         }
       if( !update_logfile( odes_ ) ) return -2;
       }
@@ -536,10 +554,11 @@ Rescuebook::Rescuebook( const long long offset, const long long isize,
                         const long long min_outfile_size,
                         const long long min_read_rate, Domain & dom,
                         const char * const iname, const char * const logname,
-                        const int cluster, const int hardbs, const int skipbs,
-                        const int max_errors, const int max_retries,
-                        const bool complete_only, const bool new_errors_only,
-                        const bool nosplit, const bool retrim, const bool sparse,
+                        const long timeout, const int cluster, const int hardbs,
+                        const int skipbs, const int max_errors,
+                        const int max_retries, const bool complete_only,
+                        const bool new_errors_only, const bool nosplit,
+                        const bool retrim, const bool sparse,
                         const bool synchronous, const bool try_again )
   : Logbook( offset, isize, dom, logname, cluster, hardbs, complete_only ),
     max_error_rate_( max_error_rate ),
@@ -549,9 +568,11 @@ Rescuebook::Rescuebook( const long long offset, const long long isize,
     sparse_size( sparse ? 0 : -1 ),
     recsize( 0 ),
     errsize( 0 ),
+    timeout_( timeout ),
     iname_( ( access( iname, F_OK ) == 0 ) ? iname : 0 ),
     max_retries_( max_retries ),
     skipbs_( skipbs ),
+    max_skip_size( calculate_max_skip_size( isize, hardbs, skipbs ) ),
     max_errors_( max_errors ),
     e_code( 0 ),
     nosplit_( nosplit ), synchronous_( synchronous ),
@@ -615,22 +636,31 @@ int Rescuebook::do_rescue( const int ides, const int odes, const bool reverse )
       std::printf( "rescued: %10sB,", format_num( recsize ) );
       std::printf( "  errsize:%9sB,", format_num( errsize, 99999 ) );
       std::printf( "  errors: %7u\n", errors );
+      if( verbosity >= 2 )
+        {
+        std::printf( "current position:  %10sB,", format_num( current_pos() ) );
+        std::printf( "     current sector: %7lld\n", current_pos() / hardbs() );
+        if( sblocks() )
+          std::printf( "last block size:   %10sB\n",
+                       format_num( sblock( sblocks() - 1 ).size() ) );
+        std::printf( "\n" );
+        }
       std::printf( "Current status\n" );
       }
     }
   int retval = 0;
   update_rates();				// first call
-  if( copy_pending && !too_many_errors() )
+  if( copy_pending && !errors_or_timeout() )
     retval = ( reverse ? rcopy_non_tried() : copy_non_tried() );
-  if( !retval && trim_pending && !too_many_errors() )
+  if( !retval && trim_pending && !errors_or_timeout() )
     retval = ( reverse ? rtrim_errors() : trim_errors() );
-  if( !retval && split_pending && !nosplit_ && !too_many_errors() )
+  if( !retval && split_pending && !nosplit_ && !errors_or_timeout() )
     retval = ( reverse ? rsplit_errors() : split_errors() );
-  if( !retval && max_retries_ != 0 && !too_many_errors() )
+  if( !retval && max_retries_ != 0 && !errors_or_timeout() )
     retval = ( reverse ? rcopy_errors() : copy_errors() );
   if( !rates_updated ) update_rates( true );	// force update of rates
   show_status( -1, (retval ? 0 : "Finished"), true );
-  if( !retval && too_many_errors() ) retval = 1;
+  if( !retval && errors_or_timeout() ) retval = 1;
   if( verbosity >= 0 )
     {
     if( retval == -2 ) std::printf( "\nLogfile error" );
@@ -641,6 +671,7 @@ int Rescuebook::do_rescue( const int ides, const int odes, const bool reverse )
         std::printf( "\nToo high error rate reading input file (%sB/s)",
                      format_num( error_rate ) );
       if( e_code & 2 ) std::printf( "\nToo many errors in input file" );
+      if( e_code & 4 ) std::printf( "\nTimeout expired" );
       }
     std::fputc( '\n', stdout );
     }

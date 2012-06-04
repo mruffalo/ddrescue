@@ -1,6 +1,12 @@
 Changes in version 1.16:
 
+The new option "-O, --timeout", which sets the maximum time allowed
+since the last successful read, has been added.
+
 The new option "-K, --skip-size" has been added.
+
+Maximum skip size is now limited to 1% of infile size or 1 GiB
+(whichever is smaller), rounded to the next multiple of sector size.
 
 The current position is now set to the end of the block when reading
 backwards, allowing perfect resumability also in reverse mode.
@@ -8,6 +14,16 @@ backwards, allowing perfect resumability also in reverse mode.
 The "-E, --max-error-rate" option now checks the rate of actually failed
 reads, not the growth of error size, and shows the error rate in the
 error message.
+
+The option "-v, --verbose" now increases verbosity if repeated.
+
+Initial skip size is now shown at verbosity level 1 and above.
+
+Most user-defined parameters are now shown at verbosity level 2 and
+above.
+
+Verbosity level 2 and above adds two lines of initial status showing
+current position, current sector, and size of last block in logfile.
 
 Quote characters in messages have been changed as advised by GNU Coding
 Standards.

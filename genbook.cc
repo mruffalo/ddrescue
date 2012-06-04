@@ -35,7 +35,7 @@
 //
 int Genbook::check_all()
   {
-  long long pos = ( (offset() >= 0) ? 0 : -offset() );
+  long long pos = ( ( offset() >= 0 ) ? 0 : -offset() );
   if( current_status() == generating && domain().includes( current_pos() ) &&
       ( offset() >= 0 || current_pos() >= -offset() ) )
     pos = current_pos();

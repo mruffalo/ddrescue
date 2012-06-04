@@ -11,8 +11,8 @@ Ddrescuelog operations can be restricted to one or several parts of the
 logfile if the domain setting options are used.
 
 The basic operation of ddrescue is fully automatic. That is, you don't
-have to wait for an error, stop the program, read the log, run it in
-reverse mode, etc.
+have to wait for an error, stop the program, read the log, run it
+backwards, etc.
 
 If you use the logfile feature of ddrescue, the data is rescued very
 efficiently, (only the needed blocks are read). Also you can interrupt

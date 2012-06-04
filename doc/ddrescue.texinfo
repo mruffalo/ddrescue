@@ -6,8 +6,8 @@
 @finalout
 @c %**end of header
 
-@set UPDATED 12 March 2012
-@set VERSION 1.16-rc3
+@set UPDATED 4 June 2012
+@set VERSION 1.16-rc4
 
 @dircategory GNU Packages
 @direntry
@@ -67,8 +67,8 @@ block device (hard disc, cdrom, etc) to another, trying hard to rescue
 data in case of read errors.
 
 The basic operation of ddrescue is fully automatic. That is, you don't
-have to wait for an error, stop the program, read the log, run it in
-reverse mode, etc.
+have to wait for an error, stop the program, read the log, run it
+backwards, etc.
 
 If you use the logfile feature of ddrescue, the data is rescued very
 efficiently, (only the needed blocks are read). Also you can interrupt
@@ -220,15 +220,15 @@ over different subsets. See this example:
 @noindent
 Rescue the most important part of the disc first.
 @example
-ddrescue -i0 -s50M /dev/hdc hdimage logfile
-ddrescue -i0 -s1M -d -r3 /dev/hdc hdimage logfile
+ddrescue -i0 -s50MiB /dev/hdc hdimage logfile
+ddrescue -i0 -s1MiB -d -r3 /dev/hdc hdimage logfile
 @end example
 
 @noindent
 Then rescue some key disc areas.
 @example
-ddrescue -i30G -s10G /dev/hdc hdimage logfile
-ddrescue -i230G -s5G /dev/hdc hdimage logfile
+ddrescue -i30GiB -s10GiB /dev/hdc hdimage logfile
+ddrescue -i230GiB -s5GiB /dev/hdc hdimage logfile
 @end example
 
 @noindent
@@ -270,8 +270,8 @@ read rate falls below this value, ddrescue will skip ahead a variable
 amount depending on rate and error history. The skipped blocks are tried
 in additional passes (before trimming) where the minimum read rate is
 divided by ten before each pass, until there are no more non-tried
-blocks left. If @var{bytes} is 0, the minimum read rate is calculated
-for each block read as @w{(average_rate / 10)}.
+blocks left. If @var{bytes} is 0 (auto), the minimum read rate is
+recalculated for each block read as @w{(average_rate / 10)}.
 
 Note that specifying a minimum read rate above the posibilities of the
 input device will result in a very low average rate because all reads
@@ -291,7 +291,7 @@ SI prefixes (powers of 1000) are used by default. (See table below).
 
 @item -c @var{sectors}
 @itemx --cluster-size=@var{sectors}
-Number of sectors to copy at a time. Defaults to @w{64KiB / sector_size}.
+Number of sectors to copy at a time. Defaults to @w{64 KiB / sector_size}.
 Try smaller values for slow drives. The number of sectors per track (18
 or 9) is a good value for floppies.
 
@@ -369,15 +369,17 @@ See the chapter Fill Mode (@pxref{Fill Mode}) for details.
 Compare the size of @var{infile} with the size calculated from the list
 of blocks contained in the @var{logfile}, and exit with status 1 if they
 differ. This is not enabled by default because the size of some devices
-can't be known and because the size derived from the @var{logfile} may
-be incomplete, for example after doing a partial rescue.
+can't be known in advance and because the size derived from the
+@var{logfile} may be incomplete, for example after doing a partial
+rescue.
 
 @item -K @var{bytes}
 @itemx --skip-size=@var{bytes}
-Set the initial size to skip on the first read error or slow read. For
+Set the initial size to skip on the first read error or slow read. The
+value given will be rounded to the next multiple of sector size. For
 subsequent read errors or slow reads, ddrescue will modify the skip size
-depending on error rate and error history. Valid values range from 64KiB
-to INT_MAX. Defaults to 64KiB.
+depending on error rate and error history. Valid values range from 64 KiB
+to 1 GiB. Defaults to 64 KiB.
 
 @item -m @var{file}
 @itemx --domain-logfile=@var{file}
@@ -403,6 +405,14 @@ Starting position in @var{outfile}, in bytes. Defaults to
 @samp{--input-position}. The bytes below @var{bytes} aren't touched if
 they exist and truncation is not requested. Else they are set to 0.
 
+@item -O @var{interval}
+@itemx --timeout=@var{interval}
+Maximum time since last successful read allowed before giving up.
+Defaults to infinity. @var{interval} is a rational number (like 1.5 or
+1/2) optionally followed by one of @samp{s}, @samp{m}, @samp{h} or
+@samp{d}, meaning seconds, minutes, hours and days respectively. If no
+unit is specified, it defaults to seconds.
+
 @item -p
 @itemx --preallocate
 Preallocate space on disc for @var{outfile}. Only space for regular
@@ -425,9 +435,8 @@ of retries.
 
 @item -R
 @itemx --reverse
-Reverse direction of all copy operations. This means the copy of the
-non-tried blocks, splitting and retrying are run backwards, while
-trimming is run forwards.
+Reverse direction of all copy operations. This makes copying, splitting
+and retrying to be run backwards, and trimming to be run forwards.
 
 @item -s @var{bytes}
 @itemx --max-size=@var{bytes}
@@ -463,7 +472,7 @@ inside the rescue domain as non-tried.
 
 @item -v
 @itemx --verbose
-Verbose mode.
+Verbose mode. Further -v's (up to 4) increase the verbosity level.
 
 @item -x @var{bytes}
 @itemx --extend-outfile=@var{bytes}
@@ -581,7 +590,7 @@ those things to, in order to use it safely.
 
 A failing drive tends to develop more and more errors as time passes.
 Because of this, you should rescue the data from a drive as soon as you
-notice the first error. Be diligent because every time a physicaly
+notice the first error. Be diligent because every time a physically
 damaged drive powers up and is able to output some data, it may be the
 very last time that it ever will.
 
@@ -829,7 +838,7 @@ all blocks marked as @samp{-} (bad-sector) with copies of the string
 @w{@samp{BAD SECTOR }}:
 
 @example
-echo -n "BAD SECTOR " > tmpfile
+printf "BAD SECTOR " > tmpfile
 ddrescue --fill=- tmpfile outfile logfile
 @end example
 
@@ -883,7 +892,7 @@ Example 4: Figure out what files are in the bad areas of the disc.
 
 @example
 ddrescue -b2048 /dev/cdrom cdimage logfile
-echo -n "DEADBEEF" > tmpfile
+printf "DEADBEEF" > tmpfile
 ddrescue --fill=- tmpfile cdimage logfile
 rm tmpfile
 mount -t iso9660 -o loop,ro cdimage /mnt/cdimage
@@ -1120,7 +1129,7 @@ the domain setting options are used.
 
 @item -v
 @itemx --verbose
-Verbose mode.
+Verbose mode. Further -v's (up to 4) increase the verbosity level.
 
 @item -x @var{file}
 @itemx --xor-logfile=@var{file}

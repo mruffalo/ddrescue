@@ -36,7 +36,7 @@
 bool Arg_parser::parse_long_option( const char * const opt, const char * const arg,
                                     const Option options[], int & argind )
   {
-  unsigned int len;
+  unsigned len;
   int index = -1;
   bool exact = false, ambig = false;
 
@@ -178,7 +178,7 @@ Arg_parser::Arg_parser( const int argc, const char * const argv[],
   if( error_.size() ) data.clear();
   else
     {
-    for( unsigned int i = 0; i < non_options.size(); ++i )
+    for( unsigned i = 0; i < non_options.size(); ++i )
       { data.push_back( Record() ); data.back().argument.swap( non_options[i] ); }
     while( argind < argc )
       { data.push_back( Record() ); data.back().argument = argv[argind++]; }

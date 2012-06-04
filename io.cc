@@ -48,23 +48,6 @@ bool block_is_zero( const uint8_t * const buf, const int size )
   }
 
 
-const char * format_time( long t )
-  {
-  static char buf[16];
-  int fraction = 0;
-  char unit = 's';
-
-  if( t >= 86400 ) { fraction = ( t % 86400 ) / 8640; t /= 86400; unit = 'd'; }
-  else if( t >= 3600 ) { fraction = ( t % 3600 ) / 360; t /= 3600; unit = 'h'; }
-  else if( t >= 60 ) { fraction = ( t % 60 ) / 6; t /= 60; unit = 'm'; }
-  if( fraction == 0 )
-    snprintf( buf, sizeof buf, "%ld %c", t, unit );
-  else
-    snprintf( buf, sizeof buf, "%ld.%d %c", t, fraction, unit );
-  return buf;
-  }
-
-
 // Returns the number of bytes really read.
 // If (returned value < size) and (errno == 0), means EOF was reached.
 //
@@ -79,7 +62,7 @@ int readblock( const int fd, uint8_t * const buf, const int size,
       errno = 0;
       const int n = read( fd, buf + size - rest, rest );
       if( n > 0 ) rest -= n;
-      else if( n == 0 ) break;
+      else if( n == 0 ) break;				// EOF
       else if( errno != EINTR && errno != EAGAIN ) break;
       }
   return ( rest > 0 ) ? size - rest : size;
@@ -296,7 +279,11 @@ void Rescuebook::update_rates( const bool force )
     {
     a_rate = ( recsize - first_size ) / ( t2 - t0 );
     c_rate = ( recsize - last_size ) / ( t2 - t1 );
-    if( recsize != last_size ) { last_size = recsize; ts = t2; }
+    if( !( e_code & 4 ) )
+      {
+      if( recsize != last_size ) { last_size = recsize; ts = t2; }
+      else if( timeout_ >= 0 && t2 - ts > timeout_ ) e_code |= 4;
+      }
     if( max_error_rate_ >= 0 && !( e_code & 1 ) )
       {
       error_rate /= ( t2 - t1 );
@@ -327,9 +314,9 @@ void Rescuebook::show_status( const long long ipos, const char * const msg,
                    format_num( last_ipos ), errors );
       std::printf( "  average rate: %9sB/s\n", format_num( a_rate, 99999 ) );
       std::printf( "   opos: %10sB,", format_num( last_ipos + offset() ) );
-      std::printf( "     time from last successful read: %9s\n",
+      std::printf( "     time since last successful read: %9s\n",
                    format_time( t1 - ts ) );
-      if( msg && msg[0] && !too_many_errors() )
+      if( msg && msg[0] && !errors_or_timeout() )
         {
         const int len = std::strlen( msg ); std::printf( "%s", msg );
         for( int i = len; i < oldlen; ++i ) std::fputc( ' ', stdout );
@@ -340,6 +327,23 @@ void Rescuebook::show_status( const long long ipos, const char * const msg,
       }
     rates_updated = false;
     }
+  }
+
+
+const char * format_time( long t )
+  {
+  static char buf[16];
+  int fraction = 0;
+  char unit = 's';
+
+  if( t >= 86400 ) { fraction = ( t % 86400 ) / 8640; t /= 86400; unit = 'd'; }
+  else if( t >= 3600 ) { fraction = ( t % 3600 ) / 360; t /= 3600; unit = 'h'; }
+  else if( t >= 60 ) { fraction = ( t % 60 ) / 6; t /= 60; unit = 'm'; }
+  if( fraction == 0 )
+    snprintf( buf, sizeof buf, "%ld %c", t, unit );
+  else
+    snprintf( buf, sizeof buf, "%ld.%d %c", t, fraction, unit );
+  return buf;
   }
 
 

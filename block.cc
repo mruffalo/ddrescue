@@ -102,7 +102,7 @@ Block Block::split( long long pos, const int hardbs )
 
 void Domain::crop( const Block & b )
   {
-  for( unsigned int i = block_vector.size(); i > 0; )
+  for( unsigned i = block_vector.size(); i > 0; )
     {
     --i;
     block_vector[i].crop( b );
@@ -115,7 +115,7 @@ void Domain::crop( const Block & b )
 bool Domain::crop_by_file_size( const long long isize )
   {
   if( isize > 0 )
-    for( unsigned int i = 0; i < block_vector.size(); ++i )
+    for( unsigned i = 0; i < block_vector.size(); ++i )
       {
       if( block_vector[i].pos() >= isize )
         {

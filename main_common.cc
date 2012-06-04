@@ -92,7 +92,7 @@ long long getnum( const char * const ptr, const int bs,
 void check_types( const std::string & types, const char * const opt_name )
   {
   bool error = false;
-  for( unsigned int i = 0; i < types.size(); ++i )
+  for( unsigned i = 0; i < types.size(); ++i )
     if( !Sblock::isstatus( types[i] ) )
       { error = true; break; }
   if( !types.size() || error )
@@ -143,7 +143,7 @@ void show_error( const char * const msg, const int errcode, const bool help )
         std::fprintf( stderr, ": %s", std::strerror( errcode ) );
       std::fprintf( stderr, "\n" );
       }
-    if( help && invocation_name && invocation_name[0] )
+    if( help )
       std::fprintf( stderr, "Try '%s --help' for more information.\n",
                     invocation_name );
     }

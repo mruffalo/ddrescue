@@ -165,31 +165,38 @@ public:
 
 class Rescuebook : public Logbook
   {
+public:
+  enum { max_skipbs = 1 << 30 };
+
+private:
   const long long max_error_rate_;
   const long long min_outfile_size_;
   long long error_rate;
   long long min_read_rate_;
   long long sparse_size;		// end position of pending writes
   long long recsize, errsize;		// total recovered and error sizes
+  const long timeout_;
   const char * const iname_;
   const int max_retries_;
   const int skipbs_;			// initial size to skip on read error
+  const int max_skip_size;		// maximum size to skip on read error
   int max_errors_;
-  int e_code;				// error code for too many errors
+  int e_code;				// error code for errors_or_timeout
+					// 1 rate, 2 errors, 4 timeout
   int errors;				// error areas found so far
   int ides_, odes_;			// input and output file descriptors
   const bool nosplit_, synchronous_;
 					// variables for update_rates
   long long a_rate, c_rate, first_size, last_size;
   long long last_ipos;
-  long t0, t1, ts;
+  long t0, t1, ts;			// start, current, last successful
   int oldlen;
   bool rates_updated;
 
   bool extend_outfile_size();
   int copy_block( const Block & b, int & copied_size, int & error_size );
   void count_errors();
-  bool too_many_errors()
+  bool errors_or_timeout()
     { if( max_errors_ >= 0 && errors > max_errors_ ) e_code |= 2;
       return ( e_code != 0 ); }
   void reduce_min_read_rate()
@@ -218,19 +225,32 @@ public:
               const long long min_outfile_size,
               const long long min_read_rate, Domain & dom,
               const char * const iname, const char * const logname,
-              const int cluster, const int hardbs, const int skipbs,
-              const int max_errors, const int max_retries,
-              const bool complete_only = false,
-              const bool new_errors_only = false, const bool nosplit = false,
-              const bool retrim = false, const bool sparse = false,
-              const bool synchronous = false, const bool try_again = false );
+              const long timeout, const int cluster, const int hardbs,
+              const int skipbs, const int max_errors, const int max_retries,
+              const bool complete_only, const bool new_errors_only,
+              const bool nosplit, const bool retrim, const bool sparse,
+              const bool synchronous, const bool try_again );
 
   int do_rescue( const int ides, const int odes, const bool reverse );
   };
 
 
+// Round "size" to the next multiple of sector size (hardbs).
+//
+inline int round_up( int size, const int hardbs )
+  {
+  if( size % hardbs )
+    {
+    size -= size % hardbs;
+    if( INT_MAX - size >= hardbs ) size += hardbs;
+    }
+  return size;
+  }
+
+
 // Defined in io.cc
 //
+const char * format_time( long t );
 bool interrupted();
 void set_signals();
 
