@@ -1,9 +1,11 @@
 Changes in version 1.16:
 
-The new option "-O, --timeout", which sets the maximum time allowed
+The new option "-K, --skip-size" has been added.
+
+The new option "-T, --timeout", which sets the maximum time allowed
 since the last successful read, has been added.
 
-The new option "-K, --skip-size" has been added.
+The short name of option "--try-again" has been changed to "-A".
 
 Maximum skip size is now limited to 1% of infile size or 1 GiB
 (whichever is smaller), rounded to the next multiple of sector size.

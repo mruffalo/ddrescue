@@ -121,7 +121,7 @@ cat ${in2} > out || framework_failure
 rm logfile || framework_failure
 "${DDRESCUE}" -qt -x 35744 ${in1} copy || fail=1
 "${DDRESCUE}" -qg ${in} out logfile || fail=1
-"${DDRESCUE}" -qR copy out logfile || fail=1
+"${DDRESCUE}" -qR -T1.5d copy out logfile || fail=1
 cmp ${in} out || fail=1
 printf .
 

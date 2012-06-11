@@ -70,6 +70,7 @@ void show_help( const int cluster, const int hardbs, const int skipbs )
                "  -h, --help                     display this help and exit\n"
                "  -V, --version                  output version information and exit\n"
                "  -a, --min-read-rate=<bytes>    minimum read rate of good areas in bytes/s\n"
+               "  -A, --try-again                mark non-split, non-trimmed blocks as non-tried\n"
                "  -b, --block-size=<bytes>       sector size of input device [default %d]\n", hardbs );
   std::printf( "  -B, --binary-prefixes          show binary multipliers in numbers [SI]\n"
                "  -c, --cluster-size=<sectors>   sectors to copy at a time [%d]\n", cluster );
@@ -89,7 +90,6 @@ void show_help( const int cluster, const int hardbs, const int skipbs )
                "  -M, --retrim                   mark all failed blocks as non-trimmed\n"
                "  -n, --no-split                 do not try to split or retry failed blocks\n"
                "  -o, --output-position=<bytes>  starting position in output file [ipos]\n"
-               "  -O, --timeout=<interval>       maximum time since last successful read\n"
                "  -p, --preallocate              preallocate space on disc for output file\n"
                "  -q, --quiet                    suppress all messages\n"
                "  -r, --max-retries=<n>          exit after given retries (-1=infinity) [0]\n"
@@ -97,12 +97,12 @@ void show_help( const int cluster, const int hardbs, const int skipbs )
                "  -s, --max-size=<bytes>         maximum size of input data to be copied\n"
                "  -S, --sparse                   use sparse writes for output file\n"
                "  -t, --truncate                 truncate output file to zero size\n"
-               "  -T, --try-again                mark non-split, non-trimmed blocks as non-tried\n"
+               "  -T, --timeout=<interval>       maximum time since last successful read\n"
                "  -v, --verbose                  be verbose (a 2nd -v gives more)\n"
                "  -x, --extend-outfile=<bytes>   extend outfile size to be at least this long\n"
                "Numbers may be followed by a multiplier: b = blocks, k = kB = 10^3 = 1000,\n"
                "Ki = KiB = 2^10 = 1024, M = 10^6, Mi = 2^20, G = 10^9, Gi = 2^30, etc...\n"
-               "Time intervals have the format x.y[smhd] or x/y[smhd]."
+               "Time intervals have the format 1[.5][smhd] or 1/2[smhd]."
                "\nReport bugs to bug-ddrescue@gnu.org\n"
                "Ddrescue home page: http://www.gnu.org/software/ddrescue/ddrescue.html\n"
                "General help using GNU software: http://www.gnu.org/gethelp\n" );
@@ -481,6 +481,7 @@ int main( const int argc, const char * const argv[] )
   const Arg_parser::Option options[] =
     {
     { 'a', "min-read-rate",     Arg_parser::yes },
+    { 'A', "try-again",         Arg_parser::no  },
     { 'b', "block-size",        Arg_parser::yes },
     { 'B', "binary-prefixes",   Arg_parser::no  },
     { 'c', "cluster-size",      Arg_parser::yes },
@@ -500,7 +501,6 @@ int main( const int argc, const char * const argv[] )
     { 'M', "retrim",            Arg_parser::no  },
     { 'n', "no-split",          Arg_parser::no  },
     { 'o', "output-position",   Arg_parser::yes },
-    { 'O', "timeout",           Arg_parser::yes },
     { 'p', "preallocate",       Arg_parser::no  },
     { 'q', "quiet",             Arg_parser::no  },
     { 'r', "max-retries",       Arg_parser::yes },
@@ -508,7 +508,7 @@ int main( const int argc, const char * const argv[] )
     { 's', "max-size",          Arg_parser::yes },
     { 'S', "sparse",            Arg_parser::no  },
     { 't', "truncate",          Arg_parser::no  },
-    { 'T', "try-again",         Arg_parser::no  },
+    { 'T', "timeout",           Arg_parser::yes },
     { 'v', "verbose",           Arg_parser::no  },
     { 'V', "version",           Arg_parser::no  },
     { 'x', "extend-outfile",    Arg_parser::yes },
@@ -527,6 +527,7 @@ int main( const int argc, const char * const argv[] )
     switch( code )
       {
       case 'a': min_read_rate = getnum( arg, hardbs, 0 ); break;
+      case 'A': try_again = true; break;
       case 'b': hardbs = getnum( arg, 0, 1, max_hardbs ); break;
       case 'B': format_num( 0, 0, -1 ); break;		// set binary prefixes
       case 'c': cluster = getnum( arg, 1, 1, INT_MAX ); break;
@@ -557,7 +558,6 @@ int main( const int argc, const char * const argv[] )
       case 'M': retrim = true; break;
       case 'n': nosplit = true; break;
       case 'o': opos = getnum( arg, hardbs, 0 ); break;
-      case 'O': timeout = parse_time_interval( arg ); break;
       case 'p': preallocate = true; break;
       case 'q': verbosity = -1; break;
       case 'r': max_retries = getnum( arg, 0, -1, INT_MAX ); break;
@@ -565,7 +565,7 @@ int main( const int argc, const char * const argv[] )
       case 's': max_size = getnum( arg, hardbs, -1 ); break;
       case 'S': sparse = true; break;
       case 't': o_trunc = O_TRUNC; break;
-      case 'T': try_again = true; break;
+      case 'T': timeout = parse_time_interval( arg ); break;
       case 'v': if( verbosity < 4 ) ++verbosity; break;
       case 'V': show_version(); return 0;
       case 'x': min_outfile_size = getnum( arg, hardbs, 1 ); break;

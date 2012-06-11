@@ -6,8 +6,8 @@
 @finalout
 @c %**end of header
 
-@set UPDATED 4 June 2012
-@set VERSION 1.16-rc4
+@set UPDATED 11 June 2012
+@set VERSION 1.16
 
 @dircategory GNU Packages
 @direntry
@@ -278,6 +278,14 @@ input device will result in a very low average rate because all reads
 will be considered slow reads and continuous skipping will occur. This
 will also make the logfile grow disproportionately.
 
+@item -A
+@itemx --try-again
+Mark all non-split and non-trimmed blocks inside the rescue domain as
+non-tried before beginning the rescue. Try this if the drive stops
+responding and ddrescue immediately starts splitting failed blocks when
+restarted. If @samp{--retrim} is also specified, mark all failed blocks
+inside the rescue domain as non-tried.
+
 @item -b @var{bytes}
 @itemx --block-size=@var{bytes}
 Sector (hardware block) size of input device in bytes (usually 512 for
@@ -405,14 +413,6 @@ Starting position in @var{outfile}, in bytes. Defaults to
 @samp{--input-position}. The bytes below @var{bytes} aren't touched if
 they exist and truncation is not requested. Else they are set to 0.
 
-@item -O @var{interval}
-@itemx --timeout=@var{interval}
-Maximum time since last successful read allowed before giving up.
-Defaults to infinity. @var{interval} is a rational number (like 1.5 or
-1/2) optionally followed by one of @samp{s}, @samp{m}, @samp{h} or
-@samp{d}, meaning seconds, minutes, hours and days respectively. If no
-unit is specified, it defaults to seconds.
-
 @item -p
 @itemx --preallocate
 Preallocate space on disc for @var{outfile}. Only space for regular
@@ -462,13 +462,13 @@ Not all systems support this. Only regular files can be sparse.
 Truncate @var{outfile} to zero size before writing to it. Only works for
 regular files, not for drives or partitions.
 
-@item -T
-@itemx --try-again
-Mark all non-split and non-trimmed blocks inside the rescue domain as
-non-tried before beginning the rescue. Try this if the drive stops
-responding and ddrescue immediately starts splitting failed blocks when
-restarted. If @samp{--retrim} is also specified, mark all failed blocks
-inside the rescue domain as non-tried.
+@item -T @var{interval}
+@itemx --timeout=@var{interval}
+Maximum time since last successful read allowed before giving up.
+Defaults to infinity. @var{interval} is a rational number (like 1.5 or
+1/2) optionally followed by one of @samp{s}, @samp{m}, @samp{h} or
+@samp{d}, meaning seconds, minutes, hours and days respectively. If no
+unit is specified, it defaults to seconds.
 
 @item -v
 @itemx --verbose
@@ -731,7 +731,7 @@ stops responding and disappears from /dev.
 @example
 ddrescue -f -n /dev/hda /dev/hdb logfile      <-- /dev/hda fails here
   (restart /dev/hda or reboot computer as many times as needed)
-ddrescue -f -n -T /dev/hda /dev/hdb logfile
+ddrescue -f -n -A /dev/hda /dev/hdb logfile
 ddrescue -d -f -r3 /dev/hda /dev/hdb logfile
 @end example
 

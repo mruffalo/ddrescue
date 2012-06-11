@@ -12,7 +12,7 @@ File: ddrescue.info,  Node: Top,  Next: Introduction,  Up: (dir)
 GNU ddrescue Manual
 *******************
 
-This manual is for GNU ddrescue (version 1.16-rc4, 4 June 2012).
+This manual is for GNU ddrescue (version 1.16, 11 June 2012).
 
 * Menu:
 
@@ -250,6 +250,14 @@ The format for running ddrescue is:
      will occur. This will also make the logfile grow
      disproportionately.
 
+`-A'
+`--try-again'
+     Mark all non-split and non-trimmed blocks inside the rescue domain
+     as non-tried before beginning the rescue. Try this if the drive
+     stops responding and ddrescue immediately starts splitting failed
+     blocks when restarted. If `--retrim' is also specified, mark all
+     failed blocks inside the rescue domain as non-tried.
+
 `-b BYTES'
 `--block-size=BYTES'
      Sector (hardware block) size of input device in bytes (usually 512
@@ -378,14 +386,6 @@ The format for running ddrescue is:
      `--input-position'. The bytes below BYTES aren't touched if they
      exist and truncation is not requested. Else they are set to 0.
 
-`-O INTERVAL'
-`--timeout=INTERVAL'
-     Maximum time since last successful read allowed before giving up.
-     Defaults to infinity. INTERVAL is a rational number (like 1.5 or
-     1/2) optionally followed by one of `s', `m', `h' or `d', meaning
-     seconds, minutes, hours and days respectively. If no unit is
-     specified, it defaults to seconds.
-
 `-p'
 `--preallocate'
      Preallocate space on disc for OUTFILE. Only space for regular
@@ -435,13 +435,13 @@ The format for running ddrescue is:
      Truncate OUTFILE to zero size before writing to it. Only works for
      regular files, not for drives or partitions.
 
-`-T'
-`--try-again'
-     Mark all non-split and non-trimmed blocks inside the rescue domain
-     as non-tried before beginning the rescue. Try this if the drive
-     stops responding and ddrescue immediately starts splitting failed
-     blocks when restarted. If `--retrim' is also specified, mark all
-     failed blocks inside the rescue domain as non-tried.
+`-T INTERVAL'
+`--timeout=INTERVAL'
+     Maximum time since last successful read allowed before giving up.
+     Defaults to infinity. INTERVAL is a rational number (like 1.5 or
+     1/2) optionally followed by one of `s', `m', `h' or `d', meaning
+     seconds, minutes, hours and days respectively. If no unit is
+     specified, it defaults to seconds.
 
 `-v'
 `--verbose'
@@ -528,7 +528,7 @@ Character   Meaning
 
 And here is an example logfile:
 
-# Rescue Logfile. Created by GNU ddrescue version 1.16-rc4
+# Rescue Logfile. Created by GNU ddrescue version 1.16
 # Command line: ddrescue /dev/fd0 fdimage logfile
 # current_pos  current_status
 0x00120000     ?
@@ -668,7 +668,7 @@ stops responding and disappears from /dev.
 
      ddrescue -f -n /dev/hda /dev/hdb logfile      <-- /dev/hda fails here
        (restart /dev/hda or reboot computer as many times as needed)
-     ddrescue -f -n -T /dev/hda /dev/hdb logfile
+     ddrescue -f -n -A /dev/hda /dev/hdb logfile
      ddrescue -d -f -r3 /dev/hda /dev/hdb logfile
 
 
@@ -1110,20 +1110,20 @@ Concept Index
 
 Tag Table:
 Node: Top203
-Node: Introduction1305
-Node: Basic Concepts3782
-Node: Algorithm5244
-Node: Invoking Ddrescue8668
-Node: Logfile Structure18986
-Node: Examples21240
-Ref: lziprecover-example24904
-Node: Direct Disc Access26297
-Node: Fill Mode28174
-Node: Generate Mode32268
-Node: Ddrescuelog33943
-Node: Invoking Ddrescuelog36092
-Node: Problems41590
-Node: Concept Index42147
+Node: Introduction1302
+Node: Basic Concepts3779
+Node: Algorithm5241
+Node: Invoking Ddrescue8665
+Node: Logfile Structure18983
+Node: Examples21233
+Ref: lziprecover-example24897
+Node: Direct Disc Access26290
+Node: Fill Mode28167
+Node: Generate Mode32261
+Node: Ddrescuelog33936
+Node: Invoking Ddrescuelog36085
+Node: Problems41583
+Node: Concept Index42140
 
 End Tag Table
 
