@@ -18,6 +18,7 @@
 
 namespace {
 
+const char * const program_year = "2012";
 std::string command_line;
 
 

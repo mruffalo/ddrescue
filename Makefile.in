@@ -11,8 +11,8 @@ objs = arg_parser.o rational.o $(ddobjs)
 logobjs = arg_parser.o block.o logbook.o ddrescuelog.o
 
 
-.PHONY : all install install-info install-man install-strip \
-         uninstall uninstall-info uninstall-man \
+.PHONY : all install install-bin install-info install-man install-strip \
+         uninstall uninstall-bin uninstall-info uninstall-man \
          doc info man check dist clean distclean
 
 all : $(progname) ddrescuelog
@@ -69,7 +69,9 @@ Makefile : $(VPATH)/configure $(VPATH)/Makefile.in
 check : all
 	@$(VPATH)/testsuite/check.sh $(VPATH)/testsuite $(pkgversion)
 
-install : all install-info install-man
+install : install-bin install-info install-man
+
+install-bin : all
 	if [ ! -d "$(DESTDIR)$(bindir)" ] ; then $(INSTALL_DIR) "$(DESTDIR)$(bindir)" ; fi
 	$(INSTALL_PROGRAM) ./$(progname) "$(DESTDIR)$(bindir)/$(progname)"
 	$(INSTALL_PROGRAM) ./ddrescuelog "$(DESTDIR)$(bindir)/ddrescuelog"
@@ -87,7 +89,9 @@ install-man :
 install-strip : all
 	$(MAKE) INSTALL_PROGRAM='$(INSTALL_PROGRAM) -s' install
 
-uninstall : uninstall-info uninstall-man
+uninstall : uninstall-bin uninstall-info uninstall-man
+
+uninstall-bin :
 	-rm -f "$(DESTDIR)$(bindir)/$(progname)"
 	-rm -f "$(DESTDIR)$(bindir)/ddrescuelog"
 

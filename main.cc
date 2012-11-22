@@ -41,12 +41,15 @@
 #include "block.h"
 #include "ddrescue.h"
 
+#ifndef O_DIRECT
+#define O_DIRECT 0
+#endif
+
 
 namespace {
 
 const char * const Program_name = "GNU ddrescue";
 const char * const program_name = "ddrescue";
-const char * const program_year = "2012";
 const char * invocation_name = 0;
 
 enum Mode { m_none, m_fill, m_generate };
@@ -66,12 +69,13 @@ void show_help( const int cluster, const int hardbs, const int skipbs )
                "trying hard to rescue data in case of read errors.\n"
                "\nUsage: %s [options] infile outfile [logfile]\n", invocation_name );
   std::printf( "You should use a logfile unless you know what you are doing.\n"
+               "If you reboot, check the device names before restarting ddrescue.\n"
                "\nOptions:\n"
                "  -h, --help                     display this help and exit\n"
                "  -V, --version                  output version information and exit\n"
                "  -a, --min-read-rate=<bytes>    minimum read rate of good areas in bytes/s\n"
                "  -A, --try-again                mark non-split, non-trimmed blocks as non-tried\n"
-               "  -b, --block-size=<bytes>       sector size of input device [default %d]\n", hardbs );
+               "  -b, --sector-size=<bytes>      sector size of input device [default %d]\n", hardbs );
   std::printf( "  -B, --binary-prefixes          show binary multipliers in numbers [SI]\n"
                "  -c, --cluster-size=<sectors>   sectors to copy at a time [%d]\n", cluster );
   std::printf( "  -C, --complete-only            do not read new data beyond logfile limits\n"
@@ -176,7 +180,8 @@ bool check_identical( const char * const iname, const char * const oname,
 bool check_files( const char * const iname, const char * const oname,
                   const char * const logname,
                   const long long min_outfile_size, const bool force,
-                  const bool preallocate, const bool sparse )
+                  const bool generate, const bool preallocate,
+                  const bool sparse )
   {
   if( !iname || !oname )
     {
@@ -184,7 +189,7 @@ bool check_files( const char * const iname, const char * const oname,
     return false;
     }
   if( check_identical( iname, oname, logname ) ) return false;
-  if( min_outfile_size > 0 || !force || preallocate || sparse )
+  if( !generate && ( min_outfile_size > 0 || !force || preallocate || sparse ) )
     {
     struct stat st;
     if( stat( oname, &st ) == 0 && !S_ISREG( st.st_mode ) )
@@ -192,7 +197,8 @@ bool check_files( const char * const iname, const char * const oname,
       show_error( "Output file exists and is not a regular file." );
       if( !force )
         show_error( "Use '--force' if you really want to overwrite it, but be\n"
-                    "aware that all existing data in the output file will be lost.", 0, true );
+                    "          aware that all existing data in the output file will be lost.",
+                    0, true );
       else if( min_outfile_size > 0 )
         show_error( "Only regular files can be extended.", 0, true );
       else if( preallocate )
@@ -247,8 +253,7 @@ int do_fill( const long long offset, Domain & domain,
     std::printf( ",  outfile = %sB\n",
                  format_num( fillbook.domain().pos() + fillbook.offset() ) );
     std::printf( "    Copy block size: %3d sectors\n", cluster );
-    std::printf( "Sector size: %sBytes\n", format_num( hardbs, 99999 ) );
-    std::printf( "\n" );
+    std::printf( "Sector size: %sBytes\n\n", format_num( hardbs, 99999 ) );
     }
 
   return fillbook.do_fill( odes, filltypes );
@@ -299,8 +304,7 @@ int do_generate( const long long offset, Domain & domain,
     std::printf( ",  outfile = %sB\n",
                  format_num( genbook.domain().pos() + genbook.offset() ) );
     std::printf( "    Copy block size: %3d sectors\n", cluster );
-    std::printf( "Sector size: %sBytes\n", format_num( hardbs, 99999 ) );
-    std::printf( "\n" );
+    std::printf( "Sector size: %sBytes\n\n", format_num( hardbs, 99999 ) );
     }
   return genbook.do_generate( odes );
   }
@@ -483,6 +487,7 @@ int main( const int argc, const char * const argv[] )
     { 'a', "min-read-rate",     Arg_parser::yes },
     { 'A', "try-again",         Arg_parser::no  },
     { 'b', "block-size",        Arg_parser::yes },
+    { 'b', "sector-size",       Arg_parser::yes },
     { 'B', "binary-prefixes",   Arg_parser::no  },
     { 'c', "cluster-size",      Arg_parser::yes },
     { 'C', "complete-only",     Arg_parser::no  },
@@ -532,10 +537,7 @@ int main( const int argc, const char * const argv[] )
       case 'B': format_num( 0, 0, -1 ); break;		// set binary prefixes
       case 'c': cluster = getnum( arg, 1, 1, INT_MAX ); break;
       case 'C': complete_only = true; break;
-      case 'd':
-#ifdef O_DIRECT
-                o_direct = O_DIRECT;
-#endif
+      case 'd': o_direct = O_DIRECT;
                 if( !o_direct )
                   { show_error( "Direct disc access not available." ); return 1; }
                 break;
@@ -591,7 +593,8 @@ int main( const int argc, const char * const argv[] )
   // end scan arguments
 
   if( !check_files( iname, oname, logname, min_outfile_size, force,
-                    preallocate, sparse ) ) return 1;
+                    program_mode == m_generate, preallocate, sparse ) )
+    return 1;
 
   Domain domain( ipos, max_size, domain_logfile_name );
 

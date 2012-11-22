@@ -1,34 +1,24 @@
-Changes in version 1.16:
+Changes in version 1.17:
 
-The new option "-K, --skip-size" has been added.
+The option "--sector-size" has been added as a synonym of "--block-size".
 
-The new option "-T, --timeout", which sets the maximum time allowed
-since the last successful read, has been added.
+Ddrescue now terminates with an error if an unexpected EOF would discard
+any successfully read data, just as it does when the input file
+disappears from /dev.
 
-The short name of option "--try-again" has been changed to "-A".
+Ddrescue now removes the last block from the logfile if it starts at the
+end of the input file and is not marked as finished. This automatically
+adjusts the logfile to shrinking input devices, like CD-ROMs written in
+Track-At-Once mode.
 
-Maximum skip size is now limited to 1% of infile size or 1 GiB
-(whichever is smaller), rounded to the next multiple of sector size.
+A bug has been fixed that prevented status to update after system clock
+had been put back.
 
-The current position is now set to the end of the block when reading
-backwards, allowing perfect resumability also in reverse mode.
+Control-C no more overwrites status message.
 
-The "-E, --max-error-rate" option now checks the rate of actually failed
-reads, not the growth of error size, and shows the error rate in the
-error message.
+Generate mode no more requires the "--force" option when outfile is not
+a regular file.
 
-The option "-v, --verbose" now increases verbosity if repeated.
+The new chapter "Using ddrescue safely" has been added to the manual.
 
-Initial skip size is now shown at verbosity level 1 and above.
-
-Most user-defined parameters are now shown at verbosity level 2 and
-above.
-
-Verbosity level 2 and above adds two lines of initial status showing
-current position, current sector, and size of last block in logfile.
-
-Quote characters in messages have been changed as advised by GNU Coding
-Standards.
-
-Configure option "--datadir" has been renamed to "--datarootdir" to
-follow GNU Standards.
+The target "install-bin" has been added to the Makefile.

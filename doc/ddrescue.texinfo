@@ -6,8 +6,8 @@
 @finalout
 @c %**end of header
 
-@set UPDATED 11 June 2012
-@set VERSION 1.16
+@set UPDATED 22 November 2012
+@set VERSION 1.17-pre1
 
 @dircategory GNU Packages
 @direntry
@@ -37,6 +37,7 @@ This manual is for GNU ddrescue (version @value{VERSION}, @value{UPDATED}).
 @menu
 * Introduction::          Purpose and features of GNU ddrescue
 * Basic Concepts::        Blocks, clusters, devices, files, sectors, etc
+* Important Advice::      Read this or risk losing your data
 * Algorithm::             How ddrescue recovers the data
 * Invoking Ddrescue::     Command line interface
 * Logfile Structure::     Detailed format of the logfile
@@ -67,8 +68,8 @@ block device (hard disc, cdrom, etc) to another, trying hard to rescue
 data in case of read errors.
 
 The basic operation of ddrescue is fully automatic. That is, you don't
-have to wait for an error, stop the program, read the log, run it
-backwards, etc.
+have to wait for an error, stop the program, read the log, restart it
+from a new position, etc.
 
 If you use the logfile feature of ddrescue, the data is rescued very
 efficiently, (only the needed blocks are read). Also you can interrupt
@@ -129,8 +130,8 @@ pendrives, are devices. /dev/hda, /dev/sdb, are device names.
 
 @item File
 Files are named units of data which are stored by the operating system
-for you to retrieve later by name. Devices are accessed by means of
-their associated file names.
+for you to retrieve later by name. Devices and partitions are accessed
+by means of their associated file names.
 
 @item Partition
 Every part in which a device is divided. A partition normally contains a
@@ -153,6 +154,35 @@ input file or logfile.
 Hardware block. Smallest accessible amount of data on a device.
 
 @end table
+
+
+@node Important Advice
+@chapter Using ddrescue safely
+@cindex using ddrescue safely
+
+Ddrescue is like any other power tool. You need to understand what it
+does, and you need to understand some things about the machines it does
+those things to, in order to use it safely.
+
+Always use a logfile unless you know you won't need it. Without a
+logfile, ddrescue can't resume a rescue, only reinitiate it.
+
+Never try to rescue a r/w mounted partition. The resulting copy may be
+useless.
+
+Never try to repair a file system on a drive with I/O errors; you will
+probably lose even more data.
+
+If you use a device or a partition as destination, any data stored there
+will be overwritten.
+
+Some systems may change device names on reboot (eg. udev enabled
+systems). If you reboot, check the device names before restarting
+ddrescue.
+
+If you interrupt the rescue and then reboot, any partially copied
+partitions should be hidden before allowing them to be touched by any
+operating system that tries to mount and "fix" the partitions it sees.
 
 
 @node Algorithm
@@ -273,11 +303,6 @@ divided by ten before each pass, until there are no more non-tried
 blocks left. If @var{bytes} is 0 (auto), the minimum read rate is
 recalculated for each block read as @w{(average_rate / 10)}.
 
-Note that specifying a minimum read rate above the posibilities of the
-input device will result in a very low average rate because all reads
-will be considered slow reads and continuous skipping will occur. This
-will also make the logfile grow disproportionately.
-
 @item -A
 @itemx --try-again
 Mark all non-split and non-trimmed blocks inside the rescue domain as
@@ -288,6 +313,7 @@ inside the rescue domain as non-tried.
 
 @item -b @var{bytes}
 @itemx --block-size=@var{bytes}
+@itemx --sector-size=@var{bytes}
 Sector (hardware block) size of input device in bytes (usually 512 for
 hard discs and 3.5" floppies, 1024 for 5.25" floppies, and 2048 for
 cdroms). Defaults to 512.
@@ -307,10 +333,10 @@ or 9) is a good value for floppies.
 @itemx --complete-only
 Limit rescue domain to the blocks listed in the @var{logfile}. Do not
 read new data beyond @var{logfile} limits. This is useful when reading
-from devices of undefined size, like raw devices, or when the drive
-returns an incorrect size. It can only be used after a first rescue
-attempt, possibly limited with the @samp{--max-size} option, has
-produced a complete @var{logfile}.
+from devices of undefined size (like raw devices), when the drive
+returns an incorrect size, or when reading from a partial copy. It can
+only be used after a first rescue attempt, possibly limited with the
+@samp{--max-size} option, has produced a complete @var{logfile}.
 
 @item -d
 @itemx --direct
@@ -584,9 +610,9 @@ using the same syntax that integer constants in C++.
 @chapter A small tutorial with examples
 @cindex examples
 
-Ddrescue is like any other power tool. You need to understand what it
-does, and you need to understand some things about the machines it does
-those things to, in order to use it safely.
+This tutorial is for those already able to use the dd command. If you
+don't know what dd is, better search the net for some introductory
+material about dd and GNU ddrescue first.
 
 A failing drive tends to develop more and more errors as time passes.
 Because of this, you should rescue the data from a drive as soon as you
@@ -598,23 +624,6 @@ You should make a copy of the failing drive with ddrescue, and then try
 to repair the copy. If your data is really important, use the first copy
 as a master for a second copy, and try to repair the second copy. If
 something goes wrong, you have the master intact to try again.
-
-IMPORTANT! Always use a logfile unless you know you won't need it.
-Without a logfile, ddrescue can't resume a rescue, only reinitiate it.
-
-IMPORTANT! Never try to rescue a r/w mounted partition. The resulting
-copy may be useless.
-
-IMPORTANT! If you use a device or a partition as destination, any data
-stored there will be overwritten.
-
-IMPORTANT! If you interrupt the rescue and then reboot, any partially
-copied partitions should be hidden before allowing them to be touched by
-any operating system that tries to mount and "fix" the partitions it
-sees.
-
-IMPORTANT! Never try to repair a file system on a drive with I/O errors;
-you will probably lose even more data.
 
 If you are trying to rescue a whole partition, first repair the copy
 with e2fsck or some other tool appropiate for the type of partition you
@@ -747,7 +756,7 @@ accesses and grouping them. In this case you may want to use direct disc
 access or a raw device to bypass the kernel cache and rescue more of
 your data.
 
-NOTE! Sector size must be correctly set with the @samp{--block-size}
+NOTE! Sector size must be correctly set with the @samp{--sector-size}
 option for this to work. Try the @samp{--direct} option first. If direct
 disc access is not available in your system, try raw devices. Read your
 system documentation to find how to bind a raw device to a regular block
@@ -793,7 +802,7 @@ mount -t ext2 -o ro /dev/hdc1 /mnt
 
 @node Fill Mode
 @chapter Fill Mode
-@cindex Fill Mode
+@cindex fill Mode
 
 When ddrescue is invoked with the @samp{--fill} option it operates in
 "fill mode", which is different from the default "rescue mode". That is,
@@ -904,14 +913,14 @@ ddrescue --fill=- /dev/zero cdimage logfile
 
 @node Generate Mode
 @chapter Generate-logfile Mode
-@cindex Generate-logfile Mode
+@cindex generate-logfile Mode
 
 So you didn't read the tutorial and started ddrescue without a logfile.
 Now, two days later, your computer crashed and you can't know how much
 data ddrescue managed to save. And even worse, you can't resume the
 rescue; you have to restart it from the very beginning.
 
-Or maybe you started copying a drive with @w{@samp{dd
+Or maybe you started copying a drive with @w{@code{dd
 conv=noerror,sync}} and are now in the same situation described above.
 In this case, note that you can't use a copy made by dd unless it was
 invoked with the @samp{sync} conversion argument.
@@ -1041,6 +1050,7 @@ type of @var{new_types} is repeated as many times as necessary.
 
 @item -b @var{bytes}
 @itemx --block-size=@var{bytes}
+@itemx --sector-size=@var{bytes}
 Block size used by ddrescuelog. Depending on the requested operation it
 may be the sector size of the input device, the block size of the
 rescued file system, etc. Defaults to 512.

@@ -1,3 +1,19 @@
+2012-11-22  Antonio Diaz Diaz  <ant_diaz@teleline.es>
+
+	* Version 1.17-pre1 released.
+	* Added option '--sector-size' as a synonym of '--block-size'.
+	* logbook.cc (extend_sblock_vector, truncate_vector): Terminate
+	  if truncation would discard finished blocks.
+	* logbook.cc (extend_sblock_vector): Remove last block of
+	  logfile if it starts at isize and is not marked as finished.
+	* io.cc (show_status,update_rates): Detect a jump back in time
+	  and adjust status.
+	* io.cc (show_status) Leave cursor after message so that ^C does
+	  not overwrite it.
+	* main.cc: Do not require '--force' for generate mode.
+	* Added new chapter 'Using ddrescue safely' to the manual.
+	* Makefile.in: Added new target 'install-bin'.
+
 2012-06-11  Antonio Diaz Diaz  <ant_diaz@teleline.es>
 
 	* Version 1.16 released.

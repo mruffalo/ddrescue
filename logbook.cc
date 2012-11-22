@@ -36,6 +36,16 @@
 
 namespace {
 
+void input_pos_error( const long long pos, const long long isize )
+  {
+  char buf[128];
+  snprintf( buf, sizeof buf,
+            "Can't start reading at pos %lld.\n"
+            "          Input file is only %lld bytes long.", pos, isize );
+  show_error( buf );
+  }
+
+
 int my_fgetc( FILE * const f )
   {
   int ch;
@@ -97,12 +107,22 @@ void extend_sblock_vector( std::vector< Sblock > & sblock_vector,
     {
     if( back.pos() >= isize )
       {
-      if( back.pos() == isize && back.status() == Sblock::non_tried )
+      if( back.pos() == isize && back.status() != Sblock::finished )
         { sblock_vector.pop_back(); return; }
-      show_error( "Bad logfile; last block begins past end of input file." );
+      show_error( "Last block in logfile begins past end of input file.\n"
+                  "          Use '-C' if you are reading from a partial copy.",
+                  0, true );
       std::exit( 1 );
       }
-    if( end < 0 || end > isize ) back.size( isize - back.pos() );
+    if( end > isize )
+      {
+      if( back.status() != Sblock::finished )
+        { back.size( isize - back.pos() ); return; }
+      show_error( "Rescued data in logfile goes past end of input file.\n"
+                  "          Use '-C' if you are reading from a partial copy.",
+                  0, true );
+      std::exit( 1 );
+      }
     else if( end < isize )
       sblock_vector.push_back( Sblock( end, isize - end, Sblock::non_tried ) );
     }
@@ -118,7 +138,7 @@ void extend_sblock_vector( std::vector< Sblock > & sblock_vector,
 void show_logfile_error( const char * const filename, const int linenum )
   {
   char buf[80];
-  snprintf( buf, sizeof buf, "error in logfile %s, line %d", filename, linenum );
+  snprintf( buf, sizeof buf, "error in logfile %s, line %d.", filename, linenum );
   show_error( buf );
   }
 
@@ -134,7 +154,7 @@ bool read_logfile( const char * const logname,
   int linenum = 0;
   sblock_vector.clear();
 
-  const char *line = my_fgets( f, linenum );
+  const char * line = my_fgets( f, linenum );
   if( line )						// status line
     {
     char ch;
@@ -195,7 +215,8 @@ Domain::Domain( const long long p, const long long s,
     const Sblock & sb = sblock_vector[i];
     if( sb.status() == Sblock::finished ) block_vector.push_back( sb );
     }
-  this->crop( b );
+  if( block_vector.size() == 0 ) block_vector.push_back( Block( 0, 0 ) );
+  else this->crop( b );
   }
 
 
@@ -235,7 +256,12 @@ Logbook::Logbook( const long long offset, const long long isize,
     if( disp > 0 && disp < alignment ) iobuf_ += disp;
     }
 
-  if( !domain_.crop_by_file_size( isize ) ) std::exit( 1 );
+  if( isize > 0 )
+    {
+    if( domain_.pos() >= isize )
+      { input_pos_error( domain_.pos(), isize ); std::exit( 1 ); }
+    domain_.crop_by_file_size( isize );
+    }
   if( filename_ && !do_not_read &&
       read_logfile( filename_, sblock_vector, current_pos_, current_status_ ) &&
       sblock_vector.size() )
@@ -297,8 +323,8 @@ bool Logbook::update_logfile( const int odes, const bool force,
   if( verbosity >= 0 )
     {
     char buf[80];
-    const char * const s = ( f ? "Error writing logfile '%s'" :
-                                 "Error opening logfile '%s' for writing" );
+    const char * const s = ( f ? "Error writing logfile '%s'." :
+                                 "Error opening logfile '%s' for writing." );
     snprintf( buf, sizeof buf, s, filename_ );
     if( retry ) std::fprintf( stderr, "\n" );
     show_error( buf, errno );
@@ -336,21 +362,32 @@ void Logbook::write_logfile( FILE * const f ) const
   }
 
 
-void Logbook::truncate_vector( const long long pos )
+// Returns false only if truncation would remove finished blocks and
+// force is false.
+//
+bool Logbook::truncate_vector( const long long end, const bool force )
   {
   int i = sblocks() - 1;
-  while( i >= 0 && sblock_vector[i].pos() >= pos ) --i;
+  while( i >= 0 && sblock_vector[i].pos() >= end ) --i;
   if( i < 0 )
     {
     sblock_vector.clear();
-    sblock_vector.push_back( Sblock( pos, 0, Sblock::non_tried ) );
+    sblock_vector.push_back( Sblock( 0, 0, Sblock::non_tried ) );
     }
   else
     {
+    if( !force )
+      for( unsigned j = i + 1; j < sblock_vector.size(); ++j )
+        if( sblock_vector[j].status() == Sblock::finished ) return false;
     Sblock & sb = sblock_vector[i];
-    if( sb.includes( pos ) ) sb.size( pos - sb.pos() );
+    if( sb.includes( end ) )
+      {
+      if( !force && sb.status() == Sblock::finished ) return false;
+      sb.size( end - sb.pos() );
+      }
     sblock_vector.erase( sblock_vector.begin() + i + 1, sblock_vector.end() );
     }
+  return true;
   }
 
 

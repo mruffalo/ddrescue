@@ -29,20 +29,6 @@
 #include "ddrescue.h"
 
 
-namespace {
-
-void input_pos_error( const long long pos, const long long isize )
-  {
-  char buf[80];
-  snprintf( buf, sizeof buf, "can't start reading at pos %lld", pos );
-  show_error( buf );
-  snprintf( buf, sizeof buf, "input file is only %lld bytes long", isize );
-  show_error( buf );
-  }
-
-} // end namespace
-
-
 // Align pos to next boundary if size is big enough
 //
 void Block::align_pos( const int alignment )
@@ -104,28 +90,24 @@ void Domain::crop( const Block & b )
   {
   for( unsigned i = block_vector.size(); i > 0; )
     {
-    --i;
-    block_vector[i].crop( b );
+    block_vector[--i].crop( b );
     if( block_vector[i].size() <= 0 )
       block_vector.erase( block_vector.begin() + i );
     }
+  if( block_vector.size() == 0 ) block_vector.push_back( Block( 0, 0 ) );
   }
 
 
-bool Domain::crop_by_file_size( const long long isize )
+void Domain::crop_by_file_size( const long long end )
   {
-  if( isize > 0 )
-    for( unsigned i = 0; i < block_vector.size(); ++i )
-      {
-      if( block_vector[i].pos() >= isize )
-        {
-        if( i == 0 )
-          { input_pos_error( block_vector[i].pos(), isize ); return false; }
-        block_vector.erase( block_vector.begin() + i, block_vector.end() );
-        break;
-        }
-      if( block_vector[i].end() > isize )
-        block_vector[i].size( isize - block_vector[i].pos() );
-      }
-  return true;
+  unsigned i = block_vector.size();
+  while( i > 0 && block_vector[i-1].pos() >= end ) --i;
+  if( i == 0 )
+    block_vector[0].assign( 0, 0 );
+  else
+    {
+    Block & b = block_vector[--i];
+    if( b.includes( end ) ) b.size( end - b.pos() );
+    }
+  block_vector.erase( block_vector.begin() + i + 1, block_vector.end() );
   }

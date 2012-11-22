@@ -88,7 +88,9 @@ public:
     if( sblock_vector[i].includes( pos ) )
       insert_sblock( i, sblock_vector[i].split( pos ) );
     }
-  void truncate_vector( const long long pos );
+  bool truncate_vector( const long long end, const bool force = false );
+  void truncate_domain( const long long end )
+    { domain_.crop_by_file_size( end ); }
 
   int find_index( const long long pos ) const;
   void find_chunk( Block & b, const Sblock::Status st,
@@ -185,7 +187,7 @@ private:
 					// 1 rate, 2 errors, 4 timeout
   int errors;				// error areas found so far
   int ides_, odes_;			// input and output file descriptors
-  const bool nosplit_, synchronous_;
+  const bool complete_only_, nosplit_, synchronous_;
 					// variables for update_rates
   long long a_rate, c_rate, first_size, last_size;
   long long last_ipos;
@@ -202,7 +204,8 @@ private:
   void reduce_min_read_rate()
     { if( min_read_rate_ > 0 ) min_read_rate_ /= 10; }
   bool slow_read() const
-    { return ( ( min_read_rate_ > 0 && c_rate < min_read_rate_ ) ||
+    { return ( ( min_read_rate_ > 0 && c_rate < min_read_rate_ &&
+                 c_rate < a_rate / 2 ) ||
                ( min_read_rate_ == 0 && c_rate < a_rate / 10 ) ); }
   int copy_and_update( const Block & b, const Sblock::Status st,
                        int & copied_size, int & error_size,

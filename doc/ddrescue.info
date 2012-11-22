@@ -12,12 +12,13 @@ File: ddrescue.info,  Node: Top,  Next: Introduction,  Up: (dir)
 GNU ddrescue Manual
 *******************
 
-This manual is for GNU ddrescue (version 1.16, 11 June 2012).
+This manual is for GNU ddrescue (version 1.17-pre1, 22 November 2012).
 
 * Menu:
 
 * Introduction::          Purpose and features of GNU ddrescue
 * Basic Concepts::        Blocks, clusters, devices, files, sectors, etc
+* Important Advice::      Read this or risk losing your data
 * Algorithm::             How ddrescue recovers the data
 * Invoking Ddrescue::     Command line interface
 * Logfile Structure::     Detailed format of the logfile
@@ -48,8 +49,8 @@ block device (hard disc, cdrom, etc) to another, trying hard to rescue
 data in case of read errors.
 
    The basic operation of ddrescue is fully automatic. That is, you
-don't have to wait for an error, stop the program, read the log, run it
-backwards, etc.
+don't have to wait for an error, stop the program, read the log,
+restart it from a new position, etc.
 
    If you use the logfile feature of ddrescue, the data is rescued very
 efficiently, (only the needed blocks are read). Also you can interrupt
@@ -92,7 +93,7 @@ wiping data, marking bad areas or even, in some cases, "repair" damaged
 sectors.
 
 
-File: ddrescue.info,  Node: Basic Concepts,  Next: Algorithm,  Prev: Introduction,  Up: Top
+File: ddrescue.info,  Node: Basic Concepts,  Next: Important Advice,  Prev: Introduction,  Up: Top
 
 2 Basic Concepts
 ****************
@@ -110,8 +111,8 @@ Device
 
 File
      Files are named units of data which are stored by the operating
-     system for you to retrieve later by name. Devices are accessed by
-     means of their associated file names.
+     system for you to retrieve later by name. Devices and partitions
+     are accessed by means of their associated file names.
 
 Partition
      Every part in which a device is divided. A partition normally
@@ -135,9 +136,39 @@ Sector
 
 
 
-File: ddrescue.info,  Node: Algorithm,  Next: Invoking Ddrescue,  Prev: Basic Concepts,  Up: Top
+File: ddrescue.info,  Node: Important Advice,  Next: Algorithm,  Prev: Basic Concepts,  Up: Top
 
-3 Algorithm
+3 Using ddrescue safely
+***********************
+
+Ddrescue is like any other power tool. You need to understand what it
+does, and you need to understand some things about the machines it does
+those things to, in order to use it safely.
+
+   Always use a logfile unless you know you won't need it. Without a
+logfile, ddrescue can't resume a rescue, only reinitiate it.
+
+   Never try to rescue a r/w mounted partition. The resulting copy may
+be useless.
+
+   Never try to repair a file system on a drive with I/O errors; you
+will probably lose even more data.
+
+   If you use a device or a partition as destination, any data stored
+there will be overwritten.
+
+   Some systems may change device names on reboot (eg. udev enabled
+systems). If you reboot, check the device names before restarting
+ddrescue.
+
+   If you interrupt the rescue and then reboot, any partially copied
+partitions should be hidden before allowing them to be touched by any
+operating system that tries to mount and "fix" the partitions it sees.
+
+
+File: ddrescue.info,  Node: Algorithm,  Next: Invoking Ddrescue,  Prev: Important Advice,  Up: Top
+
+4 Algorithm
 ***********
 
 GNU ddrescue manages efficiently the status of the rescue in progress
@@ -215,7 +246,7 @@ Now rescue the rest (does not recopy what is already done).
 
 File: ddrescue.info,  Node: Invoking Ddrescue,  Next: Logfile Structure,  Prev: Algorithm,  Up: Top
 
-4 Invoking Ddrescue
+5 Invoking Ddrescue
 *******************
 
 The format for running ddrescue is:
@@ -244,12 +275,6 @@ The format for running ddrescue is:
      minimum read rate is recalculated for each block read as
      (average_rate / 10).
 
-     Note that specifying a minimum read rate above the posibilities of
-     the input device will result in a very low average rate because
-     all reads will be considered slow reads and continuous skipping
-     will occur. This will also make the logfile grow
-     disproportionately.
-
 `-A'
 `--try-again'
      Mark all non-split and non-trimmed blocks inside the rescue domain
@@ -260,6 +285,7 @@ The format for running ddrescue is:
 
 `-b BYTES'
 `--block-size=BYTES'
+`--sector-size=BYTES'
      Sector (hardware block) size of input device in bytes (usually 512
      for hard discs and 3.5" floppies, 1024 for 5.25" floppies, and
      2048 for cdroms). Defaults to 512.
@@ -280,10 +306,10 @@ The format for running ddrescue is:
 `--complete-only'
      Limit rescue domain to the blocks listed in the LOGFILE. Do not
      read new data beyond LOGFILE limits. This is useful when reading
-     from devices of undefined size, like raw devices, or when the drive
-     returns an incorrect size. It can only be used after a first rescue
-     attempt, possibly limited with the `--max-size' option, has
-     produced a complete LOGFILE.
+     from devices of undefined size (like raw devices), when the drive
+     returns an incorrect size, or when reading from a partial copy. It
+     can only be used after a first rescue attempt, possibly limited
+     with the `--max-size' option, has produced a complete LOGFILE.
 
 `-d'
 `--direct'
@@ -481,7 +507,7 @@ bug) which caused ddrescue to panic.
 
 File: ddrescue.info,  Node: Logfile Structure,  Next: Examples,  Prev: Invoking Ddrescue,  Up: Top
 
-5 Logfile Structure
+6 Logfile Structure
 *******************
 
 The logfile is a text file easy to read and edit. It is formed by three
@@ -528,7 +554,7 @@ Character   Meaning
 
 And here is an example logfile:
 
-# Rescue Logfile. Created by GNU ddrescue version 1.16
+# Rescue Logfile. Created by GNU ddrescue version 1.17-pre1
 # Command line: ddrescue /dev/fd0 fdimage logfile
 # current_pos  current_status
 0x00120000     ?
@@ -545,12 +571,12 @@ values, using the same syntax that integer constants in C++.
 
 File: ddrescue.info,  Node: Examples,  Next: Direct Disc Access,  Prev: Logfile Structure,  Up: Top
 
-6 A small tutorial with examples
+7 A small tutorial with examples
 ********************************
 
-Ddrescue is like any other power tool. You need to understand what it
-does, and you need to understand some things about the machines it does
-those things to, in order to use it safely.
+This tutorial is for those already able to use the dd command. If you
+don't know what dd is, better search the net for some introductory
+material about dd and GNU ddrescue first.
 
    A failing drive tends to develop more and more errors as time passes.
 Because of this, you should rescue the data from a drive as soon as you
@@ -562,23 +588,6 @@ very last time that it ever will.
 try to repair the copy. If your data is really important, use the first
 copy as a master for a second copy, and try to repair the second copy.
 If something goes wrong, you have the master intact to try again.
-
-   IMPORTANT! Always use a logfile unless you know you won't need it.
-Without a logfile, ddrescue can't resume a rescue, only reinitiate it.
-
-   IMPORTANT! Never try to rescue a r/w mounted partition. The resulting
-copy may be useless.
-
-   IMPORTANT! If you use a device or a partition as destination, any
-data stored there will be overwritten.
-
-   IMPORTANT! If you interrupt the rescue and then reboot, any partially
-copied partitions should be hidden before allowing them to be touched by
-any operating system that tries to mount and "fix" the partitions it
-sees.
-
-   IMPORTANT! Never try to repair a file system on a drive with I/O
-errors; you will probably lose even more data.
 
    If you are trying to rescue a whole partition, first repair the copy
 with e2fsck or some other tool appropiate for the type of partition you
@@ -674,7 +683,7 @@ stops responding and disappears from /dev.
 
 File: ddrescue.info,  Node: Direct Disc Access,  Next: Fill Mode,  Prev: Examples,  Up: Top
 
-7 Direct Disc Access
+8 Direct Disc Access
 ********************
 
 If you notice that the positions and sizes in the log file are ALWAYS
@@ -683,7 +692,7 @@ accesses and grouping them. In this case you may want to use direct disc
 access or a raw device to bypass the kernel cache and rescue more of
 your data.
 
-   NOTE! Sector size must be correctly set with the `--block-size'
+   NOTE! Sector size must be correctly set with the `--sector-size'
 option for this to work. Try the `--direct' option first. If direct
 disc access is not available in your system, try raw devices. Read your
 system documentation to find how to bind a raw device to a regular block
@@ -723,7 +732,7 @@ Example 2: using a raw device.
 
 File: ddrescue.info,  Node: Fill Mode,  Next: Generate Mode,  Prev: Direct Disc Access,  Up: Top
 
-8 Fill Mode
+9 Fill Mode
 ***********
 
 When ddrescue is invoked with the `--fill' option it operates in "fill
@@ -820,8 +829,8 @@ Example 4: Figure out what files are in the bad areas of the disc.
 
 File: ddrescue.info,  Node: Generate Mode,  Next: Ddrescuelog,  Prev: Fill Mode,  Up: Top
 
-9 Generate-logfile Mode
-***********************
+10 Generate-logfile Mode
+************************
 
 So you didn't read the tutorial and started ddrescue without a logfile.
 Now, two days later, your computer crashed and you can't know how much
@@ -859,7 +868,7 @@ and `--output-position' of the original rescue run.
 
 File: ddrescue.info,  Node: Ddrescuelog,  Next: Invoking Ddrescuelog,  Prev: Generate Mode,  Up: Top
 
-10 Ddrescuelog
+11 Ddrescuelog
 **************
 
 Ddrescuelog is a tool that manipulates ddrescue logfiles, shows logfile
@@ -912,7 +921,7 @@ somehow on /dev/hdb.
 
 File: ddrescue.info,  Node: Invoking Ddrescuelog,  Next: Problems,  Prev: Ddrescuelog,  Up: Top
 
-11 Invoking Ddrescuelog
+12 Invoking Ddrescuelog
 ***********************
 
 The format for running ddrescuelog is:
@@ -943,6 +952,7 @@ The format for running ddrescuelog is:
 
 `-b BYTES'
 `--block-size=BYTES'
+`--sector-size=BYTES'
      Block size used by ddrescuelog. Depending on the requested
      operation it may be the sector size of the input device, the block
      size of the rescued file system, etc. Defaults to 512.
@@ -1067,7 +1077,7 @@ bug) which caused ddrescuelog to panic.
 
 File: ddrescue.info,  Node: Problems,  Next: Concept Index,  Prev: Invoking Ddrescuelog,  Up: Top
 
-12 Reporting Bugs
+13 Reporting Bugs
 *****************
 
 There are probably bugs in ddrescue. There are certainly errors and
@@ -1094,8 +1104,8 @@ Concept Index
 * ddrescuelog:                           Ddrescuelog.           (line 6)
 * direct disc access:                    Direct Disc Access.    (line 6)
 * examples:                              Examples.              (line 6)
-* Fill Mode:                             Fill Mode.             (line 6)
-* Generate-logfile Mode:                 Generate Mode.         (line 6)
+* fill Mode:                             Fill Mode.             (line 6)
+* generate-logfile Mode:                 Generate Mode.         (line 6)
 * getting help:                          Problems.              (line 6)
 * introduction:                          Introduction.          (line 6)
 * invoking ddrescue:                     Invoking Ddrescue.     (line 6)
@@ -1104,26 +1114,28 @@ Concept Index
 * options:                               Invoking Ddrescue.     (line 6)
 * raw devices:                           Direct Disc Access.    (line 6)
 * usage:                                 Invoking Ddrescue.     (line 6)
+* using ddrescue safely:                 Important Advice.      (line 6)
 * version:                               Invoking Ddrescue.     (line 6)
 
 
 
 Tag Table:
 Node: Top203
-Node: Introduction1302
-Node: Basic Concepts3779
-Node: Algorithm5241
-Node: Invoking Ddrescue8665
-Node: Logfile Structure18983
-Node: Examples21233
-Ref: lziprecover-example24897
-Node: Direct Disc Access26290
-Node: Fill Mode28167
-Node: Generate Mode32261
-Node: Ddrescuelog33936
-Node: Invoking Ddrescuelog36085
-Node: Problems41583
-Node: Concept Index42140
+Node: Introduction1372
+Node: Basic Concepts3863
+Node: Important Advice5347
+Node: Algorithm6456
+Node: Invoking Ddrescue9882
+Node: Logfile Structure19967
+Node: Examples22222
+Ref: lziprecover-example25195
+Node: Direct Disc Access26588
+Node: Fill Mode28466
+Node: Generate Mode32560
+Node: Ddrescuelog34237
+Node: Invoking Ddrescuelog36386
+Node: Problems41906
+Node: Concept Index42463
 
 End Tag Table
 

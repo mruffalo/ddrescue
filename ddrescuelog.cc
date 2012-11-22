@@ -39,7 +39,6 @@ namespace {
 
 const char * const Program_name = "GNU ddrescuelog";
 const char * const program_name = "ddrescuelog";
-const char * const program_year = "2012";
 const char * invocation_name = 0;
 
 enum Mode { m_none, m_and, m_change, m_compare, m_create, m_delete,
@@ -104,9 +103,7 @@ void set_types( const std::string & arg,
   if( types1.size() == 0 || types2.size() == 0 ) error = true;
   if( error )
     {
-    char buf[80];
-    snprintf( buf, sizeof buf, "Invalid type for 'change-types' option." );
-    show_error( buf, 0, true );
+    show_error( "Invalid type for 'change-types' option.", 0, true );
     std::exit( 1 );
     }
   if( types1.size() > types2.size() )
@@ -121,9 +118,7 @@ void set_types( const std::string & arg,
   if( arg.size() != 2 || arg[0] == arg[1] ||
       !Sblock::isstatus( arg[0] ) || !Sblock::isstatus( arg[1] ) )
     {
-    char buf[80];
-    snprintf( buf, sizeof buf, "Invalid type for 'create-logfile' option." );
-    show_error( buf, 0, true );
+    show_error( "Invalid type for 'create-logfile' option.", 0, true );
     std::exit( 1 );
     }
   type1 = Sblock::Status( arg[0] );
@@ -300,7 +295,7 @@ int create_logfile( Domain & domain, const char * const logname,
     if( logbook.domain().includes( b ) )
       logbook.change_chunk_status( b, type1 );
     }
-  logbook.truncate_vector( logbook.domain().end() );
+  logbook.truncate_vector( logbook.domain().end(), true );
   if( !logbook.update_logfile( -1, true, false ) ) return 1;
   return 0;
   }
@@ -511,28 +506,29 @@ int main( const int argc, const char * const argv[] )
 
   const Arg_parser::Option options[] =
     {
-    { 'a', "change-types",     Arg_parser::yes },
-    { 'b', "block-size",       Arg_parser::yes },
-    { 'c', "create-logfile",   Arg_parser::maybe },
-    { 'd', "delete-if-done",   Arg_parser::no  },
-    { 'D', "done-status",      Arg_parser::no  },
-    { 'f', "force",            Arg_parser::no  },
-    { 'h', "help",             Arg_parser::no  },
-    { 'i', "input-position",   Arg_parser::yes },
-    { 'l', "list-blocks",      Arg_parser::yes },
-    { 'm', "domain-logfile",   Arg_parser::yes },
-    { 'n', "invert-logfile",   Arg_parser::no  },
-    { 'o', "output-position",  Arg_parser::yes },
-    { 'p', "compare-logfile",  Arg_parser::yes },
-    { 'q', "quiet",            Arg_parser::no  },
-    { 's', "max-size",         Arg_parser::yes },
-    { 't', "show-status",      Arg_parser::no  },
-    { 'v', "verbose",          Arg_parser::no  },
-    { 'V', "version",          Arg_parser::no  },
-    { 'x', "xor-logfile",      Arg_parser::yes },
-    { 'y', "and-logfile",      Arg_parser::yes },
-    { 'z', "or-logfile",       Arg_parser::yes },
-    {  0 , 0,                  Arg_parser::no  } };
+    { 'a', "change-types",      Arg_parser::yes },
+    { 'b', "block-size",        Arg_parser::yes },
+    { 'b', "sector-size",       Arg_parser::yes },
+    { 'c', "create-logfile",    Arg_parser::maybe },
+    { 'd', "delete-if-done",    Arg_parser::no  },
+    { 'D', "done-status",       Arg_parser::no  },
+    { 'f', "force",             Arg_parser::no  },
+    { 'h', "help",              Arg_parser::no  },
+    { 'i', "input-position",    Arg_parser::yes },
+    { 'l', "list-blocks",       Arg_parser::yes },
+    { 'm', "domain-logfile",    Arg_parser::yes },
+    { 'n', "invert-logfile",    Arg_parser::no  },
+    { 'o', "output-position",   Arg_parser::yes },
+    { 'p', "compare-logfile",   Arg_parser::yes },
+    { 'q', "quiet",             Arg_parser::no  },
+    { 's', "max-size",          Arg_parser::yes },
+    { 't', "show-status",       Arg_parser::no  },
+    { 'v', "verbose",           Arg_parser::no  },
+    { 'V', "version",           Arg_parser::no  },
+    { 'x', "xor-logfile",       Arg_parser::yes },
+    { 'y', "and-logfile",       Arg_parser::yes },
+    { 'z', "or-logfile",        Arg_parser::yes },
+    {  0 , 0,                   Arg_parser::no  } };
 
   const Arg_parser parser( argc, argv, options );
   if( parser.error().size() )				// bad option

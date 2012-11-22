@@ -84,8 +84,15 @@ int Rescuebook::copy_and_update( const Block & b, const Sblock::Status st,
   int retval = copy_block( b, copied_size, error_size );
   if( !retval )
     {
-    if( copied_size + error_size < b.size() )		// EOF
-      truncate_vector( b.pos() + copied_size + error_size );
+    if( copied_size + error_size < b.size() )			// EOF
+      {
+      if( complete_only_ ) truncate_domain( b.pos() + copied_size + error_size );
+      else if( !truncate_vector( b.pos() + copied_size + error_size ) )
+        {
+        final_msg( "EOF found before end of logfile" );
+        retval = 1;
+        }
+      }
     if( copied_size > 0 )
       {
       errors += change_chunk_status( Block( b.pos(), copied_size ), Sblock::finished );
@@ -152,7 +159,7 @@ int Rescuebook::copy_non_tried()
         {
         if( pos >= 0 && skip_size > 0 )
           {
-          b.pos( pos ); b.size( skip_size ); b.fix_size();
+          b.assign( pos, skip_size ); b.fix_size();
           find_chunk( b, Sblock::non_tried );
           if( pos == b.pos() && b.size() > 0 )
             {
@@ -575,7 +582,9 @@ Rescuebook::Rescuebook( const long long offset, const long long isize,
     max_skip_size( calculate_max_skip_size( isize, hardbs, skipbs ) ),
     max_errors_( max_errors ),
     e_code( 0 ),
-    nosplit_( nosplit ), synchronous_( synchronous ),
+    complete_only_( complete_only ),
+    nosplit_( nosplit ),
+    synchronous_( synchronous ),
     a_rate( 0 ), c_rate( 0 ), first_size( 0 ), last_size( 0 ),
     last_ipos( 0 ), t0( 0 ), t1( 0 ), ts( 0 ), oldlen( 0 ),
     rates_updated( false )
@@ -658,7 +667,7 @@ int Rescuebook::do_rescue( const int ides, const int odes, const bool reverse )
     retval = ( reverse ? rsplit_errors() : split_errors() );
   if( !retval && max_retries_ != 0 && !errors_or_timeout() )
     retval = ( reverse ? rcopy_errors() : copy_errors() );
-  if( !rates_updated ) update_rates( true );	// force update of rates
+  if( !rates_updated ) update_rates( true );	// force update of e_code
   show_status( -1, (retval ? 0 : "Finished"), true );
   if( !retval && errors_or_timeout() ) retval = 1;
   if( verbosity >= 0 )

@@ -41,10 +41,13 @@ public:
 
   void pos( const long long p ) { pos_ = p; }
   void size( const long long s ) { size_ = s; }
-  void fix_size()		// limit size_ to largest possible value
-    { if( size_ < 0 || size_ > LLONG_MAX - pos_ ) size_ = LLONG_MAX - pos_; }
   void end( const long long e )
     { pos_ = e - size_; if( pos_ < 0 ) { size_ += pos_; pos_ = 0; } }
+  Block & assign( const long long p, const long long s )
+    { pos_ = p; size_ = s; return *this; }
+
+  void fix_size()		// limit size_ to largest possible value
+    { if( size_ < 0 || size_ > LLONG_MAX - pos_ ) size_ = LLONG_MAX - pos_; }
   void align_pos( const int alignment );
   void align_end( const int alignment );
   void inc_size( const long long delta ) { size_ += delta; }
@@ -107,15 +110,11 @@ class Domain
 public:
   Domain( const long long p, const long long s, const char * const logname = 0 );
 
-  long long pos() const
-    { if( block_vector.size() ) return block_vector[0].pos(); else return 0; }
-
+  long long pos() const { return block_vector[0].pos(); }
   long long size() const
-    {
-    if( block_vector.size() )
-      return block_vector.back().end() - block_vector[0].pos();
-    else return 0;
-    }
+    { return block_vector.back().end() - block_vector[0].pos(); }
+  long long end() const { return block_vector.back().end(); }
+  int blocks() const { return (int)block_vector.size(); }
 
   long long in_size() const
     {
@@ -124,10 +123,6 @@ public:
       s += block_vector[i].size();
     return s;
     }
-
-  long long end() const
-    { if( block_vector.size() ) return block_vector.back().end();
-      else return 0; }
 
   bool operator!=( const Domain & d ) const
     {
@@ -138,7 +133,7 @@ public:
     }
 
   bool operator<( const Block & b ) const
-    { return ( block_vector.size() && block_vector.back().end() <= b.pos() ); }
+    { return ( block_vector.back().end() <= b.pos() ); }
 
   long long breaks_block_by( const Block & b ) const
     {
@@ -166,8 +161,8 @@ public:
     return false;
     }
 
-  void clear() { block_vector.clear(); }
+  void clear()
+    { block_vector.clear(); block_vector.push_back( Block( 0, 0 ) ); }
   void crop( const Block & b );
-  bool crop_by_file_size( const long long isize );
-  int blocks() const { return (int)block_vector.size(); }
+  void crop_by_file_size( const long long end );
   };

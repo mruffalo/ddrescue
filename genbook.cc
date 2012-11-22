@@ -31,7 +31,7 @@
 #include "ddrescue.h"
 
 
-// Return values: 0 OK, -1 interrupted, -2 logfile error.
+// Return values: 1 unexpected EOF, 0 OK, -1 interrupted, -2 logfile error.
 //
 int Genbook::check_all()
   {
@@ -55,8 +55,12 @@ int Genbook::check_all()
     if( interrupted() ) return -1;
     int copied_size = 0, error_size = 0;
     check_block( b, copied_size, error_size );
-    if( copied_size + error_size < b.size() )		// EOF
-      truncate_vector( b.pos() + copied_size + error_size );
+    if( copied_size + error_size < b.size() &&			// EOF
+        !truncate_vector( b.pos() + copied_size + error_size ) )
+      {
+      final_msg( "EOF found before end of logfile" );
+      return 1;
+      }
     if( !update_logfile() ) return -2;
     }
   return 0;
@@ -95,7 +99,7 @@ int Genbook::do_generate( const int odes )
   if( verbosity >= 0 )
     {
     show_status( -1, (retval ? 0 : "Finished"), true );
-    if( retval == -2 ) std::printf( "Logfile error" );
+    if( retval == -2 ) std::printf( "\nLogfile error" );
     else if( retval < 0 ) std::printf( "\nInterrupted by user" );
     std::fputc( '\n', stdout );
     }

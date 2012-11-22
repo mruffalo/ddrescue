@@ -125,7 +125,8 @@ void Fillbook::show_status( const long long ipos, bool force )
       {
       a_rate = ( filled_size - first_size ) / ( t2 - t0 );
       c_rate = ( filled_size - last_size ) / ( t2 - t1 );
-      t1 = t2; last_size = filled_size;
+      t1 = t2;
+      last_size = filled_size;
       }
     std::printf( "\r%s%s%s", up, up, up );
     std::printf( "filled size: %10sB,", format_num( filled_size ) );
@@ -136,6 +137,11 @@ void Fillbook::show_status( const long long ipos, bool force )
     std::printf( "  average rate: %9sB/s\n", format_num( a_rate, 99999 ) );
     std::printf( "current pos: %10sB\n", format_num( last_ipos + offset() ) );
     std::fflush( stdout );
+    }
+  else if( t2 < t1 )			// clock jumped back
+    {
+    t0 -= std::min( t0, t1 - t2 );
+    t1 = t2;
     }
   }
 
@@ -205,12 +211,18 @@ void Genbook::show_status( const long long ipos, const char * const msg,
     std::printf( "   opos: %10sB,                        ",
                  format_num( last_ipos + offset() ) );
     std::printf( "  average rate: %9sB/s\n", format_num( a_rate, 99999 ) );
-    int len = oldlen;
-    if( msg ) { len = std::strlen( msg ); if( len ) std::printf( "%s", msg ); }
-    for( int i = len; i < oldlen; ++i ) std::fputc( ' ', stdout );
-    if( len || oldlen ) std::fputc( '\r', stdout );
-    oldlen = len;
+    if( msg && msg[0] )
+      {
+      const int len = std::strlen( msg ); std::printf( "\r%s", msg );
+      for( int i = len; i < oldlen; ++i ) std::fputc( ' ', stdout );
+      oldlen = len;
+      }
     std::fflush( stdout );
+    }
+  else if( t2 < t1 )			// clock jumped back
+    {
+    t0 -= std::min( t0, t1 - t2 );
+    t1 = t2;
     }
   }
 
@@ -274,7 +286,7 @@ void Rescuebook::update_rates( const bool force )
     }
 
   long t2 = std::time( 0 );
-  if( force && t2 <= t1 ) t2 = t1 + 1;
+  if( force && t2 <= t1 ) t2 = t1 + 1;		// force update of e_code
   if( t2 > t1 )
     {
     a_rate = ( recsize - first_size ) / ( t2 - t0 );
@@ -292,6 +304,13 @@ void Rescuebook::update_rates( const bool force )
       }
     t1 = t2;
     rates_updated = true;
+    }
+  else if( t2 < t1 )			// clock jumped back
+    {
+    const long delta = std::min( t0, t1 - t2 );
+    t0 -= delta;
+    ts -= delta;
+    t1 = t2;
     }
   }
 
@@ -314,13 +333,12 @@ void Rescuebook::show_status( const long long ipos, const char * const msg,
                    format_num( last_ipos ), errors );
       std::printf( "  average rate: %9sB/s\n", format_num( a_rate, 99999 ) );
       std::printf( "   opos: %10sB,", format_num( last_ipos + offset() ) );
-      std::printf( "     time since last successful read: %9s\n",
+      std::printf( "    time since last successful read: %9s\n",
                    format_time( t1 - ts ) );
       if( msg && msg[0] && !errors_or_timeout() )
         {
-        const int len = std::strlen( msg ); std::printf( "%s", msg );
+        const int len = std::strlen( msg ); std::printf( "\r%s", msg );
         for( int i = len; i < oldlen; ++i ) std::fputc( ' ', stdout );
-        std::fputc( '\r', stdout );
         oldlen = len;
         }
       std::fflush( stdout );

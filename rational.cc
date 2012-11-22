@@ -31,7 +31,7 @@
 
 namespace {
 
-long long llgcd( long long n, long long m )	// Greatest Common Divisor
+int gcd( int n, int m )				// Greatest Common Divisor
   {
   if( n < 0 ) n = -n;
   if( m < 0 ) m = -m;
@@ -44,7 +44,7 @@ long long llgcd( long long n, long long m )	// Greatest Common Divisor
   }
 
 
-int gcd( int n, int m )				// Greatest Common Divisor
+long long llgcd( long long n, long long m )	// Greatest Common Divisor
   {
   if( n < 0 ) n = -n;
   if( m < 0 ) m = -m;
@@ -63,7 +63,7 @@ const std::string overflow_string( const int n )
 int overflow_value( const int n )
   { if( n > 0 ) return INT_MAX; if( n < 0 ) return -INT_MAX; return 0; }
 
-int overflow_value( const long long n )
+int lloverflow_value( const long long n )
   { if( n > 0 ) return INT_MAX; if( n < 0 ) return -INT_MAX; return 0; }
 
 } // end namespace
@@ -71,7 +71,7 @@ int overflow_value( const long long n )
 
 void Rational::normalize( long long n, long long d )
   {
-  if( d == 0 ) { num = overflow_value( n ); den = 0; return; }	// set error
+  if( d == 0 ) { num = lloverflow_value( n ); den = 0; return; }  // set error
   if( n == 0 ) { num = 0; den = 1; return; }
   if( d != 1 )
     {
@@ -82,7 +82,7 @@ void Rational::normalize( long long n, long long d )
   if( n <= INT_MAX && n >= -INT_MAX && d <= INT_MAX && d >= -INT_MAX )
     { if( d >= 0 ) { num = n; den = d; } else { num = -n; den = -d; } }
   else
-    { num = overflow_value( (d >= 0) ? n : -n ); den = 0; }
+    { num = lloverflow_value( (d >= 0) ? n : -n ); den = 0; }
   }
 
 

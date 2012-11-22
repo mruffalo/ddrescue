@@ -104,8 +104,8 @@ int Fillbook::do_fill( const int odes, const std::string & filltypes )
     {
     show_status( -1, true );
     if( retval == 0 ) std::printf( "Finished" );
-    else if( retval == -2 ) std::printf( "Logfile error" );
-    else if( retval < 0 ) std::printf( "Interrupted by user" );
+    else if( retval == -2 ) std::printf( "\nLogfile error" );
+    else if( retval < 0 ) std::printf( "\nInterrupted by user" );
     std::fputc( '\n', stdout );
     }
   if( retval == -2 ) retval = 1;		// logfile error

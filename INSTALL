@@ -1,7 +1,7 @@
 Requirements
 ------------
 You will need a C++ compiler.
-I use gcc 4.7.0 and 3.3.6, but the code should compile with any
+I use gcc 4.7.2 and 3.3.6, but the code should compile with any
 standards compliant compiler.
 Gcc is available at http://gcc.gnu.org.
 
@@ -31,6 +31,10 @@ the main archive.
 
 5. Type 'make install' to install the program and any data files and
    documentation.
+
+   You can install only the program, the info manual or the man page
+   typing 'make install-bin', 'make install-info' or 'make install-man'
+   respectively.
 
 
 Another way
