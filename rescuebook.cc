@@ -1,6 +1,6 @@
 /*  GNU ddrescue - Data recovery tool
-    Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012
-    Antonio Diaz Diaz.
+    Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012,
+    2013 Antonio Diaz Diaz.
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -256,74 +256,61 @@ int Rescuebook::rcopy_non_tried()
 
 
 // Return values: 1 I/O error, 0 OK, -1 interrupted, -2 logfile error.
-// Trim the damaged areas backwards.
+// Trim the damaged areas (largest first) from both edges.
 //
 int Rescuebook::trim_errors()
   {
-  long long end = LLONG_MAX;
+  const char * const msg = "Trimming failed blocks...";
   bool first_post = true;
 
-  while( end > 0 )
+  while( true )
     {
-    long long pos = end - hardbs();
-    if( pos < 0 ) pos = 0;
-    Block b( pos, end - pos );
-    rfind_chunk( b, Sblock::non_trimmed );
-    if( b.size() <= 0 ) break;
-    end = b.pos();
-    current_status( trimming );
-    int copied_size = 0, error_size = 0;
-    const int retval = copy_and_update( b, Sblock::bad_sector, copied_size,
-                                        error_size, "Trimming failed blocks...",
-                                        first_post, false );
-    if( copied_size > 0 ) errsize -= copied_size;
-    if( retval ) return retval;
-    if( error_size > 0 ) error_rate += error_size;
-    if( error_size > 0 && end > 0 )
+    const int index = find_largest_sblock( Sblock::non_trimmed );
+    if( index < 0 ) break;				// no more blocks
+    const Block block = sblock( index );
+    long long pos = block.pos();
+    while( pos >= 0 )
       {
-      const int index = find_index( end - 1 );
-      if( index >= 0 && domain().includes( sblock( index ) ) &&
-          sblock( index ).status() == Sblock::non_trimmed )
-        errors += change_chunk_status( sblock( index ), Sblock::non_split );
+      Block b( pos, hardbs() );
+      find_chunk( b, Sblock::non_trimmed );
+      if( pos != b.pos() || b.size() <= 0 ) break;	// block change
+      pos = b.end();
+      current_status( trimming );
+      int copied_size = 0, error_size = 0;
+      const int retval = copy_and_update( b, Sblock::bad_sector, copied_size,
+                                          error_size, msg, first_post, true );
+      if( copied_size > 0 ) errsize -= copied_size;
+      if( retval ) return retval;
+      if( error_size > 0 ) { error_rate += error_size; pos = -1; }
+      update_rates();
+      if( !update_logfile( odes_ ) ) return -2;
       }
-    update_rates();
-    if( !update_logfile( odes_ ) ) return -2;
-    }
-  return 0;
-  }
-
-
-// Return values: 1 I/O error, 0 OK, -1 interrupted, -2 logfile error.
-// Trim the damaged areas in reverse mode, forwards.
-//
-int Rescuebook::rtrim_errors()
-  {
-  long long pos = 0;
-  bool first_post = true;
-
-  while( pos >= 0 )
-    {
-    Block b( pos, hardbs() );
-    find_chunk( b, Sblock::non_trimmed );
-    if( b.size() <= 0 ) break;
-    pos = b.end();
-    current_status( trimming );
-    int copied_size = 0, error_size = 0;
-    const int retval = copy_and_update( b, Sblock::bad_sector, copied_size,
-                                        error_size, "Trimming failed blocks...",
-                                        first_post, true );
-    if( copied_size > 0 ) errsize -= copied_size;
-    if( retval ) return retval;
-    if( error_size > 0 ) error_rate += error_size;
-    if( error_size > 0 && pos >= 0 )
+    long long end = block.end();
+    while( end > 0 )
       {
-      const int index = find_index( pos );
-      if( index >= 0 && domain().includes( sblock( index ) ) &&
-          sblock( index ).status() == Sblock::non_trimmed )
-        errors += change_chunk_status( sblock( index ), Sblock::non_split );
+      pos = end - hardbs();
+      if( pos < 0 ) pos = 0;
+      Block b( pos, end - pos );
+      rfind_chunk( b, Sblock::non_trimmed );
+      if( pos != b.pos() || b.size() <= 0 ) break;	// block change
+      end = b.pos();
+      current_status( trimming );
+      int copied_size = 0, error_size = 0;
+      const int retval = copy_and_update( b, Sblock::bad_sector, copied_size,
+                                          error_size, msg, first_post, false );
+      if( copied_size > 0 ) errsize -= copied_size;
+      if( retval ) return retval;
+      if( error_size > 0 ) error_rate += error_size;
+      if( error_size > 0 && end > 0 )
+        {
+        const int index = find_index( end - 1 );
+        if( index >= 0 && domain().includes( sblock( index ) ) &&
+            sblock( index ).status() == Sblock::non_trimmed )
+          errors += change_chunk_status( sblock( index ), Sblock::non_split );
+        }
+      update_rates();
+      if( !update_logfile( odes_ ) ) return -2;
       }
-    update_rates();
-    if( !update_logfile( odes_ ) ) return -2;
     }
   return 0;
   }
@@ -367,7 +354,7 @@ int Rescuebook::split_errors()
       if( retval ) return retval;
       if( error_size > 0 ) error_rate += error_size;
       if( error_size <= 0 ) error_counter = 0;
-      else if( pos >= 0 && ++error_counter >= 8 )
+      else if( pos >= 0 && ++error_counter >= 2 )
         {			// skip after enough consecutive errors
         error_counter = 0;
         const int index = find_index( pos );
@@ -436,7 +423,7 @@ int Rescuebook::rsplit_errors()
       if( retval ) return retval;
       if( error_size > 0 ) error_rate += error_size;
       if( error_size <= 0 ) error_counter = 0;
-      else if( end > 0 && ++error_counter >= 8 )
+      else if( end > 0 && ++error_counter >= 2 )
         {			// skip after enough consecutive errors
         error_counter = 0;
         const int index = find_index( end - 1 );
@@ -662,7 +649,7 @@ int Rescuebook::do_rescue( const int ides, const int odes, const bool reverse )
   if( copy_pending && !errors_or_timeout() )
     retval = ( reverse ? rcopy_non_tried() : copy_non_tried() );
   if( !retval && trim_pending && !errors_or_timeout() )
-    retval = ( reverse ? rtrim_errors() : trim_errors() );
+    retval = trim_errors();
   if( !retval && split_pending && !nosplit_ && !errors_or_timeout() )
     retval = ( reverse ? rsplit_errors() : split_errors() );
   if( !retval && max_retries_ != 0 && !errors_or_timeout() )

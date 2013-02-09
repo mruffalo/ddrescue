@@ -12,7 +12,7 @@ File: ddrescue.info,  Node: Top,  Next: Introduction,  Up: (dir)
 GNU ddrescue Manual
 *******************
 
-This manual is for GNU ddrescue (version 1.17-pre1, 22 November 2012).
+This manual is for GNU ddrescue (version 1.17-pre2, 9 February 2013).
 
 * Menu:
 
@@ -32,8 +32,8 @@ This manual is for GNU ddrescue (version 1.17-pre1, 22 November 2012).
 * Concept Index::         Index of concepts
 
 
-   Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012
-Antonio Diaz Diaz.
+   Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012,
+2013 Antonio Diaz Diaz.
 
    This manual is free documentation: you have unlimited permission to
 copy, distribute and modify it.
@@ -204,9 +204,12 @@ is tried at most two times; the first in this step as part of a large
 block read, the second in one of the steps below as a single sector
 read.
 
-   3) Read backwards one sector at a time the non-trimmed blocks, until
-a bad sector is found. For each non-trimmed block, mark the bad sector
-found as bad-sector and mark the rest of that block as non-split.
+   3) Read forwards one sector at a time from the leading edge of the
+largest non-trimmed block, until a bad sector is found. Then read
+backwards one sector at a time from the trailing edge of the same block,
+until a bad sector is found. For each non-trimmed block, mark the bad
+sectors found as bad-sector and mark the rest of that block as
+non-split. Repeat until there are no more non-trimmed blocks.
 
    4) Read forwards one sector at a time the non-split blocks, marking
 the bad sectors found as bad-sector. After a number of consecutive bad
@@ -434,9 +437,8 @@ The format for running ddrescue is:
 
 `-R'
 `--reverse'
-     Reverse direction of all copy operations. This makes copying,
-     splitting and retrying to be run backwards, and trimming to be run
-     forwards.
+     Reverse direction of copying, splitting and retrying, running them
+     backwards from the end of the input file.
 
 `-s BYTES'
 `--max-size=BYTES'
@@ -554,7 +556,7 @@ Character   Meaning
 
 And here is an example logfile:
 
-# Rescue Logfile. Created by GNU ddrescue version 1.17-pre1
+# Rescue Logfile. Created by GNU ddrescue version 1.17-pre2
 # Command line: ddrescue /dev/fd0 fdimage logfile
 # current_pos  current_status
 0x00120000     ?
@@ -1049,7 +1051,7 @@ The format for running ddrescuelog is:
      Perform a logical XOR (exclusive OR) operation between the finished
      blocks in FILE and those in LOGFILE, and write the resulting
      logfile to standard output. In other words, in the resulting
-     logfile a block is only shown as finisned if it was finisned in
+     logfile a block is only shown as finished if it was finished in
      either of the two input logfiles but not in both.
 
 `-y FILE'
@@ -1057,7 +1059,7 @@ The format for running ddrescuelog is:
      Perform a logical AND operation between the finished blocks in
      FILE and those in LOGFILE, and write the resulting logfile to
      standard output. In other words, in the resulting logfile a block
-     is only shown as finisned if it was finisned in both input
+     is only shown as finished if it was finished in both input
      logfiles.
 
 `-z FILE'
@@ -1065,7 +1067,7 @@ The format for running ddrescuelog is:
      Perform a logical OR operation between the finished blocks in FILE
      and those in LOGFILE, and write the resulting logfile to standard
      output. In other words, in the resulting logfile a block is shown
-     as finisned if it was finisned in either of the two input logfiles.
+     as finished if it was finished in either of the two input logfiles.
 
 
 
@@ -1121,21 +1123,21 @@ Concept Index
 
 Tag Table:
 Node: Top203
-Node: Introduction1372
-Node: Basic Concepts3863
-Node: Important Advice5347
-Node: Algorithm6456
-Node: Invoking Ddrescue9882
-Node: Logfile Structure19967
-Node: Examples22222
-Ref: lziprecover-example25195
-Node: Direct Disc Access26588
-Node: Fill Mode28466
-Node: Generate Mode32560
-Node: Ddrescuelog34237
-Node: Invoking Ddrescuelog36386
-Node: Problems41906
-Node: Concept Index42463
+Node: Introduction1377
+Node: Basic Concepts3868
+Node: Important Advice5352
+Node: Algorithm6461
+Node: Invoking Ddrescue10082
+Node: Logfile Structure20132
+Node: Examples22387
+Ref: lziprecover-example25360
+Node: Direct Disc Access26753
+Node: Fill Mode28631
+Node: Generate Mode32725
+Node: Ddrescuelog34402
+Node: Invoking Ddrescuelog36551
+Node: Problems42071
+Node: Concept Index42628
 
 End Tag Table
 

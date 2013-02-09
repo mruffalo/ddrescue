@@ -1,6 +1,6 @@
 /*  GNU ddrescue - Data recovery tool
-    Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012
-    Antonio Diaz Diaz.
+    Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012,
+    2013 Antonio Diaz Diaz.
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -93,6 +93,7 @@ public:
     { domain_.crop_by_file_size( end ); }
 
   int find_index( const long long pos ) const;
+  int find_largest_sblock( const Sblock::Status st ) const;
   void find_chunk( Block & b, const Sblock::Status st,
                    const int alignment = 0 ) const;
   void rfind_chunk( Block & b, const Sblock::Status st,
@@ -204,9 +205,10 @@ private:
   void reduce_min_read_rate()
     { if( min_read_rate_ > 0 ) min_read_rate_ /= 10; }
   bool slow_read() const
-    { return ( ( min_read_rate_ > 0 && c_rate < min_read_rate_ &&
-                 c_rate < a_rate / 2 ) ||
-               ( min_read_rate_ == 0 && c_rate < a_rate / 10 ) ); }
+    { return ( t1 - t0 >= 10 &&		// no slow reads for first 10s
+               ( ( min_read_rate_ > 0 && c_rate < min_read_rate_ &&
+                   c_rate < a_rate / 2 ) ||
+                 ( min_read_rate_ == 0 && c_rate < a_rate / 10 ) ) ); }
   int copy_and_update( const Block & b, const Sblock::Status st,
                        int & copied_size, int & error_size,
                        const char * const msg, bool & first_post,
@@ -214,7 +216,6 @@ private:
   int copy_non_tried();
   int rcopy_non_tried();
   int trim_errors();
-  int rtrim_errors();
   int split_errors();
   int rsplit_errors();
   int copy_errors();

@@ -2,6 +2,9 @@ Changes in version 1.17:
 
 The option "--sector-size" has been added as a synonym of "--block-size".
 
+Trimming is now done from both edges of each non-trimmed block. Largest
+blocks are trimmed first.
+
 Ddrescue now terminates with an error if an unexpected EOF would discard
 any successfully read data, just as it does when the input file
 disappears from /dev.
@@ -11,8 +14,10 @@ end of the input file and is not marked as finished. This automatically
 adjusts the logfile to shrinking input devices, like CD-ROMs written in
 Track-At-Once mode.
 
-A bug has been fixed that prevented status to update after system clock
-had been put back.
+A bug has been fixed that prevented status to update after the system
+clock had been put back.
+
+Slow reads are now ignored during the first 10 seconds.
 
 Control-C no more overwrites status message.
 

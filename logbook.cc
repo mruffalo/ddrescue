@@ -1,6 +1,6 @@
 /*  GNU ddrescue - Data recovery tool
-    Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012
-    Antonio Diaz Diaz.
+    Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012,
+    2013 Antonio Diaz Diaz.
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -306,7 +306,7 @@ bool Logbook::update_logfile( const int odes, const bool force,
                               const bool retry )
   {
   if( !filename_ ) return true;
-  const int interval = 30 + std::min( 270, sblocks() / 38 );
+  const int interval = 30 + std::min( 270, sblocks() / 38 );	// 30s to 5m
   const long t2 = std::time( 0 );
   if( !force && t2 - ul_t1 < interval ) return true;
   ul_t1 = t2;
@@ -400,6 +400,20 @@ int Logbook::find_index( const long long pos ) const
     --index_;
   if( !sblock_vector[index_].includes( pos ) ) index_ = -1;
   return index_;
+  }
+
+
+int Logbook::find_largest_sblock( const Sblock::Status st ) const
+  {
+  long long size = 0;
+  int index = -1;
+  for( int i = 0; i < sblocks(); ++i )
+    {
+    const Sblock & sb = sblock_vector[i];
+    if( sb.status() == st && sb.size() > size && domain_.includes( sb ) )
+      { size = sb.size(); index = i; }
+    }
+  return index;
   }
 
 
