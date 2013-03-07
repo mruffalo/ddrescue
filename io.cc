@@ -229,9 +229,9 @@ void Genbook::show_status( const long long ipos, const char * const msg,
 
 bool Rescuebook::extend_outfile_size()
   {
-  if( min_outfile_size_ > 0 || sparse_size > 0 )
+  if( min_outfile_size > 0 || sparse_size > 0 )
     {
-    const long long min_size = std::max( min_outfile_size_, sparse_size );
+    const long long min_size = std::max( min_outfile_size, sparse_size );
     const long long size = lseek( odes_, 0, SEEK_END );
     if( size < 0 ) return false;
     if( min_size > size )
@@ -294,12 +294,12 @@ void Rescuebook::update_rates( const bool force )
     if( !( e_code & 4 ) )
       {
       if( recsize != last_size ) { last_size = recsize; ts = t2; }
-      else if( timeout_ >= 0 && t2 - ts > timeout_ ) e_code |= 4;
+      else if( timeout >= 0 && t2 - ts > timeout ) e_code |= 4;
       }
-    if( max_error_rate_ >= 0 && !( e_code & 1 ) )
+    if( max_error_rate >= 0 && !( e_code & 1 ) )
       {
       error_rate /= ( t2 - t1 );
-      if( error_rate > max_error_rate_ ) e_code |= 1;
+      if( error_rate > max_error_rate ) e_code |= 1;
       else error_rate = 0;
       }
     t1 = t2;

@@ -90,21 +90,22 @@ void show_help( const int cluster, const int hardbs, const int skipbs )
                "  -I, --verify-input-size        verify input file size with size in logfile\n"
                "  -K, --skip-size=<bytes>        initial size to skip on read error [%sB]\n",
                format_num( skipbs, 9999, -1 ) );
-  std::printf( "  -m, --domain-logfile=<file>    restrict domain to finished blocks in file\n"
+  std::printf( "  -l, --logfile-size=<entries>   do not grow logfile beyond this size [1000]\n"
+               "  -m, --domain-logfile=<file>    restrict domain to finished blocks in file\n"
                "  -M, --retrim                   mark all failed blocks as non-trimmed\n"
                "  -n, --no-split                 do not try to split or retry failed blocks\n"
                "  -o, --output-position=<bytes>  starting position in output file [ipos]\n"
                "  -p, --preallocate              preallocate space on disc for output file\n"
                "  -q, --quiet                    suppress all messages\n"
-               "  -r, --max-retries=<n>          exit after given retries (-1=infinity) [0]\n"
+               "  -r, --retries=<n>              exit after given retries (-1=infinity) [0]\n"
                "  -R, --reverse                  reverse direction of copy operations\n"
-               "  -s, --max-size=<bytes>         maximum size of input data to be copied\n"
+               "  -s, --size=<bytes>             maximum size of input data to be copied\n"
                "  -S, --sparse                   use sparse writes for output file\n"
                "  -t, --truncate                 truncate output file to zero size\n"
                "  -T, --timeout=<interval>       maximum time since last successful read\n"
                "  -v, --verbose                  be verbose (a 2nd -v gives more)\n"
                "  -x, --extend-outfile=<bytes>   extend outfile size to be at least this long\n"
-               "Numbers may be followed by a multiplier: b = blocks, k = kB = 10^3 = 1000,\n"
+               "Numbers may be followed by a multiplier: s = sectors, k = kB = 10^3 = 1000,\n"
                "Ki = KiB = 2^10 = 1024, M = 10^6, Mi = 2^20, G = 10^9, Gi = 2^30, etc...\n"
                "Time intervals have the format 1[.5][smhd] or 1/2[smhd]."
                "\nReport bugs to bug-ddrescue@gnu.org\n"
@@ -311,18 +312,12 @@ int do_generate( const long long offset, Domain & domain,
 
 
 int do_rescue( const long long offset, Domain & domain,
+               const Rb_options & rb_opts,
                const char * const iname, const char * const oname,
                const char * const logname, const int cluster,
-               const int hardbs, const long long max_error_rate,
-               const long long min_outfile_size, const long long min_read_rate,
-               const long timeout, const int skipbs,
-               const int max_errors, const int max_retries,
-               const int o_direct, const int o_trunc,
-               const bool complete_only, const bool new_errors_only,
-               const bool nosplit, const bool preallocate,
-               const bool retrim, const bool reverse,
-               const bool sparse, const bool synchronous,
-               const bool try_again, const bool verify_input_size )
+               const int hardbs, const int o_direct, const int o_trunc,
+               const bool preallocate, const bool reverse,
+               const bool synchronous, const bool verify_input_size )
   {
   const int ides = open( iname, O_RDONLY | o_direct | o_binary );
   if( ides < 0 )
@@ -331,11 +326,8 @@ int do_rescue( const long long offset, Domain & domain,
   if( isize < 0 )
     { show_error( "Input file is not seekable." ); return 1; }
 
-  Rescuebook rescuebook( offset, isize, max_error_rate, min_outfile_size,
-                         min_read_rate, domain, iname, logname, timeout,
-                         cluster, hardbs, skipbs, max_errors, max_retries,
-                         complete_only, new_errors_only, nosplit,
-                         retrim, sparse, synchronous, try_again );
+  Rescuebook rescuebook( offset, isize, domain, rb_opts, iname, logname,
+                         cluster, hardbs, synchronous );
 
   if( verify_input_size )
     {
@@ -354,7 +346,7 @@ int do_rescue( const long long offset, Domain & domain,
     }
   if( rescuebook.domain().size() == 0 )
     {
-    if( complete_only )
+    if( rb_opts.complete_only )
       { show_error( "Nothing to complete; logfile is missing or empty.", 0, true );
         return 1; }
     show_error( "Nothing to do." ); return 0;
@@ -396,39 +388,38 @@ int do_rescue( const long long offset, Domain & domain,
     std::printf( ",  outfile = %sB\n",
                  format_num( rescuebook.domain().pos() + rescuebook.offset() ) );
     std::printf( "    Copy block size: %3d sectors", cluster );
-    std::printf( "       Initial skip size: %d sectors\n", skipbs / hardbs );
+    std::printf( "       Initial skip size: %d sectors\n",
+                 rb_opts.skipbs / hardbs );
     std::printf( "Sector size: %sBytes\n", format_num( hardbs, 99999 ) );
     if( verbosity >= 2 )
       {
       bool nl = false;
-      if( max_error_rate >= 0 )
+      if( rb_opts.max_error_rate >= 0 )
         { nl = true; std::printf( "Max error rate: %8sB/s    ",
-                                  format_num( max_error_rate, 99999 ) ); }
-      if( max_errors >= 0 )
+                                  format_num( rb_opts.max_error_rate, 99999 ) ); }
+      if( rb_opts.max_errors >= 0 )
         {
         nl = true;
-        if( new_errors_only )
-          std::printf( "Max new errors: %d    ", max_errors );
-        else
-          std::printf( "Max errors: %d    ", max_errors );
+        std::printf( "Max %serrors: %d    ",
+                     rb_opts.new_errors_only ? "new " : "", rb_opts.max_errors );
         }
-      if( max_retries >= 0 )
-        { nl = true; std::printf( "Max retries: %d    ", max_retries ); }
+      if( rb_opts.max_retries >= 0 )
+        { nl = true; std::printf( "Max retries: %d    ", rb_opts.max_retries ); }
       if( nl ) { nl = false; std::printf( "\n" ); }
 
-      if( min_read_rate >= 0 )
+      if( rb_opts.min_read_rate >= 0 )
         { nl = true; std::printf( "Min read rate:  %8sB/s    ",
-                                  format_num( min_read_rate, 99999 ) ); }
-      if( timeout >= 0 )
+                                  format_num( rb_opts.min_read_rate, 99999 ) ); }
+      if( rb_opts.timeout >= 0 )
         { nl = true; std::printf( "Max time since last successful read: %s",
-                                  format_time( timeout ) ); }
+                                  format_time( rb_opts.timeout ) ); }
       if( nl ) { nl = false; std::printf( "\n" ); }
 
       std::printf( "Direct: %s    ", o_direct ? "yes" : "no" );
-      std::printf( "Sparse: %s    ", sparse ? "yes" : "no" );
-      std::printf( "Split: %s    ", !nosplit ? "yes" : "no" );
+      std::printf( "Sparse: %s    ", rb_opts.sparse ? "yes" : "no" );
+      std::printf( "Split: %s    ", !rb_opts.nosplit ? "yes" : "no" );
       std::printf( "Truncate: %s    ", o_trunc ? "yes" : "no" );
-      if( complete_only ) std::printf( "Complete only" );
+      if( rb_opts.complete_only ) std::printf( "Complete only" );
       std::printf( "\n" );
       if( reverse ) std::printf( "Reverse mode\n" );
       }
@@ -447,34 +438,21 @@ int main( const int argc, const char * const argv[] )
   {
   long long ipos = 0;
   long long opos = -1;
-  long long max_error_rate = -1;
   long long max_size = -1;
-  long long min_outfile_size = -1;
-  long long min_read_rate = -1;
-  long timeout = -1;
   const char * domain_logfile_name = 0;
   const int cluster_bytes = 65536;
   const int default_hardbs = 512;
-  const int default_skipbs = 65536;
-  const int max_hardbs = Rescuebook::max_skipbs;
+  const int max_hardbs = Rb_options::max_skipbs;
   int cluster = 0;
   int hardbs = default_hardbs;
-  int skipbs = default_skipbs;
-  int max_errors = -1;
-  int max_retries = 0;
   int o_direct = 0;
   int o_trunc = 0;
   Mode program_mode = m_none;
-  bool complete_only = false;
+  struct Rb_options rb_opts;
   bool force = false;
-  bool new_errors_only = false;
-  bool nosplit = false;
   bool preallocate = false;
-  bool retrim = false;
   bool reverse = false;
-  bool sparse = false;
   bool synchronous = false;
-  bool try_again = false;
   bool verify_input_size = false;
   std::string filltypes;
   invocation_name = argv[0];
@@ -502,14 +480,17 @@ int main( const int argc, const char * const argv[] )
     { 'i', "input-position",    Arg_parser::yes },
     { 'I', "verify-input-size", Arg_parser::no  },
     { 'K', "skip-size",         Arg_parser::yes },
+    { 'l', "logfile-size",      Arg_parser::yes },
     { 'm', "domain-logfile",    Arg_parser::yes },
     { 'M', "retrim",            Arg_parser::no  },
     { 'n', "no-split",          Arg_parser::no  },
     { 'o', "output-position",   Arg_parser::yes },
     { 'p', "preallocate",       Arg_parser::no  },
     { 'q', "quiet",             Arg_parser::no  },
+    { 'r', "retries",           Arg_parser::yes },
     { 'r', "max-retries",       Arg_parser::yes },
     { 'R', "reverse",           Arg_parser::no  },
+    { 's', "size",              Arg_parser::yes },
     { 's', "max-size",          Arg_parser::yes },
     { 'S', "sparse",            Arg_parser::no  },
     { 't', "truncate",          Arg_parser::no  },
@@ -531,46 +512,47 @@ int main( const int argc, const char * const argv[] )
     const char * const arg = parser.argument( argind ).c_str();
     switch( code )
       {
-      case 'a': min_read_rate = getnum( arg, hardbs, 0 ); break;
-      case 'A': try_again = true; break;
+      case 'a': rb_opts.min_read_rate = getnum( arg, hardbs, 0 ); break;
+      case 'A': rb_opts.try_again = true; break;
       case 'b': hardbs = getnum( arg, 0, 1, max_hardbs ); break;
       case 'B': format_num( 0, 0, -1 ); break;		// set binary prefixes
-      case 'c': cluster = getnum( arg, 1, 1, INT_MAX ); break;
-      case 'C': complete_only = true; break;
+      case 'c': cluster = getnum( arg, 0, 1, INT_MAX ); break;
+      case 'C': rb_opts.complete_only = true; break;
       case 'd': o_direct = O_DIRECT;
                 if( !o_direct )
                   { show_error( "Direct disc access not available." ); return 1; }
                 break;
       case 'D': synchronous = true; break;
-      case 'e': new_errors_only = ( *arg == '+' );
-                max_errors = getnum( arg, 0, 0, INT_MAX ); break;
-      case 'E': max_error_rate = getnum( arg, hardbs, 0 ); break;
+      case 'e': rb_opts.new_errors_only = ( *arg == '+' );
+                rb_opts.max_errors = getnum( arg, 0, 0, INT_MAX ); break;
+      case 'E': rb_opts.max_error_rate = getnum( arg, hardbs, 0 ); break;
       case 'f': force = true; break;
       case 'F': set_mode( program_mode, m_fill ); filltypes = arg;
                 check_types( filltypes, "fill" ); break;
       case 'g': set_mode( program_mode, m_generate ); break;
       case 'h': show_help( cluster_bytes / default_hardbs, default_hardbs,
-                default_skipbs );
+                           Rb_options::default_skipbs );
                 return 0;
       case 'i': ipos = getnum( arg, hardbs, 0 ); break;
       case 'I': verify_input_size = true; break;
-      case 'K': skipbs = getnum( arg, hardbs, default_skipbs,
-                                 Rescuebook::max_skipbs ); break;
+      case 'K': rb_opts.skipbs = getnum( arg, hardbs, Rb_options::default_skipbs,
+                                         Rb_options::max_skipbs ); break;
+      case 'l': rb_opts.max_logfile_size = getnum( arg, 0, 1, INT_MAX ); break;
       case 'm': set_name( &domain_logfile_name, arg ); break;
-      case 'M': retrim = true; break;
-      case 'n': nosplit = true; break;
+      case 'M': rb_opts.retrim = true; break;
+      case 'n': rb_opts.nosplit = true; break;
       case 'o': opos = getnum( arg, hardbs, 0 ); break;
       case 'p': preallocate = true; break;
       case 'q': verbosity = -1; break;
-      case 'r': max_retries = getnum( arg, 0, -1, INT_MAX ); break;
+      case 'r': rb_opts.max_retries = getnum( arg, 0, -1, INT_MAX ); break;
       case 'R': reverse = true; break;
       case 's': max_size = getnum( arg, hardbs, -1 ); break;
-      case 'S': sparse = true; break;
+      case 'S': rb_opts.sparse = true; break;
       case 't': o_trunc = O_TRUNC; break;
-      case 'T': timeout = parse_time_interval( arg ); break;
+      case 'T': rb_opts.timeout = parse_time_interval( arg ); break;
       case 'v': if( verbosity < 4 ) ++verbosity; break;
       case 'V': show_version(); return 0;
-      case 'x': min_outfile_size = getnum( arg, hardbs, 1 ); break;
+      case 'x': rb_opts.min_outfile_size = getnum( arg, hardbs, 1 ); break;
       default : internal_error( "uncaught option" );
       }
     } // end process options
@@ -580,8 +562,10 @@ int main( const int argc, const char * const argv[] )
   if( cluster >= INT_MAX / hardbs ) cluster = ( INT_MAX / hardbs ) - 1;
   if( cluster < 1 ) cluster = cluster_bytes / hardbs;
   if( cluster < 1 ) cluster = 1;
-  if( skipbs < hardbs ) skipbs = hardbs;
-  else skipbs = round_up( skipbs, hardbs );	// make multiple of hardbs
+  if( rb_opts.skipbs < hardbs )
+    rb_opts.skipbs = hardbs;
+  else						// make multiple of hardbs
+    rb_opts.skipbs = round_up( rb_opts.skipbs, hardbs );
 
   const char *iname = 0, *oname = 0, *logname = 0;
   if( argind < parser.arguments() ) iname = parser.argument( argind++ ).c_str();
@@ -592,8 +576,8 @@ int main( const int argc, const char * const argv[] )
 
   // end scan arguments
 
-  if( !check_files( iname, oname, logname, min_outfile_size, force,
-                    program_mode == m_generate, preallocate, sparse ) )
+  if( !check_files( iname, oname, logname, rb_opts.min_outfile_size, force,
+                    program_mode == m_generate, preallocate, rb_opts.sparse ) )
     return 1;
 
   Domain domain( ipos, max_size, domain_logfile_name );
@@ -601,27 +585,20 @@ int main( const int argc, const char * const argv[] )
   switch( program_mode )
     {
     case m_fill:
-      if( min_read_rate >= 0 || complete_only || o_direct ||
-          max_errors >= 0 || max_error_rate >= 0 || verify_input_size ||
-          retrim || nosplit || timeout >= 0 || preallocate || max_retries ||
-          reverse || sparse || o_trunc || try_again || min_outfile_size > 0 )
+      if( rb_opts != Rb_options() || o_direct ||
+          verify_input_size || preallocate || reverse || o_trunc )
         show_error( "warning: Options -aCdeEIMnOprRStTx are ignored in fill mode." );
       return do_fill( opos - ipos, domain, iname, oname, logname, cluster,
                       hardbs, filltypes, synchronous );
     case m_generate:
-      if( min_read_rate >= 0 || complete_only || o_direct || synchronous ||
-          max_errors >= 0 || max_error_rate >= 0 || verify_input_size ||
-          retrim || nosplit || timeout >= 0 || preallocate || max_retries ||
-          reverse || sparse || o_trunc || try_again || min_outfile_size > 0 )
+      if( rb_opts != Rb_options() || o_direct || synchronous ||
+          verify_input_size || preallocate || reverse || o_trunc )
         show_error( "warning: Options -aCdDeEIMnOprRStTx are ignored in generate mode." );
       return do_generate( opos - ipos, domain, iname, oname, logname,
                           cluster, hardbs );
     case m_none:
-      return do_rescue( opos - ipos, domain, iname, oname, logname, cluster,
-                        hardbs, max_error_rate, min_outfile_size, min_read_rate,
-                        timeout, skipbs, max_errors, max_retries,
-                        o_direct, o_trunc, complete_only, new_errors_only,
-                        nosplit, preallocate, retrim, reverse, sparse,
-                        synchronous, try_again, verify_input_size );
+      return do_rescue( opos - ipos, domain, rb_opts, iname, oname, logname,
+                        cluster, hardbs, o_direct, o_trunc, preallocate,
+                        reverse, synchronous, verify_input_size );
     }
   }

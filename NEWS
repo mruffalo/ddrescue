@@ -1,9 +1,18 @@
 Changes in version 1.17:
 
+The new option "-l, --logfile-size" has been added.
+
 The option "--sector-size" has been added as a synonym of "--block-size".
+
+The option "--retries" has been added as a synonym of "--max-retries".
+
+The option "--size" has been added as a synonym of "--max-size".
 
 Trimming is now done from both edges of each non-trimmed block. Largest
 blocks are trimmed first.
+
+Largest blocks are now split first until logfile reaches
+"--logfile-size" entries.
 
 Ddrescue now terminates with an error if an unexpected EOF would discard
 any successfully read data, just as it does when the input file

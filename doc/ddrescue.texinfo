@@ -6,8 +6,8 @@
 @finalout
 @c %**end of header
 
-@set UPDATED 9 February 2013
-@set VERSION 1.17-pre2
+@set UPDATED 7 March 2013
+@set VERSION 1.17-rc1
 
 @dircategory GNU Packages
 @direntry
@@ -146,9 +146,9 @@ digital audio" CDs can't, "video CDs"[1] maybe.@*
 
 @item Rescue domain
 Block or set of blocks to be acted upon (rescued, listed, etc). You can
-define it with the options @samp{--input-position}, @samp{--max-size}
-and @samp{--domain-logfile}. The rescue domain defaults to the whole
-input file or logfile.
+define it with the options @samp{--input-position}, @samp{--size} and
+@samp{--domain-logfile}. The rescue domain defaults to the whole input
+file or logfile.
 
 @item Sector
 Hardware block. Smallest accessible amount of data on a device.
@@ -213,28 +213,33 @@ for a long time until the kernel gives up):
 previously interrupted rescue. If no logfile is specified or is empty or
 does not exist, mark all the rescue domain as non-tried.
 
-2) Read the non-tried parts of the input file, marking the failed blocks
-as non-trimmed and skipping beyond them, until all the rescue domain is
-tried. Only non-tried areas are read in large blocks. Trimming,
-splitting and retrying are done sector by sector. Each sector is tried
-at most two times; the first in this step as part of a large block read,
-the second in one of the steps below as a single sector read.
+2) (First phase; Copying) Read the non-tried parts of the input file,
+marking the failed blocks as non-trimmed and skipping beyond them, until
+all the rescue domain is tried. Only non-tried areas are read in large
+blocks. Trimming, splitting and retrying are done sector by sector. Each
+sector is tried at most two times; the first in this step as part of a
+large block read, the second in one of the steps below as a single
+sector read.
 
-3) Read forwards one sector at a time from the leading edge of the
-largest non-trimmed block, until a bad sector is found. Then read
-backwards one sector at a time from the trailing edge of the same block,
-until a bad sector is found. For each non-trimmed block, mark the bad
-sectors found as bad-sector and mark the rest of that block as
-non-split. Repeat until there are no more non-trimmed blocks.
+3) (Second phase; Trimming) Read forwards one sector at a time from the
+leading edge of the largest non-trimmed block, until a bad sector is
+found. Then read backwards one sector at a time from the trailing edge
+of the same block, until a bad sector is found. For each non-trimmed
+block, mark the bad sectors found as bad-sector and mark the rest of
+that block as non-split. Repeat until there are no more non-trimmed
+blocks.
 
-4) Read forwards one sector at a time the non-split blocks, marking the
-bad sectors found as bad-sector. After a number of consecutive bad
-sectors is found in a block large enough, the block is split by half and
-the reading continues on the second half. This recursively splits the
-largest failed blocks without producing a logfile too large.
+4) (Third phase; Splitting) Read forwards one sector at a time from the
+center of the largest non-split block, until a bad sector is found. Then
+read backwards one sector at a time from the center of the same block,
+until a bad sector is found. If the logfile is larger than
+@samp{--logfile-size}, read the smallest non-split blocks until the
+number of entries in the logfile drops below @samp{--logfile-size}.
+Repeat until all remaining non-split blocks have less than 5 sectors.
+Then read the remaining non-split blocks sequentially.
 
-5) Optionally try to read again the bad sectors until the specified
-number of retries is reached.
+5) (Fourth phase; Retrying) Optionally try to read again the bad sectors
+until the specified number of retries is reached.
 
 6) Optionally write a logfile for later use.
 
@@ -315,7 +320,6 @@ restarted. If @samp{--retrim} is also specified, mark all failed blocks
 inside the rescue domain as non-tried.
 
 @item -b @var{bytes}
-@itemx --block-size=@var{bytes}
 @itemx --sector-size=@var{bytes}
 Sector (hardware block) size of input device in bytes (usually 512 for
 hard discs and 3.5" floppies, 1024 for 5.25" floppies, and 2048 for
@@ -339,7 +343,7 @@ read new data beyond @var{logfile} limits. This is useful when reading
 from devices of undefined size (like raw devices), when the drive
 returns an incorrect size, or when reading from a partial copy. It can
 only be used after a first rescue attempt, possibly limited with the
-@samp{--max-size} option, has produced a complete @var{logfile}.
+@samp{--size} option, has produced a complete @var{logfile}.
 
 @item -d
 @itemx --direct
@@ -418,6 +422,12 @@ subsequent read errors or slow reads, ddrescue will modify the skip size
 depending on error rate and error history. Valid values range from 64 KiB
 to 1 GiB. Defaults to 64 KiB.
 
+@item -l @var{entries}
+@itemx --logfile-size=@var{entries}
+During the splitting phase, do not grow logfile beyond this number of
+entries. Logfile may be larger if it was larger at startup or if it
+became larger during the copying or trimming phases. Defaults to 1000.
+
 @item -m @var{file}
 @itemx --domain-logfile=@var{file}
 Restrict the rescue domain to the blocks marked as finished in the
@@ -427,13 +437,13 @@ the rescue.
 @item -M
 @itemx --retrim
 Mark all failed blocks inside the rescue domain as non-trimmed before
-beginning the rescue. The effect is similar to @samp{--max-retries=1},
-but the bad sectors are tried in a different order, making perhaps
-possible to rescue some of them.
+beginning the rescue. The effect is similar to @samp{--retries=1}, but
+the bad sectors are tried in a different order, making perhaps possible
+to rescue some of them.
 
 @item -n
 @itemx --no-split
-Skip the splitting pass. Avoids spending a lot of time trying to rescue
+Skip the splitting phase. Avoids spending a lot of time trying to rescue
 the most difficult parts of the file.
 
 @item -o @var{bytes}
@@ -448,15 +458,15 @@ Preallocate space on disc for @var{outfile}. Only space for regular
 files can be preallocated. If preallocation succeeds, rescue will not
 fail due to lack of free space on disc. If ddrescue can't determine the
 size to preallocate, you may need to specify it with some combination of
-the @samp{--input-position}, @samp{--output-position},
-@samp{--max-size}, and @samp{--domain-logfile} options.
+the @samp{--input-position}, @samp{--output-position}, @samp{--size},
+and @samp{--domain-logfile} options.
 
 @item -q
 @itemx --quiet
 Quiet operation. Suppress all messages.
 
 @item -r @var{n}
-@itemx --max-retries=@var{n}
+@itemx --retries=@var{n}
 Exit after given number of retry passes. Defaults to 0. -1 means
 infinity. Every bad sector is tried only one time per pass. To retry bad
 sectors detected on a previous run, you must specify a non-zero number
@@ -464,11 +474,11 @@ of retries.
 
 @item -R
 @itemx --reverse
-Reverse direction of copying, splitting and retrying, running them
-backwards from the end of the input file.
+Reverse direction of copying, retrying, and the sequential part of
+splitting, running them backwards from the end of the input file.
 
 @item -s @var{bytes}
-@itemx --max-size=@var{bytes}
+@itemx --size=@var{bytes}
 Maximum size of the input data to be copied, in bytes. If ddrescue can't
 determine the size of the input device, you may need to specify it with
 this option. Note that this option specifies the size of the input data
@@ -520,7 +530,7 @@ Table of SI and binary prefixes (unit multipliers):
 
 @multitable {Prefix} {kilobyte  (10^3 = 1000)} {|} {Prefix} {kibibyte (2^10 = 1024)}
 @item Prefix @tab Value               @tab | @tab Prefix @tab Value
-@item   @tab                          @tab | @tab b  @tab hardware blocks
+@item   @tab                          @tab | @tab s  @tab sectors
 @item k @tab kilobyte  (10^3 = 1000)  @tab | @tab Ki @tab kibibyte (2^10 = 1024)
 @item M @tab megabyte  (10^6)         @tab | @tab Mi @tab mebibyte (2^20)
 @item G @tab gigabyte  (10^9)         @tab | @tab Gi @tab gibibyte (2^30)
@@ -725,7 +735,21 @@ lziprecover -m -v -o rescued.tar.lz rescued1.tar.lz rescued2.tar.lz
 
 @sp 1
 @noindent
-Example 6: While rescuing the whole drive /dev/hda to /dev/hdb, /dev/hdb
+Example 6: While rescuing the whole drive /dev/hda to /dev/hdb, /dev/hda
+freezes up at position 12345678.
+
+@example
+ddrescue -f /dev/hda /dev/hdb logfile       <-- /dev/hda freezes here
+  (restart /dev/hda or reboot computer)
+  (restart copy at a safe distance from the troubled sector)
+ddrescue -f -i 12350000 /dev/hda /dev/hdb logfile
+  (copy backwards down to the troubled sector)
+ddrescue -f -R /dev/hda /dev/hdb logfile
+@end example
+
+@sp 1
+@noindent
+Example 7: While rescuing the whole drive /dev/hda to /dev/hdb, /dev/hdb
 fails and you have to rescue data to a third drive, /dev/hdc.
 
 @example
@@ -737,7 +761,7 @@ ddrescue -d -f -r3 /dev/hda /dev/hdc logfile2
 
 @sp 1
 @noindent
-Example 7: While rescuing the whole drive /dev/hda to /dev/hdb, /dev/hda
+Example 8: While rescuing the whole drive /dev/hda to /dev/hdb, /dev/hda
 stops responding and disappears from /dev.
 
 @example
@@ -763,14 +787,15 @@ NOTE! Sector size must be correctly set with the @samp{--sector-size}
 option for this to work. Try the @samp{--direct} option first. If direct
 disc access is not available in your system, try raw devices. Read your
 system documentation to find how to bind a raw device to a regular block
-device.
+device. Some OSs provide raw access through special device names, like
+/dev/rdisk.
 
 Ddrescue aligns its I/O buffer to the sector size so that it can be used
 for direct disc access or to read from raw devices. For efficiency
 reasons, also aligns it to the memory page size if page size is a
-multiple of sector size. Ddrescue can't determine the size of a raw
-device, so an explicit @samp{--max-size} or @samp{--complete-only}
-option is needed.
+multiple of sector size. On some systems, ddrescue can't determine the
+size of a raw device, so an explicit @samp{--size} or
+@samp{--complete-only} option may be needed.
 
 Using direct disc access, or reading from a raw device, may be slower or
 faster than normal cached reading depending on your OS and hardware. In
@@ -1053,7 +1078,6 @@ type of @var{new_types} is repeated as many times as necessary.
 
 @item -b @var{bytes}
 @itemx --block-size=@var{bytes}
-@itemx --sector-size=@var{bytes}
 Block size used by ddrescuelog. Depending on the requested operation it
 may be the sector size of the input device, the block size of the
 rescued file system, etc. Defaults to 512.
@@ -1130,7 +1154,7 @@ otherwise.
 Quiet operation. Suppress all messages.
 
 @item -s @var{bytes}
-@itemx --max-size=@var{bytes}
+@itemx --size=@var{bytes}
 Maximum size of the rescue domain, in bytes. It refers to a size in the
 original input file.
 

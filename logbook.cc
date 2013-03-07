@@ -417,6 +417,22 @@ int Logbook::find_largest_sblock( const Sblock::Status st ) const
   }
 
 
+int Logbook::find_smallest_sblock( const Sblock::Status st ) const
+  {
+  long long size = LLONG_MAX;
+  int index = -1;
+  for( int i = 0; i < sblocks(); ++i )
+    {
+    const Sblock & sb = sblock_vector[i];
+    if( sb.status() == st &&
+        ( sb.size() < size || ( sb.size() == size && index < 0 ) ) &&
+        domain_.includes( sb ) )
+      { size = sb.size(); index = i; if( size <= hardbs_ ) break; }
+    }
+  return index;
+  }
+
+
 // Find chunk from b.pos of size <= b.size and status st.
 // if not found, puts b.size to 0.
 //

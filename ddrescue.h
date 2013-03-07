@@ -94,6 +94,7 @@ public:
 
   int find_index( const long long pos ) const;
   int find_largest_sblock( const Sblock::Status st ) const;
+  int find_smallest_sblock( const Sblock::Status st ) const;
   void find_chunk( Block & b, const Sblock::Status st,
                    const int alignment = 0 ) const;
   void rfind_chunk( Block & b, const Sblock::Status st,
@@ -160,35 +161,68 @@ public:
            const int cluster, const int hardbs )
     : Logbook( offset, isize, dom, logname, cluster, hardbs, false ),
       a_rate( 0 ), c_rate( 0 ), first_size( 0 ), last_size( 0 ),
-      last_ipos( 0 ), t0( 0 ), t1( 0 ), oldlen( 0 ) {}
+      last_ipos( 0 ), t0( 0 ), t1( 0 ), oldlen( 0 )
+      {}
 
   int do_generate( const int odes );
   };
 
 
-class Rescuebook : public Logbook
+struct Rb_options
   {
-public:
-  enum { max_skipbs = 1 << 30 };
+  enum { default_skipbs = 65536, max_skipbs = 1 << 30 };
 
-private:
-  const long long max_error_rate_;
-  const long long min_outfile_size_;
+  long long max_error_rate;
+  long long min_outfile_size;
+  long long min_read_rate;
+  long timeout;
+  int max_errors;
+  int max_logfile_size;
+  int max_retries;
+  int skipbs;			// initial size to skip on read error
+  bool complete_only;
+  bool new_errors_only;
+  bool nosplit;
+  bool retrim;
+  bool sparse;
+  bool try_again;
+
+  Rb_options()
+    : max_error_rate( -1 ), min_outfile_size( -1 ), min_read_rate( -1 ),
+      timeout( -1 ), max_errors( -1 ), max_logfile_size( 1000 ),
+      max_retries( 0 ), skipbs( default_skipbs ), complete_only( false ),
+      new_errors_only( false ), nosplit( false ), retrim( false ),
+      sparse( false ), try_again( false )
+      {}
+
+  bool operator==( const Rb_options & o ) const
+    { return ( max_error_rate == o.max_error_rate &&
+               min_outfile_size == o.min_outfile_size &&
+               min_read_rate == o.min_read_rate && timeout == o.timeout &&
+               max_errors == o.max_errors &&
+               max_logfile_size == o.max_logfile_size &&
+               max_retries == o.max_retries && skipbs == o.skipbs &&
+               complete_only == o.complete_only &&
+               new_errors_only == o.new_errors_only &&
+               nosplit == o.nosplit && retrim == o.retrim &&
+               sparse == o.sparse && try_again == o.try_again ); }
+  bool operator!=( const Rb_options & o ) const
+    { return !( *this == o ); }
+  };
+
+
+class Rescuebook : public Logbook, public Rb_options
+  {
   long long error_rate;
-  long long min_read_rate_;
   long long sparse_size;		// end position of pending writes
   long long recsize, errsize;		// total recovered and error sizes
-  const long timeout_;
   const char * const iname_;
-  const int max_retries_;
-  const int skipbs_;			// initial size to skip on read error
   const int max_skip_size;		// maximum size to skip on read error
-  int max_errors_;
   int e_code;				// error code for errors_or_timeout
 					// 1 rate, 2 errors, 4 timeout
   int errors;				// error areas found so far
   int ides_, odes_;			// input and output file descriptors
-  const bool complete_only_, nosplit_, synchronous_;
+  const bool synchronous_;
 					// variables for update_rates
   long long a_rate, c_rate, first_size, last_size;
   long long last_ipos;
@@ -200,15 +234,15 @@ private:
   int copy_block( const Block & b, int & copied_size, int & error_size );
   void count_errors();
   bool errors_or_timeout()
-    { if( max_errors_ >= 0 && errors > max_errors_ ) e_code |= 2;
+    { if( max_errors >= 0 && errors > max_errors ) e_code |= 2;
       return ( e_code != 0 ); }
   void reduce_min_read_rate()
-    { if( min_read_rate_ > 0 ) min_read_rate_ /= 10; }
+    { if( min_read_rate > 0 ) min_read_rate /= 10; }
   bool slow_read() const
     { return ( t1 - t0 >= 10 &&		// no slow reads for first 10s
-               ( ( min_read_rate_ > 0 && c_rate < min_read_rate_ &&
+               ( ( min_read_rate > 0 && c_rate < min_read_rate &&
                    c_rate < a_rate / 2 ) ||
-                 ( min_read_rate_ == 0 && c_rate < a_rate / 10 ) ) ); }
+                 ( min_read_rate == 0 && c_rate < a_rate / 10 ) ) ); }
   int copy_and_update( const Block & b, const Sblock::Status st,
                        int & copied_size, int & error_size,
                        const char * const msg, bool & first_post,
@@ -216,8 +250,7 @@ private:
   int copy_non_tried();
   int rcopy_non_tried();
   int trim_errors();
-  int split_errors();
-  int rsplit_errors();
+  int split_errors( const bool reverse );
   int copy_errors();
   int rcopy_errors();
   void update_rates( const bool force = false );
@@ -225,15 +258,10 @@ private:
                     const bool force = false );
 public:
   Rescuebook( const long long offset, const long long isize,
-              const long long max_error_rate,
-              const long long min_outfile_size,
-              const long long min_read_rate, Domain & dom,
+              Domain & dom, const Rb_options & rb_opts,
               const char * const iname, const char * const logname,
-              const long timeout, const int cluster, const int hardbs,
-              const int skipbs, const int max_errors, const int max_retries,
-              const bool complete_only, const bool new_errors_only,
-              const bool nosplit, const bool retrim, const bool sparse,
-              const bool synchronous, const bool try_again );
+              const int cluster, const int hardbs,
+              const bool synchronous );
 
   int do_rescue( const int ides, const int odes, const bool reverse );
   };

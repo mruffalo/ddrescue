@@ -67,13 +67,13 @@ void show_help( const int hardbs )
                "  -o, --output-position=<bytes>  starting position in output file [ipos]\n"
                "  -p, --compare-logfile=<file>   compare block types in domain of both files\n"
                "  -q, --quiet                    suppress all messages\n"
-               "  -s, --max-size=<bytes>         maximum size of rescue domain to be processed\n"
+               "  -s, --size=<bytes>             maximum size of rescue domain to be processed\n"
                "  -t, --show-status              show a summary of logfile contents\n"
                "  -v, --verbose                  be verbose (a 2nd -v gives more)\n"
                "  -x, --xor-logfile=<file>       XOR the finished blocks in file with logfile\n"
                "  -y, --and-logfile=<file>       AND the finished blocks in file with logfile\n"
                "  -z, --or-logfile=<file>        OR the finished blocks in file with logfile\n"
-               "Numbers may be followed by a multiplier: b = blocks, k = kB = 10^3 = 1000,\n"
+               "Numbers may be followed by a multiplier: s = sectors, k = kB = 10^3 = 1000,\n"
                "Ki = KiB = 2^10 = 1024, M = 10^6, Mi = 2^20, G = 10^9, Gi = 2^30, etc...\n"
                "\nReport bugs to bug-ddrescue@gnu.org\n"
                "Ddrescue home page: http://www.gnu.org/software/ddrescue/ddrescue.html\n"
@@ -521,6 +521,7 @@ int main( const int argc, const char * const argv[] )
     { 'o', "output-position",   Arg_parser::yes },
     { 'p', "compare-logfile",   Arg_parser::yes },
     { 'q', "quiet",             Arg_parser::no  },
+    { 's', "size",              Arg_parser::yes },
     { 's', "max-size",          Arg_parser::yes },
     { 't', "show-status",       Arg_parser::no  },
     { 'v', "verbose",           Arg_parser::no  },

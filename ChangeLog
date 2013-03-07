@@ -1,3 +1,12 @@
+2013-03-07  Antonio Diaz Diaz  <ant_diaz@teleline.es>
+
+	* Version 1.17-rc1 released.
+	* Added new option '-l, --logfile-size'.
+	* rescuebook.cc: Largest blocks are now split first until
+	  logfile reaches '--logfile-size' entries.
+	* Added option '--retries' as a synonym of '--max-retries'.
+	* Added option '--size' as a synonym of '--max-size'.
+
 2013-02-09  Antonio Diaz Diaz  <ant_diaz@teleline.es>
 
 	* Version 1.17-pre2 released.
