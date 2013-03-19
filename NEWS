@@ -26,6 +26,9 @@ Track-At-Once mode.
 A bug has been fixed that prevented status to update after the system
 clock had been put back.
 
+Ddrescuelog no more says that the logfile does not exist when it exists
+but is empty.
+
 Slow reads are now ignored during the first 10 seconds.
 
 Control-C no more overwrites status message.
@@ -34,5 +37,8 @@ Generate mode no more requires the "--force" option when outfile is not
 a regular file.
 
 The new chapter "Using ddrescue safely" has been added to the manual.
+
+The manual now explains that only whole sectors can be read when "direct
+disc access" is used.
 
 The target "install-bin" has been added to the Makefile.

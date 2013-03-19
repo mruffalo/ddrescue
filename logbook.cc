@@ -244,7 +244,7 @@ Logbook::Logbook( const long long offset, const long long isize,
     current_status_( copying ), domain_( dom ), filename_( logname ),
     hardbs_( hardbs ), softbs_( cluster * hardbs ),
     final_msg_( 0 ), final_errno_( 0 ), index_( 0 ),
-    ul_t1( std::time( 0 ) )
+    ul_t1( std::time( 0 ) ), logfile_exists_( false )
   {
   int alignment = sysconf( _SC_PAGESIZE );
   if( alignment < hardbs_ || alignment % hardbs_ ) alignment = hardbs_;
@@ -262,10 +262,13 @@ Logbook::Logbook( const long long offset, const long long isize,
       { input_pos_error( domain_.pos(), isize ); std::exit( 1 ); }
     domain_.crop_by_file_size( isize );
     }
-  if( filename_ && !do_not_read &&
-      read_logfile( filename_, sblock_vector, current_pos_, current_status_ ) &&
-      sblock_vector.size() )
-    logfile_isize_ = sblock_vector.back().end();
+  if( filename_ && !do_not_read )
+    {
+    logfile_exists_ =
+      read_logfile( filename_, sblock_vector, current_pos_, current_status_ );
+    if( logfile_exists_ && sblock_vector.size() )
+      logfile_isize_ = sblock_vector.back().end();
+    }
   if( !complete_only ) extend_sblock_vector( sblock_vector, isize );
   else if( sblock_vector.size() )  // limit domain to blocks read from logfile
     {

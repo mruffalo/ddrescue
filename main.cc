@@ -332,10 +332,11 @@ int do_rescue( const long long offset, Domain & domain,
   if( verify_input_size )
     {
     if( !rescuebook.logfile_exists() || isize <= 0 ||
+        rescuebook.logfile_isize() <= 0 ||
         rescuebook.logfile_isize() >= LLONG_MAX )
       {
-      show_error( "Can't verify input file size. "
-                  "Unfinished logfile or other error." );
+      show_error( "Can't verify input file size.\n"
+                  "          Logfile is unfinished or missing or size is invalid." );
       return 1;
       }
     if( rescuebook.logfile_isize() != isize )

@@ -37,6 +37,7 @@ private:
   mutable int index_;			// cached index of last find or change
   std::vector< Sblock > sblock_vector;	// note: blocks are consecutive
   long ul_t1;				// variable for update_logfile
+  bool logfile_exists_;
 
   Logbook( const Logbook & );		// declared as private
   void operator=( const Logbook & );	// declared as private
@@ -70,7 +71,7 @@ public:
   long long offset() const { return offset_; }
   const char * final_msg() const { return final_msg_; }
   int final_errno() const { return final_errno_; }
-  bool logfile_exists() const { return ( logfile_isize_ > 0 ); }
+  bool logfile_exists() const { return logfile_exists_; }
   long long logfile_isize() const { return logfile_isize_; }
 
   void current_pos( const long long pos ) { current_pos_ = pos; }

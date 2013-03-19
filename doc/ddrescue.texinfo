@@ -6,8 +6,8 @@
 @finalout
 @c %**end of header
 
-@set UPDATED 7 March 2013
-@set VERSION 1.17-rc1
+@set UPDATED 19 March 2013
+@set VERSION 1.17-rc2
 
 @dircategory GNU Packages
 @direntry
@@ -427,6 +427,7 @@ to 1 GiB. Defaults to 64 KiB.
 During the splitting phase, do not grow logfile beyond this number of
 entries. Logfile may be larger if it was larger at startup or if it
 became larger during the copying or trimming phases. Defaults to 1000.
+(Each entry is about 26-30 bytes in size).
 
 @item -m @var{file}
 @itemx --domain-logfile=@var{file}
@@ -784,9 +785,13 @@ access or a raw device to bypass the kernel cache and rescue more of
 your data.
 
 NOTE! Sector size must be correctly set with the @samp{--sector-size}
-option for this to work. Try the @samp{--direct} option first. If direct
-disc access is not available in your system, try raw devices. Read your
-system documentation to find how to bind a raw device to a regular block
+option for this to work. Only whole sectors can be read; both
+@samp{--input-position} and @samp{--size} must be a multiple of sector
+size.
+
+Try the @samp{--direct} option first. If direct disc access is not
+available in your system, try raw devices. Read your system
+documentation to find how to bind a raw device to a regular block
 device. Some OSs provide raw access through special device names, like
 /dev/rdisk.
 

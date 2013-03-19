@@ -12,7 +12,7 @@ File: ddrescue.info,  Node: Top,  Next: Introduction,  Up: (dir)
 GNU ddrescue Manual
 *******************
 
-This manual is for GNU ddrescue (version 1.17-rc1, 7 March 2013).
+This manual is for GNU ddrescue (version 1.17-rc2, 19 March 2013).
 
 * Menu:
 
@@ -399,7 +399,7 @@ The format for running ddrescue is:
      During the splitting phase, do not grow logfile beyond this number
      of entries. Logfile may be larger if it was larger at startup or
      if it became larger during the copying or trimming phases.
-     Defaults to 1000.
+     Defaults to 1000.  (Each entry is about 26-30 bytes in size).
 
 `-m FILE'
 `--domain-logfile=FILE'
@@ -566,7 +566,7 @@ Character   Meaning
 
 And here is an example logfile:
 
-# Rescue Logfile. Created by GNU ddrescue version 1.17-rc1
+# Rescue Logfile. Created by GNU ddrescue version 1.17-rc2
 # Command line: ddrescue /dev/fd0 fdimage logfile
 # current_pos  current_status
 0x00120000     ?
@@ -716,9 +716,12 @@ access or a raw device to bypass the kernel cache and rescue more of
 your data.
 
    NOTE! Sector size must be correctly set with the `--sector-size'
-option for this to work. Try the `--direct' option first. If direct
-disc access is not available in your system, try raw devices. Read your
-system documentation to find how to bind a raw device to a regular block
+option for this to work. Only whole sectors can be read; both
+`--input-position' and `--size' must be a multiple of sector size.
+
+   Try the `--direct' option first. If direct disc access is not
+available in your system, try raw devices. Read your system
+documentation to find how to bind a raw device to a regular block
 device. Some OSs provide raw access through special device names, like
 /dev/rdisk.
 
@@ -1144,21 +1147,21 @@ Concept Index
 
 Tag Table:
 Node: Top203
-Node: Introduction1373
-Node: Basic Concepts3864
-Node: Important Advice5344
-Node: Algorithm6453
-Node: Invoking Ddrescue10332
-Node: Logfile Structure20626
-Node: Examples22880
-Ref: lziprecover-example25853
-Node: Direct Disc Access27694
-Node: Fill Mode29664
-Node: Generate Mode33758
-Node: Ddrescuelog35435
-Node: Invoking Ddrescuelog37584
-Node: Problems43078
-Node: Concept Index43635
+Node: Introduction1374
+Node: Basic Concepts3865
+Node: Important Advice5345
+Node: Algorithm6454
+Node: Invoking Ddrescue10333
+Node: Logfile Structure20671
+Node: Examples22925
+Ref: lziprecover-example25898
+Node: Direct Disc Access27739
+Node: Fill Mode29817
+Node: Generate Mode33911
+Node: Ddrescuelog35588
+Node: Invoking Ddrescuelog37737
+Node: Problems43231
+Node: Concept Index43788
 
 End Tag Table
 
