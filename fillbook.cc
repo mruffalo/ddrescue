@@ -40,7 +40,7 @@ int Fillbook::fill_areas( const std::string & filltypes )
     if( !domain().includes( sb ) ) { if( domain() < sb ) break; else continue; }
     if( sb.end() <= current_pos() ||
         filltypes.find( sb.status() ) >= filltypes.size() ) continue;
-    Block b( sb.pos(), softbs() );
+    Block b( sb.pos(), softbs() );	// fill the area a softbs at a time
     if( sb.includes( current_pos() ) ) b.pos( current_pos() );
     if( b.end() > sb.end() ) b.crop( sb );
     current_status( filling );
@@ -51,7 +51,12 @@ int Fillbook::fill_areas( const std::string & filltypes )
         { show_status( b.pos(), first_post ); first_post = false; }
       if( interrupted() ) return -1;
       const int retval = fill_block( b );
-      if( retval ) return retval;
+      if( retval )					// write error
+        {
+        if( !ignore_write_errors_ ) return retval;
+        if( b.size() > hardbs() )	// fill the area a hardbs at a time
+          { b.size( hardbs() ); continue; }
+        }
       if( !update_logfile( odes_ ) ) return -2;
       b.pos( b.end() );
       if( b.end() > sb.end() ) b.crop( sb );

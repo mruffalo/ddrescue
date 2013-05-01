@@ -100,7 +100,11 @@ int Fillbook::fill_block( const Block & b )
 
   if( writeblock( odes_, iobuf(), size, b.pos() + offset() ) != size ||
       ( synchronous_ && fsync( odes_ ) < 0 && errno != EINVAL ) )
-    { final_msg( "write error" ); final_errno( errno ); return 1; }
+    {
+    if( !ignore_write_errors_ )
+      { final_msg( "write error" ); final_errno( errno ); }
+    return 1;
+    }
   filled_size += size; remaining_size -= size;
   return 0;
   }

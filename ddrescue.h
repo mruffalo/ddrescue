@@ -117,6 +117,7 @@ class Fillbook : public Logbook
   int filled_areas;			// areas already filled
   int remaining_areas;			// areas to be filled
   int odes_;				// output file descriptor
+  const bool ignore_write_errors_;
   const bool synchronous_;
 					// variables for show_status
   long long a_rate, c_rate, first_size, last_size;
@@ -130,8 +131,9 @@ class Fillbook : public Logbook
 public:
   Fillbook( const long long offset, Domain & dom,
             const char * const logname, const int cluster, const int hardbs,
-            const bool synchronous )
+            const bool ignore_write_errors, const bool synchronous )
     : Logbook( offset, 0, dom, logname, cluster, hardbs, true ),
+      ignore_write_errors_( ignore_write_errors ),
       synchronous_( synchronous ),
       a_rate( 0 ), c_rate( 0 ), first_size( 0 ), last_size( 0 ),
       last_ipos( 0 ), t0( 0 ), t1( 0 )

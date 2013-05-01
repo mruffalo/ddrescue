@@ -1,3 +1,8 @@
+2013-05-01  Antonio Diaz Diaz  <antonio@gnu.org>
+
+	* Version 1.17-rc3 released.
+	* Added new option '-w, --ignore-write-errors'.
+
 2013-03-19  Antonio Diaz Diaz  <ant_diaz@teleline.es>
 
 	* Version 1.17-rc2 released.

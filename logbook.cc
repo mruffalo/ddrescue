@@ -326,9 +326,9 @@ bool Logbook::update_logfile( const int odes, const bool force,
   if( verbosity >= 0 )
     {
     char buf[80];
-    const char * const s = ( f ? "Error writing logfile '%s'." :
-                                 "Error opening logfile '%s' for writing." );
-    snprintf( buf, sizeof buf, s, filename_ );
+    snprintf( buf, sizeof buf, f ? "Error writing logfile '%s'." :
+                                   "Error opening logfile '%s' for writing.",
+              filename_ );
     if( retry ) std::fprintf( stderr, "\n" );
     show_error( buf, errno );
     if( retry )

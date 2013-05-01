@@ -2,6 +2,9 @@ Changes in version 1.17:
 
 The new option "-l, --logfile-size" has been added.
 
+The new option "-w, --ignore-write-errors", which makes fill mode ignore
+write errors, has been added.
+
 The option "--sector-size" has been added as a synonym of "--block-size".
 
 The option "--retries" has been added as a synonym of "--max-retries".

@@ -16,7 +16,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 /*
-    Return values: 0 for a normal exit, 1 for environmental problems
+    Exit status: 0 for a normal exit, 1 for environmental problems
     (file not found, invalid flags, I/O errors, etc), 2 to indicate a
     corrupt or invalid input file, 3 for an internal consistency error
     (eg, bug) which caused ddrescue to panic.
@@ -104,10 +104,15 @@ void show_help( const int cluster, const int hardbs, const int skipbs )
                "  -t, --truncate                 truncate output file to zero size\n"
                "  -T, --timeout=<interval>       maximum time since last successful read\n"
                "  -v, --verbose                  be verbose (a 2nd -v gives more)\n"
+               "  -w, --ignore-write-errors      make fill mode ignore write errors\n"
                "  -x, --extend-outfile=<bytes>   extend outfile size to be at least this long\n"
                "Numbers may be followed by a multiplier: s = sectors, k = kB = 10^3 = 1000,\n"
                "Ki = KiB = 2^10 = 1024, M = 10^6, Mi = 2^20, G = 10^9, Gi = 2^30, etc...\n"
-               "Time intervals have the format 1[.5][smhd] or 1/2[smhd]."
+               "Time intervals have the format 1[.5][smhd] or 1/2[smhd].\n"
+               "\nExit status: 0 for a normal exit, 1 for environmental problems (file\n"
+               "not found, invalid flags, I/O errors, etc), 2 to indicate a corrupt or\n"
+               "invalid input file, 3 for an internal consistency error (eg, bug) which\n"
+               "caused ddrescue to panic.\n"
                "\nReport bugs to bug-ddrescue@gnu.org\n"
                "Ddrescue home page: http://www.gnu.org/software/ddrescue/ddrescue.html\n"
                "General help using GNU software: http://www.gnu.org/gethelp\n" );
@@ -217,7 +222,8 @@ int do_fill( const long long offset, Domain & domain,
              const char * const iname, const char * const oname,
              const char * const logname,
              const int cluster, const int hardbs,
-             const std::string & filltypes, const bool synchronous )
+             const std::string & filltypes, const bool ignore_write_errors,
+             const bool synchronous )
   {
   if( !logname )
     {
@@ -225,7 +231,8 @@ int do_fill( const long long offset, Domain & domain,
     return 1;
     }
 
-  Fillbook fillbook( offset, domain, logname, cluster, hardbs, synchronous );
+  Fillbook fillbook( offset, domain, logname, cluster, hardbs,
+                     ignore_write_errors, synchronous );
   if( fillbook.domain().size() == 0 )
     { show_error( "Nothing to do." ); return 0; }
 
@@ -451,6 +458,7 @@ int main( const int argc, const char * const argv[] )
   Mode program_mode = m_none;
   struct Rb_options rb_opts;
   bool force = false;
+  bool ignore_write_errors = false;
   bool preallocate = false;
   bool reverse = false;
   bool synchronous = false;
@@ -463,43 +471,44 @@ int main( const int argc, const char * const argv[] )
 
   const Arg_parser::Option options[] =
     {
-    { 'a', "min-read-rate",     Arg_parser::yes },
-    { 'A', "try-again",         Arg_parser::no  },
-    { 'b', "block-size",        Arg_parser::yes },
-    { 'b', "sector-size",       Arg_parser::yes },
-    { 'B', "binary-prefixes",   Arg_parser::no  },
-    { 'c', "cluster-size",      Arg_parser::yes },
-    { 'C', "complete-only",     Arg_parser::no  },
-    { 'd', "direct",            Arg_parser::no  },
-    { 'D', "synchronous",       Arg_parser::no  },
-    { 'e', "max-errors",        Arg_parser::yes },
-    { 'E', "max-error-rate",    Arg_parser::yes },
-    { 'f', "force",             Arg_parser::no  },
-    { 'F', "fill",              Arg_parser::yes },
-    { 'g', "generate-logfile",  Arg_parser::no  },
-    { 'h', "help",              Arg_parser::no  },
-    { 'i', "input-position",    Arg_parser::yes },
-    { 'I', "verify-input-size", Arg_parser::no  },
-    { 'K', "skip-size",         Arg_parser::yes },
-    { 'l', "logfile-size",      Arg_parser::yes },
-    { 'm', "domain-logfile",    Arg_parser::yes },
-    { 'M', "retrim",            Arg_parser::no  },
-    { 'n', "no-split",          Arg_parser::no  },
-    { 'o', "output-position",   Arg_parser::yes },
-    { 'p', "preallocate",       Arg_parser::no  },
-    { 'q', "quiet",             Arg_parser::no  },
-    { 'r', "retries",           Arg_parser::yes },
-    { 'r', "max-retries",       Arg_parser::yes },
-    { 'R', "reverse",           Arg_parser::no  },
-    { 's', "size",              Arg_parser::yes },
-    { 's', "max-size",          Arg_parser::yes },
-    { 'S', "sparse",            Arg_parser::no  },
-    { 't', "truncate",          Arg_parser::no  },
-    { 'T', "timeout",           Arg_parser::yes },
-    { 'v', "verbose",           Arg_parser::no  },
-    { 'V', "version",           Arg_parser::no  },
-    { 'x', "extend-outfile",    Arg_parser::yes },
-    {  0 , 0,                   Arg_parser::no  } };
+    { 'a', "min-read-rate",       Arg_parser::yes },
+    { 'A', "try-again",           Arg_parser::no  },
+    { 'b', "block-size",          Arg_parser::yes },
+    { 'b', "sector-size",         Arg_parser::yes },
+    { 'B', "binary-prefixes",     Arg_parser::no  },
+    { 'c', "cluster-size",        Arg_parser::yes },
+    { 'C', "complete-only",       Arg_parser::no  },
+    { 'd', "direct",              Arg_parser::no  },
+    { 'D', "synchronous",         Arg_parser::no  },
+    { 'e', "max-errors",          Arg_parser::yes },
+    { 'E', "max-error-rate",      Arg_parser::yes },
+    { 'f', "force",               Arg_parser::no  },
+    { 'F', "fill",                Arg_parser::yes },
+    { 'g', "generate-logfile",    Arg_parser::no  },
+    { 'h', "help",                Arg_parser::no  },
+    { 'i', "input-position",      Arg_parser::yes },
+    { 'I', "verify-input-size",   Arg_parser::no  },
+    { 'K', "skip-size",           Arg_parser::yes },
+    { 'l', "logfile-size",        Arg_parser::yes },
+    { 'm', "domain-logfile",      Arg_parser::yes },
+    { 'M', "retrim",              Arg_parser::no  },
+    { 'n', "no-split",            Arg_parser::no  },
+    { 'o', "output-position",     Arg_parser::yes },
+    { 'p', "preallocate",         Arg_parser::no  },
+    { 'q', "quiet",               Arg_parser::no  },
+    { 'r', "retries",             Arg_parser::yes },
+    { 'r', "max-retries",         Arg_parser::yes },
+    { 'R', "reverse",             Arg_parser::no  },
+    { 's', "size",                Arg_parser::yes },
+    { 's', "max-size",            Arg_parser::yes },
+    { 'S', "sparse",              Arg_parser::no  },
+    { 't', "truncate",            Arg_parser::no  },
+    { 'T', "timeout",             Arg_parser::yes },
+    { 'v', "verbose",             Arg_parser::no  },
+    { 'V', "version",             Arg_parser::no  },
+    { 'w', "ignore-write-errors", Arg_parser::no  },
+    { 'x', "extend-outfile",      Arg_parser::yes },
+    {  0 , 0,                     Arg_parser::no  } };
 
   const Arg_parser parser( argc, argv, options );
   if( parser.error().size() )				// bad option
@@ -553,6 +562,7 @@ int main( const int argc, const char * const argv[] )
       case 'T': rb_opts.timeout = parse_time_interval( arg ); break;
       case 'v': if( verbosity < 4 ) ++verbosity; break;
       case 'V': show_version(); return 0;
+      case 'w': ignore_write_errors = true; break;
       case 'x': rb_opts.min_outfile_size = getnum( arg, hardbs, 1 ); break;
       default : internal_error( "uncaught option" );
       }
@@ -590,14 +600,18 @@ int main( const int argc, const char * const argv[] )
           verify_input_size || preallocate || reverse || o_trunc )
         show_error( "warning: Options -aCdeEIMnOprRStTx are ignored in fill mode." );
       return do_fill( opos - ipos, domain, iname, oname, logname, cluster,
-                      hardbs, filltypes, synchronous );
+                      hardbs, filltypes, ignore_write_errors, synchronous );
     case m_generate:
       if( rb_opts != Rb_options() || o_direct || synchronous ||
-          verify_input_size || preallocate || reverse || o_trunc )
-        show_error( "warning: Options -aCdDeEIMnOprRStTx are ignored in generate mode." );
+          verify_input_size || preallocate || reverse || o_trunc ||
+          ignore_write_errors )
+        show_error( "warning: Options -aCdDeEIMnOprRStTwx are ignored in generate mode." );
       return do_generate( opos - ipos, domain, iname, oname, logname,
                           cluster, hardbs );
     case m_none:
+      if( ignore_write_errors )
+        { show_error( "Option '-w' is incompatible with rescue mode.", 0, true );
+          return 1; }
       return do_rescue( opos - ipos, domain, rb_opts, iname, oname, logname,
                         cluster, hardbs, o_direct, o_trunc, preallocate,
                         reverse, synchronous, verify_input_size );

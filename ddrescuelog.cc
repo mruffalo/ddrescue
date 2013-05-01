@@ -15,7 +15,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 /*
-    Return values: 0 for a normal exit, 1 for environmental problems
+    Exit status: 0 for a normal exit, 1 for environmental problems
     (file not found, invalid flags, I/O errors, etc), 2 to indicate a
     corrupt or invalid input file, 3 for an internal consistency error
     (eg, bug) which caused ddrescuelog to panic.
@@ -75,6 +75,10 @@ void show_help( const int hardbs )
                "  -z, --or-logfile=<file>        OR the finished blocks in file with logfile\n"
                "Numbers may be followed by a multiplier: s = sectors, k = kB = 10^3 = 1000,\n"
                "Ki = KiB = 2^10 = 1024, M = 10^6, Mi = 2^20, G = 10^9, Gi = 2^30, etc...\n"
+               "\nExit status: 0 for a normal exit, 1 for environmental problems (file\n"
+               "not found, invalid flags, I/O errors, etc), 2 to indicate a corrupt or\n"
+               "invalid input file, 3 for an internal consistency error (eg, bug) which\n"
+               "caused ddrescuelog to panic.\n"
                "\nReport bugs to bug-ddrescue@gnu.org\n"
                "Ddrescue home page: http://www.gnu.org/software/ddrescue/ddrescue.html\n"
                "General help using GNU software: http://www.gnu.org/gethelp\n" );
