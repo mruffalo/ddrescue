@@ -1,3 +1,11 @@
+2013-06-07  Antonio Diaz Diaz  <antonio@gnu.org>
+
+	* Version 1.17-rc4 released.
+	* Option '--fill' has been renamed to '--fill-mode'.
+	* Option '--generate-logfile' has been renamed to '--generate-mode'.
+	* rescuebook.cc: Mark failed blocks with 1 sector as bad-sector.
+	* configure: Options now accept a separate argument.
+
 2013-05-01  Antonio Diaz Diaz  <antonio@gnu.org>
 
 	* Version 1.17-rc3 released.

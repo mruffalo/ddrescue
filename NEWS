@@ -5,6 +5,10 @@ The new option "-l, --logfile-size" has been added.
 The new option "-w, --ignore-write-errors", which makes fill mode ignore
 write errors, has been added.
 
+The option "--fill" has been renamed to "--fill-mode".
+
+The option '--generate-logfile' has been renamed to '--generate-mode'.
+
 The option "--sector-size" has been added as a synonym of "--block-size".
 
 The option "--retries" has been added as a synonym of "--max-retries".
@@ -20,6 +24,10 @@ Largest blocks are now split first until logfile reaches
 Ddrescue now terminates with an error if an unexpected EOF would discard
 any successfully read data, just as it does when the input file
 disappears from /dev.
+
+During the copying phase, failed blocks containing one sector are marked
+as bad-sector instead of as non-trimmed. This avoids reading a sector
+twice when a cluster size of 1 is used.
 
 Ddrescue now removes the last block from the logfile if it starts at the
 end of the input file and is not marked as finished. This automatically
@@ -38,6 +46,8 @@ Control-C no more overwrites status message.
 
 Generate mode no more requires the "--force" option when outfile is not
 a regular file.
+
+"configure" now accepts options with a separate argument.
 
 The new chapter "Using ddrescue safely" has been added to the manual.
 

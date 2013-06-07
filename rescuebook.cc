@@ -100,7 +100,8 @@ int Rescuebook::copy_and_update( const Block & b, const Sblock::Status st,
       }
     if( error_size > 0 )
       {
-      errors += change_chunk_status( Block( b.pos() + copied_size, error_size ), st );
+      errors += change_chunk_status( Block( b.pos() + copied_size, error_size ),
+                ( error_size > hardbs() ) ? st : Sblock::bad_sector );
       if( iname_ && access( iname_, F_OK ) != 0 )
         {
         final_msg( "input file disappeared" ); final_errno( errno );
@@ -143,8 +144,8 @@ int Rescuebook::copy_non_tried()
       pos = b.end();
       current_status( copying );
       block_found = true;
-      const Sblock::Status st = ( skip_size ? Sblock::bad_sector :
-                                              Sblock::non_trimmed );
+      const Sblock::Status st =
+        ( ( b.size() > hardbs() ) ? Sblock::non_trimmed : Sblock::bad_sector );
       int copied_size = 0, error_size = 0;
       const int retval = copy_and_update( b, st, copied_size, error_size,
                                           "Copying non-tried blocks...",
@@ -216,8 +217,8 @@ int Rescuebook::rcopy_non_tried()
       end = b.pos();
       current_status( copying );
       block_found = true;
-      const Sblock::Status st = ( skip_size ? Sblock::bad_sector :
-                                              Sblock::non_trimmed );
+      const Sblock::Status st =
+        ( ( b.size() > hardbs() ) ? Sblock::non_trimmed : Sblock::bad_sector );
       int copied_size = 0, error_size = 0;
       const int retval = copy_and_update( b, st, copied_size, error_size,
                                           "Copying non-tried blocks...",

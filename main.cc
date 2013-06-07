@@ -70,6 +70,7 @@ void show_help( const int cluster, const int hardbs, const int skipbs )
                "\nUsage: %s [options] infile outfile [logfile]\n", invocation_name );
   std::printf( "You should use a logfile unless you know what you are doing.\n"
                "If you reboot, check the device names before restarting ddrescue.\n"
+               "Do not use options '-F' or '-g' without reading the manual first.\n"
                "\nOptions:\n"
                "  -h, --help                     display this help and exit\n"
                "  -V, --version                  output version information and exit\n"
@@ -84,8 +85,8 @@ void show_help( const int cluster, const int hardbs, const int skipbs )
                "  -e, --max-errors=[+]<n>        maximum number of [new] error areas allowed\n"
                "  -E, --max-error-rate=<bytes>   maximum allowed rate of read errors per second\n"
                "  -f, --force                    overwrite output device or partition\n"
-               "  -F, --fill=<types>             fill given type blocks with infile data (?*/-+)\n"
-               "  -g, --generate-logfile         generate approximate logfile from partial copy\n"
+               "  -F, --fill-mode=<types>        fill given type blocks with infile data (?*/-+)\n"
+               "  -g, --generate-mode            generate approximate logfile from partial copy\n"
                "  -i, --input-position=<bytes>   starting position in input file [0]\n"
                "  -I, --verify-input-size        verify input file size with size in logfile\n"
                "  -K, --skip-size=<bytes>        initial size to skip on read error [%sB]\n",
@@ -275,7 +276,7 @@ int do_generate( const long long offset, Domain & domain,
   {
   if( !logname )
     {
-    show_error( "Logfile must be specified in generate-logfile mode.", 0, true );
+    show_error( "Logfile must be specified in generate mode.", 0, true );
     return 1;
     }
 
@@ -483,8 +484,8 @@ int main( const int argc, const char * const argv[] )
     { 'e', "max-errors",          Arg_parser::yes },
     { 'E', "max-error-rate",      Arg_parser::yes },
     { 'f', "force",               Arg_parser::no  },
-    { 'F', "fill",                Arg_parser::yes },
-    { 'g', "generate-logfile",    Arg_parser::no  },
+    { 'F', "fill-mode",           Arg_parser::yes },
+    { 'g', "generate-mode",       Arg_parser::no  },
     { 'h', "help",                Arg_parser::no  },
     { 'i', "input-position",      Arg_parser::yes },
     { 'I', "verify-input-size",   Arg_parser::no  },
@@ -538,7 +539,7 @@ int main( const int argc, const char * const argv[] )
       case 'E': rb_opts.max_error_rate = getnum( arg, hardbs, 0 ); break;
       case 'f': force = true; break;
       case 'F': set_mode( program_mode, m_fill ); filltypes = arg;
-                check_types( filltypes, "fill" ); break;
+                check_types( filltypes, "fill-mode" ); break;
       case 'g': set_mode( program_mode, m_generate ); break;
       case 'h': show_help( cluster_bytes / default_hardbs, default_hardbs,
                            Rb_options::default_skipbs );

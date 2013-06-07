@@ -12,7 +12,7 @@ File: ddrescue.info,  Node: Top,  Next: Introduction,  Up: (dir)
 GNU ddrescue Manual
 *******************
 
-This manual is for GNU ddrescue (version 1.17-rc3, 1 May 2013).
+This manual is for GNU ddrescue (version 1.17-rc4, 7 June 2013).
 
 * Menu:
 
@@ -356,7 +356,7 @@ The format for running ddrescue is:
      file, but a device or partition.
 
 `-F TYPES'
-`--fill=TYPES'
+`--fill-mode=TYPES'
      Fill the blocks in OUTFILE specified as any of TYPES in LOGFILE,
      with data read from INFILE. TYPES contains one or more of the
      status characters defined in the chapter Logfile Structure (*note
@@ -364,7 +364,7 @@ The format for running ddrescue is:
      Mode::) for a complete description of the fill mode.
 
 `-g'
-`--generate-logfile'
+`--generate-mode'
      Generate an approximate LOGFILE from the INFILE and OUTFILE of the
      original rescue run. Note that you must keep the original offset
      between `--input-position' and `--output-position' of the original
@@ -575,7 +575,7 @@ Character   Meaning
 
 And here is an example logfile:
 
-# Rescue Logfile. Created by GNU ddrescue version 1.17-rc3
+# Rescue Logfile. Created by GNU ddrescue version 1.17-rc4
 # Command line: ddrescue /dev/fd0 fdimage logfile
 # current_pos  current_status
 0x00120000     ?
@@ -771,12 +771,13 @@ File: ddrescue.info,  Node: Fill Mode,  Next: Generate Mode,  Prev: Direct Disc 
 9 Fill Mode
 ***********
 
-When ddrescue is invoked with the `--fill' option it operates in "fill
-mode", which is different from the default "rescue mode". That is, if
-you use the `--fill' option, ddrescue does not rescue anything.  It
-only fills with data read from the input file the blocks of the output
-file whose status character from the logfile coincides with one of the
-type characters specified as argument to the `--fill' option.
+When ddrescue is invoked with the `--fill-mode' option it operates in
+"fill mode", which is different from the default "rescue mode". That
+is, if you use the `--fill-mode' option, ddrescue does not rescue
+anything. It only fills with data read from the input file the blocks of
+the output file whose status character from the logfile coincides with
+one of the type characters specified as argument to the `--fill-mode'
+option.
 
    In fill mode the input file may have any size. If it is too small,
 the data will be duplicated as many times as necessary to fill the input
@@ -795,7 +796,7 @@ values, whereas when filling the output file of the original rescue run
 you should keep the original offset between `--input-position' and
 `--output-position'.
 
-   The `--fill' option implies the `--complete-only' option.
+   The `--fill-mode' option implies the `--complete-only' option.
 
    In fill mode the logfile is updated to allow resumability when
 interrupted or in case of a crash, but as nothing is being rescued the
@@ -811,7 +812,7 @@ all blocks marked as `-' (bad-sector) with copies of the string
 `BAD SECTOR ':
 
      printf "BAD SECTOR " > tmpfile
-     ddrescue --fill=- tmpfile outfile logfile
+     ddrescue --fill-mode=- tmpfile outfile logfile
 
 Example 2: Wipe only the good sectors, leaving the bad sectors alone.
 This way, the drive will still test bad (i.e., with unreadable sectors).
@@ -819,7 +820,7 @@ This is the fastest way of wiping a failing drive, and is specially
 useful when sending the drive back to the manufacturer for warranty
 replacement.
 
-     ddrescue --fill=+ --force /dev/zero bad_drive logfile
+     ddrescue --fill-mode=+ --force /dev/zero bad_drive logfile
 
 Example 3: Force the drive to remap the bad sectors, making it usable
 again. If the drive has only a few bad sectors, and they are not caused
@@ -827,7 +828,7 @@ by drive age, you can probably just rewrite those sectors, and the drive
 will reallocate them automatically to new "spare" sectors that it keeps
 for just this purpose. WARNING! This may not work on your drive.
 
-     ddrescue --fill=- --force --synchronous /dev/zero bad_drive logfile
+     ddrescue --fill-mode=- --force --synchronous /dev/zero bad_drive logfile
 
 
 Fill mode can also help you to figure out, independently of the file
@@ -855,23 +856,28 @@ Example 4: Figure out what files are in the bad areas of the disc.
 
      ddrescue -b2048 /dev/cdrom cdimage logfile
      printf "DEADBEEF" > tmpfile
-     ddrescue --fill=- tmpfile cdimage logfile
+     ddrescue --fill-mode=- tmpfile cdimage logfile
      rm tmpfile
      mount -t iso9660 -o loop,ro cdimage /mnt/cdimage
      find /mnt/cdimage -type f -exec grep "DEADBEEF" '{}' ';'
      umount /mnt/cdimage
-     ddrescue --fill=- /dev/zero cdimage logfile
+     ddrescue --fill-mode=- /dev/zero cdimage logfile
 
 
 File: ddrescue.info,  Node: Generate Mode,  Next: Ddrescuelog,  Prev: Fill Mode,  Up: Top
 
-10 Generate-logfile Mode
-************************
+10 Generate Mode
+****************
 
-So you didn't read the tutorial and started ddrescue without a logfile.
-Now, two days later, your computer crashed and you can't know how much
-data ddrescue managed to save. And even worse, you can't resume the
-rescue; you have to restart it from the very beginning.
+NOTE: When ddrescue is invoked with the `--generate-mode' option it
+operates in "generate mode", which is different from the default "rescue
+mode". That is, if you use the `--generate-mode' option, ddrescue does
+not rescue anything. It only tries to generate a logfile for later use.
+
+   So you didn't read the tutorial and started ddrescue without a
+logfile.  Now, two days later, your computer crashed and you can't know
+how much data ddrescue managed to save. And even worse, you can't
+resume the rescue; you have to restart it from the very beginning.
 
    Or maybe you started copying a drive with `dd conv=noerror,sync' and
 are now in the same situation described above.  In this case, note that
@@ -896,7 +902,7 @@ thus non-tried but non-zero.
      dd if=infile of=outfile conv=noerror,sync
 
    then you can generate an approximate logfile with this command:
-     ddrescue --generate-logfile infile outfile logfile
+     ddrescue --generate-mode infile outfile logfile
 
 Note that you must keep the original offset between `--input-position'
 and `--output-position' of the original rescue run.
@@ -1139,7 +1145,7 @@ Concept Index
 * direct disc access:                    Direct Disc Access.    (line 6)
 * examples:                              Examples.              (line 6)
 * fill Mode:                             Fill Mode.             (line 6)
-* generate-logfile Mode:                 Generate Mode.         (line 6)
+* generate Mode:                         Generate Mode.         (line 6)
 * getting help:                          Problems.              (line 6)
 * introduction:                          Introduction.          (line 6)
 * invoking ddrescue:                     Invoking Ddrescue.     (line 6)
@@ -1155,21 +1161,21 @@ Concept Index
 
 Tag Table:
 Node: Top203
-Node: Introduction1371
-Node: Basic Concepts3862
-Node: Important Advice5342
-Node: Algorithm6451
-Node: Invoking Ddrescue10330
-Node: Logfile Structure21063
-Node: Examples23317
-Ref: lziprecover-example26290
-Node: Direct Disc Access28131
-Node: Fill Mode30209
-Node: Generate Mode34305
-Node: Ddrescuelog35982
-Node: Invoking Ddrescuelog38131
-Node: Problems43622
-Node: Concept Index44179
+Node: Introduction1372
+Node: Basic Concepts3863
+Node: Important Advice5343
+Node: Algorithm6452
+Node: Invoking Ddrescue10331
+Node: Logfile Structure21066
+Node: Examples23320
+Ref: lziprecover-example26293
+Node: Direct Disc Access28134
+Node: Fill Mode30212
+Node: Generate Mode34352
+Node: Ddrescuelog36299
+Node: Invoking Ddrescuelog38448
+Node: Problems43939
+Node: Concept Index44496
 
 End Tag Table
 
