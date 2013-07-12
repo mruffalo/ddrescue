@@ -33,8 +33,12 @@ successive copies.
 
 Ddrescue recommends lzip for compression of backups because of its
 reliability and data recovery capabilities, including error-checked
-merging of backup copies. The combination ddrescue + lziprecover is the
-best option for recovering data from multiple damaged copies.
+merging of backup copies. Lziprecover makes lzip files resistant to
+bit-flip, one of the most common forms of data corruption, and its
+recovery capabilities contribute to make of the lzip format one of the
+best formats for long-term data archiving. The combination ddrescue +
+lziprecover is the best option for recovering data from multiple damaged
+copies.
 
 Recordable CD and DVD media keep their data only for a finite time
 (typically for many years). After that time, data loss develops slowly

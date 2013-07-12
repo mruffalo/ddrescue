@@ -6,8 +6,8 @@
 @finalout
 @c %**end of header
 
-@set UPDATED 7 June 2013
-@set VERSION 1.17-rc4
+@set UPDATED 9 July 2013
+@set VERSION 1.17
 
 @dircategory GNU Packages
 @direntry
@@ -36,19 +36,19 @@ This manual is for GNU ddrescue (version @value{VERSION}, @value{UPDATED}).
 
 @menu
 * Introduction::          Purpose and features of GNU ddrescue
-* Basic Concepts::        Blocks, clusters, devices, files, sectors, etc
-* Important Advice::      Read this or risk losing your data
+* Basic concepts::        Blocks, clusters, devices, files, sectors, etc
+* Important advice::      Read this or risk losing your data
 * Algorithm::             How ddrescue recovers the data
-* Invoking Ddrescue::     Command line interface
-* Logfile Structure::     Detailed format of the logfile
+* Invoking ddrescue::     Command line interface
+* Logfile structure::     Detailed format of the logfile
 * Examples::              A small tutorial with examples
-* Direct Disc Access::    Bypassing the kernel cache
-* Fill Mode::             Selectively overwriting the output file
-* Generate Mode::         Generating an approximate logfile
+* Direct disc access::    Bypassing the kernel cache
+* Fill mode::             Selectively overwriting the output file
+* Generate mode::         Generating an approximate logfile
 * Ddrescuelog::           Tool for ddrescue logfiles
-* Invoking Ddrescuelog::  Command line interface
+* Invoking ddrescuelog::  Command line interface
 * Problems::              Reporting bugs
-* Concept Index::         Index of concepts
+* Concept index::         Index of concepts
 @end menu
 
 @sp 1
@@ -90,9 +90,12 @@ successive copies.
 
 Ddrescue recommends lzip for compression of backups because of its
 reliability and data recovery capabilities, including error-checked
-merging of backup copies. The combination ddrescue + lziprecover is the
-best option for recovering data from multiple damaged copies.
-@xref{lziprecover-example}, for an example.
+merging of backup copies. Lziprecover makes lzip files resistant to
+bit-flip, one of the most common forms of data corruption, and its
+recovery capabilities contribute to make of the lzip format one of the
+best formats for long-term data archiving. The combination ddrescue +
+lziprecover is the best option for recovering data from multiple damaged
+copies. @xref{lziprecover-example}, for an example.
 
 Recordable CD and DVD media keep their data only for a finite time
 (typically for many years). After that time, data loss develops slowly
@@ -112,8 +115,8 @@ data, marking bad areas or even, in some cases, "repair" damaged
 sectors.
 
 
-@node Basic Concepts
-@chapter Basic Concepts
+@node Basic concepts
+@chapter Basic concepts
 @cindex basic concepts
 
 @table @asis
@@ -156,7 +159,7 @@ Hardware block. Smallest accessible amount of data on a device.
 @end table
 
 
-@node Important Advice
+@node Important advice
 @chapter Using ddrescue safely
 @cindex using ddrescue safely
 
@@ -277,8 +280,8 @@ ddrescue -d -r3 /dev/hdc hdimage logfile
 @end example
 
 
-@node Invoking Ddrescue
-@chapter Invoking Ddrescue
+@node Invoking ddrescue
+@chapter Invoking ddrescue
 @cindex invoking ddrescue
 @cindex options
 @cindex usage
@@ -387,8 +390,8 @@ regular file, but a device or partition.
 Fill the blocks in @var{outfile} specified as any of @var{types} in
 @var{logfile}, with data read from @var{infile}. @var{types} contains
 one or more of the status characters defined in the chapter Logfile
-Structure (@pxref{Logfile Structure}). See the chapter Fill Mode
-(@pxref{Fill Mode}) for a complete description of the fill mode.
+Structure (@pxref{Logfile structure}). See the chapter Fill mode
+(@pxref{Fill mode}) for a complete description of the fill mode.
 
 @item -g
 @itemx --generate-mode
@@ -396,14 +399,14 @@ Generate an approximate @var{logfile} from the @var{infile} and
 @var{outfile} of the original rescue run. Note that you must keep the
 original offset between @samp{--input-position} and
 @samp{--output-position} of the original rescue run. See the chapter
-Generate Mode (@pxref{Generate Mode}) for a complete description of the
+Generate mode (@pxref{Generate mode}) for a complete description of the
 generate mode.
 
 @item -i @var{bytes}
 @itemx --input-position=@var{bytes}
 Starting position in @var{infile}, in bytes. Defaults to 0. In fill mode
 it refers to a position in the @var{infile} of the original rescue run.
-See the chapter Fill Mode (@pxref{Fill Mode}) for details.
+See the chapter Fill mode (@pxref{Fill mode}) for details.
 
 @item -I
 @itemx --verify-input-size
@@ -557,8 +560,8 @@ invalid input file, 3 for an internal consistency error (eg, bug) which
 caused ddrescue to panic.
 
 
-@node Logfile Structure
-@chapter Logfile Structure
+@node Logfile structure
+@chapter Logfile structure
 @cindex logfile structure
 
 The logfile is a text file easy to read and edit. It is formed by three
@@ -739,7 +742,7 @@ ddrescue -b2048 /dev/cdrom cdimage2 logfile2
 mount -t iso9660 -o loop,ro cdimage2 /mnt/cdimage
 cp /mnt/cdimage/backup.tar.lz rescued2.tar.lz
 umount /mnt/cdimage
-lziprecover -m -v -o rescued.tar.lz rescued1.tar.lz rescued2.tar.lz
+lziprecover -m -v -o backup.tar.lz rescued1.tar.lz rescued2.tar.lz
 @end example
 
 @sp 1
@@ -781,8 +784,8 @@ ddrescue -d -f -r3 /dev/hda /dev/hdb logfile
 @end example
 
 
-@node Direct Disc Access
-@chapter Direct Disc Access
+@node Direct disc access
+@chapter Direct disc access
 @cindex direct disc access
 @cindex raw devices
 
@@ -841,8 +844,8 @@ mount -t ext2 -o ro /dev/hdc1 /mnt
 @end example
 
 
-@node Fill Mode
-@chapter Fill Mode
+@node Fill mode
+@chapter Fill mode
 @cindex fill Mode
 
 When ddrescue is invoked with the @samp{--fill-mode} option it operates
@@ -952,8 +955,8 @@ ddrescue --fill-mode=- /dev/zero cdimage logfile
 @end example
 
 
-@node Generate Mode
-@chapter Generate Mode
+@node Generate mode
+@chapter Generate mode
 @cindex generate Mode
 
 NOTE: When ddrescue is invoked with the @samp{--generate-mode} option it
@@ -1063,8 +1066,8 @@ e2fsck -v -f -L badblocks2 /dev/hdb2
 @end example
 
 
-@node Invoking Ddrescuelog
-@chapter Invoking Ddrescuelog
+@node Invoking ddrescuelog
+@chapter Invoking ddrescuelog
 @cindex invoking ddrescuelog
 
 The format for running ddrescuelog is:
@@ -1090,8 +1093,8 @@ Change the status of every block in the rescue domain from one type in
 @var{old_types} to the corresponding type in @var{new_types}, much like
 the @samp{tr} command does, and write the resulting logfile to standard
 output. @var{old_types} and @var{new_types} are strings of block status
-characters as defined in the chapter Logfile Structure (@pxref{Logfile
-Structure}). Blocks whose status is not in @var{old_types} are left
+characters as defined in the chapter Logfile structure (@pxref{Logfile
+structure}). Blocks whose status is not in @var{old_types} are left
 unchanged. If @var{new_types} is shorter than @var{old_types} the last
 type of @var{new_types} is repeated as many times as necessary.
 
@@ -1107,7 +1110,7 @@ Create a logfile from a list of block numbers read from standard input.
 Only blocks included in the rescue domain will be added to @var{logfile}.
 
 @var{type1} and @var{type2} are block status characters as defined in
-the chapter Logfile Structure (@pxref{Logfile Structure}). @var{type1}
+the chapter Logfile structure (@pxref{Logfile structure}). @var{type1}
 sets the type for blocks included in the list, while @var{type2} sets
 the type for the rest of the logfile. If not specified, @var{type1}
 defaults to @samp{+} and @var{type2} defaults to @samp{-}.
@@ -1138,7 +1141,7 @@ refers to a position in the original input file.
 Print on standard output the block numbers of the blocks specified as
 any of @var{types} in @var{logfile} and included in the rescue domain.
 @var{types} contains one or more of the block status characters defined
-in the chapter Logfile Structure (@pxref{Logfile Structure}).
+in the chapter Logfile structure (@pxref{Logfile structure}).
 
 The list format is one block number per line in decimal, like the output
 of the badblocks program, so that it can be used as input for e2fsck or
@@ -1232,8 +1235,8 @@ If you find a bug in GNU ddrescue, please send electronic mail to
 find by running @w{@samp{ddrescue --version}}.
 
 
-@node Concept Index
-@unnumbered Concept Index
+@node Concept index
+@unnumbered Concept index
 
 @printindex cp
 

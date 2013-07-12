@@ -1,53 +1,33 @@
-2013-06-07  Antonio Diaz Diaz  <antonio@gnu.org>
+2013-07-09  Antonio Diaz Diaz  <antonio@gnu.org>
 
-	* Version 1.17-rc4 released.
+	* Version 1.17 released.
+	* Added new option '-l, --logfile-size'.
+	* Added new option '-w, --ignore-write-errors'.
 	* Option '--fill' has been renamed to '--fill-mode'.
 	* Option '--generate-logfile' has been renamed to '--generate-mode'.
-	* rescuebook.cc: Mark failed blocks with 1 sector as bad-sector.
-	* configure: Options now accept a separate argument.
-
-2013-05-01  Antonio Diaz Diaz  <antonio@gnu.org>
-
-	* Version 1.17-rc3 released.
-	* Added new option '-w, --ignore-write-errors'.
-
-2013-03-19  Antonio Diaz Diaz  <ant_diaz@teleline.es>
-
-	* Version 1.17-rc2 released.
-	* ddrescue.h (Logbook::logfile_exists): Do not return false if
-	  logfile exists but is empty.
-	* Documented that 'direct disc access' only reads whole sectors.
-
-2013-03-07  Antonio Diaz Diaz  <ant_diaz@teleline.es>
-
-	* Version 1.17-rc1 released.
-	* Added new option '-l, --logfile-size'.
-	* rescuebook.cc: Largest blocks are now split first until
-	  logfile reaches '--logfile-size' entries.
+	* Added option '--sector-size' as a synonym of '--block-size'.
 	* Added option '--retries' as a synonym of '--max-retries'.
 	* Added option '--size' as a synonym of '--max-size'.
-
-2013-02-09  Antonio Diaz Diaz  <ant_diaz@teleline.es>
-
-	* Version 1.17-pre2 released.
 	* rescuebook.cc: Trimming is now done from both edges of each
 	  non-trimmed block. Largest blocks are trimmed first.
-	* ddrescue.h (slow_read): Return false for the first 10 seconds.
-
-2012-11-22  Antonio Diaz Diaz  <ant_diaz@teleline.es>
-
-	* Version 1.17-pre1 released.
-	* Added option '--sector-size' as a synonym of '--block-size'.
+	* rescuebook.cc: Largest blocks are now split first until
+	  logfile reaches '--logfile-size' entries.
 	* logbook.cc (extend_sblock_vector, truncate_vector): Terminate
 	  if truncation would discard finished blocks.
+	* rescuebook.cc: Mark failed blocks with 1 sector as bad-sector.
 	* logbook.cc (extend_sblock_vector): Remove last block of
 	  logfile if it starts at isize and is not marked as finished.
 	* io.cc (show_status,update_rates): Detect a jump back in time
 	  and adjust status.
+	* ddrescue.h (slow_read): Return false for the first 10 seconds.
 	* io.cc (show_status) Leave cursor after message so that ^C does
 	  not overwrite it.
 	* main.cc: Do not require '--force' for generate mode.
+	* ddrescue.h (Logbook::logfile_exists): Do not return false if
+	  logfile exists but is empty.
 	* Added new chapter 'Using ddrescue safely' to the manual.
+	* Documented that 'direct disc access' only reads whole sectors.
+	* configure: Options now accept a separate argument.
 	* Makefile.in: Added new target 'install-bin'.
 
 2012-06-11  Antonio Diaz Diaz  <ant_diaz@teleline.es>

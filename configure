@@ -7,7 +7,7 @@
 # to copy, distribute and modify it.
 
 pkgname=ddrescue
-pkgversion=1.17-rc4
+pkgversion=1.17
 progname=ddrescue
 srctrigger=ddrescue.h
 
@@ -101,7 +101,7 @@ while [ $# != 0 ] ; do
 	*=* | *-*-*) ;;
 	*)
 		echo "configure: unrecognized option: '${option}'" 1>&2
-		echo "Try 'configure --help' for more information."
+		echo "Try 'configure --help' for more information." 1>&2
 		exit 1 ;;
 	esac
 
@@ -126,10 +126,8 @@ if [ -z "${srcdir}" ] ; then
 fi
 
 if [ ! -r "${srcdir}/${srctrigger}" ] ; then
-	exec 1>&2
-	echo
-	echo "configure: Can't find sources in ${srcdir} ${srcdirtext}"
-	echo "configure: (At least ${srctrigger} is missing)."
+	echo "configure: Can't find sources in ${srcdir} ${srcdirtext}" 1>&2
+	echo "configure: (At least ${srctrigger} is missing)." 1>&2
 	exit 1
 fi
 
