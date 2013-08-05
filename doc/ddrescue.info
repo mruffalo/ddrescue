@@ -12,7 +12,7 @@ File: ddrescue.info,  Node: Top,  Next: Introduction,  Up: (dir)
 GNU ddrescue Manual
 *******************
 
-This manual is for GNU ddrescue (version 1.17, 9 July 2013).
+This manual is for GNU ddrescue (version 1.18-pre1, 5 August 2013).
 
 * Menu:
 
@@ -64,19 +64,18 @@ to fill in the gaps without wiping out the data already rescued.
    Automatic merging of backups: If you have two or more damaged copies
 of a file, cdrom, etc, and run ddrescue on all of them, one at a time,
 with the same output file, you will probably obtain a complete and
-error-free file. This is so because the probability of having damaged
-areas at the same places on different input files is very low. Using
-the logfile, only the needed blocks are read from the second and
-successive copies.
+error-free file. This is so because the probability of having the same
+area damaged in all copies is low. Using the logfile, only the needed
+blocks are read from the second and successive copies.
 
-   Ddrescue recommends lzip for compression of backups because of its
-reliability and data recovery capabilities, including error-checked
-merging of backup copies. Lziprecover makes lzip files resistant to
-bit-flip, one of the most common forms of data corruption, and its
-recovery capabilities contribute to make of the lzip format one of the
-best formats for long-term data archiving. The combination ddrescue +
-lziprecover is the best option for recovering data from multiple damaged
-copies. *Note lziprecover-example::, for an example.
+   Ddrescue recommends lzip for compression of backups because the lzip
+format is designed for long-term data archiving and provides data
+recovery capabilities which nicely complement those of ddrescue.
+(Ddrescue fills unreadable sectors with data from other copies, while
+lziprecover corrects corrupt sectors with data from other copies). If
+the cause of file corruption is damaged media, the combination ddrescue
++ lziprecover is the best option for recovering data from multiple
+damaged copies. *Note lziprecover-example::, for an example.
 
    Recordable CD and DVD media keep their data only for a finite time
 (typically for many years). After that time, data loss develops slowly
@@ -366,7 +365,7 @@ The format for running ddrescue is:
      Logfile structure::). See the chapter Fill mode (*note Fill
      mode::) for a complete description of the fill mode.
 
-`-g'
+`-G'
 `--generate-mode'
      Generate an approximate LOGFILE from the INFILE and OUTFILE of the
      original rescue run. Note that you must keep the original offset
@@ -504,6 +503,24 @@ The format for running ddrescue is:
      option does nothing. Use this option to guarantee a minimum size
      for OUTFILE. Only regular files can be extended.
 
+`-1 FILE'
+`--log-rates=FILE'
+     Log rates and error sizes every second into FILE. Every time the
+     screen is updated with new details, some of those details (time,
+     input position, current and average rates, number of errors and
+     error size) are written to FILE. This allows a posterior analysis
+     of the drive to see if it has any weak zones (areas where the
+     transfer rate drops well below the sustained average).
+
+`-2 FILE'
+`--log-reads=FILE'
+     Log all read operations into FILE. Every read attempt and its
+     result (position, size, copied size and error size) is written to
+     FILE. A line is also written at the beginning of each phase
+     (copying, trimming, splitting and retrying). Finally, a line with
+     a time mark is written every second (unless the read takes more
+     time). Use this option with caution because FILE may become very
+     large very quickly.
 
 
    Numbers given as arguments to options (positions, sizes, retries,
@@ -578,7 +595,7 @@ Character   Meaning
 
 And here is an example logfile:
 
-# Rescue Logfile. Created by GNU ddrescue version 1.17
+# Rescue Logfile. Created by GNU ddrescue version 1.18-pre1
 # Command line: ddrescue /dev/fd0 fdimage logfile
 # current_pos  current_status
 0x00120000     ?
@@ -721,7 +738,7 @@ File: ddrescue.info,  Node: Direct disc access,  Next: Fill mode,  Prev: Example
 8 Direct disc access
 ********************
 
-If you notice that the positions and sizes in the log file are ALWAYS
+If you notice that the positions and sizes in the logfile are ALWAYS
 multiples of the sector size, maybe your kernel is caching the disc
 accesses and grouping them. In this case you may want to use direct disc
 access or a raw device to bypass the kernel cache and rescue more of
@@ -1120,7 +1137,7 @@ caused ddrescuelog to panic.
 
 File: ddrescue.info,  Node: Problems,  Next: Concept index,  Prev: Invoking ddrescuelog,  Up: Top
 
-13 Reporting Bugs
+13 Reporting bugs
 *****************
 
 There are probably bugs in ddrescue. There are certainly errors and
@@ -1164,21 +1181,21 @@ Concept index
 
 Tag Table:
 Node: Top203
-Node: Introduction1368
-Node: Basic concepts4081
-Node: Important advice5561
-Node: Algorithm6670
-Node: Invoking ddrescue10549
-Node: Logfile structure21284
-Node: Examples23534
-Ref: lziprecover-example26507
-Node: Direct disc access28347
-Node: Fill mode30425
-Node: Generate mode34565
-Node: Ddrescuelog36512
-Node: Invoking ddrescuelog38661
-Node: Problems44152
-Node: Concept index44709
+Node: Introduction1375
+Node: Basic concepts4064
+Node: Important advice5544
+Node: Algorithm6653
+Node: Invoking ddrescue10532
+Node: Logfile structure22171
+Node: Examples24426
+Ref: lziprecover-example27399
+Node: Direct disc access29239
+Node: Fill mode31316
+Node: Generate mode35456
+Node: Ddrescuelog37403
+Node: Invoking ddrescuelog39552
+Node: Problems45043
+Node: Concept index45600
 
 End Tag Table
 

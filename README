@@ -24,21 +24,20 @@ every time you run it on the same output file, it tries to fill in the
 gaps without wiping out the data already rescued.
 
 Automatic merging of backups: If you have two or more damaged copies of
-a file, cdrom, etc, and run ddrescue on all of them, one at a time,
-with the same output file, you will probably obtain a complete and
-error-free file. This is so because the probability of having damaged
-areas at the same places on different input files is very low. Using
-the logfile, only the needed blocks are read from the second and
-successive copies.
+a file, cdrom, etc, and run ddrescue on all of them, one at a time, with
+the same output file, you will probably obtain a complete and error-free
+file. This is so because the probability of having the same area damaged
+in all copies is low. Using the logfile, only the needed blocks are read
+from the second and successive copies.
 
-Ddrescue recommends lzip for compression of backups because of its
-reliability and data recovery capabilities, including error-checked
-merging of backup copies. Lziprecover makes lzip files resistant to
-bit-flip, one of the most common forms of data corruption, and its
-recovery capabilities contribute to make of the lzip format one of the
-best formats for long-term data archiving. The combination ddrescue +
-lziprecover is the best option for recovering data from multiple damaged
-copies.
+Ddrescue recommends lzip for compression of backups because the lzip
+format is designed for long-term data archiving and provides data
+recovery capabilities which nicely complement those of ddrescue.
+(Ddrescue fills unreadable sectors with data from other copies, while
+lziprecover corrects corrupt sectors with data from other copies). If
+the cause of file corruption is damaged media, the combination ddrescue
++ lziprecover is the best option for recovering data from multiple
+damaged copies.
 
 Recordable CD and DVD media keep their data only for a finite time
 (typically for many years). After that time, data loss develops slowly

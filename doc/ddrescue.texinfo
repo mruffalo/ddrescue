@@ -6,8 +6,8 @@
 @finalout
 @c %**end of header
 
-@set UPDATED 9 July 2013
-@set VERSION 1.17
+@set UPDATED 5 August 2013
+@set VERSION 1.18-pre1
 
 @dircategory GNU Packages
 @direntry
@@ -81,21 +81,20 @@ every time you run it on the same output file, it tries to fill in the
 gaps without wiping out the data already rescued.
 
 Automatic merging of backups: If you have two or more damaged copies of
-a file, cdrom, etc, and run ddrescue on all of them, one at a time,
-with the same output file, you will probably obtain a complete and
-error-free file. This is so because the probability of having damaged
-areas at the same places on different input files is very low. Using
-the logfile, only the needed blocks are read from the second and
-successive copies.
+a file, cdrom, etc, and run ddrescue on all of them, one at a time, with
+the same output file, you will probably obtain a complete and error-free
+file. This is so because the probability of having the same area damaged
+in all copies is low. Using the logfile, only the needed blocks are read
+from the second and successive copies.
 
-Ddrescue recommends lzip for compression of backups because of its
-reliability and data recovery capabilities, including error-checked
-merging of backup copies. Lziprecover makes lzip files resistant to
-bit-flip, one of the most common forms of data corruption, and its
-recovery capabilities contribute to make of the lzip format one of the
-best formats for long-term data archiving. The combination ddrescue +
-lziprecover is the best option for recovering data from multiple damaged
-copies. @xref{lziprecover-example}, for an example.
+Ddrescue recommends lzip for compression of backups because the lzip
+format is designed for long-term data archiving and provides data
+recovery capabilities which nicely complement those of ddrescue.
+(Ddrescue fills unreadable sectors with data from other copies, while
+lziprecover corrects corrupt sectors with data from other copies). If
+the cause of file corruption is damaged media, the combination ddrescue
++ lziprecover is the best option for recovering data from multiple
+damaged copies. @xref{lziprecover-example}, for an example.
 
 Recordable CD and DVD media keep their data only for a finite time
 (typically for many years). After that time, data loss develops slowly
@@ -393,7 +392,7 @@ one or more of the status characters defined in the chapter Logfile
 Structure (@pxref{Logfile structure}). See the chapter Fill mode
 (@pxref{Fill mode}) for a complete description of the fill mode.
 
-@item -g
+@item -G
 @itemx --generate-mode
 Generate an approximate @var{logfile} from the @var{infile} and
 @var{outfile} of the original rescue run. Note that you must keep the
@@ -532,9 +531,27 @@ If the size of @var{outfile} is already equal or longer than @var{bytes}
 then this option does nothing. Use this option to guarantee a minimum
 size for @var{outfile}. Only regular files can be extended.
 
+@item -1 @var{file}
+@itemx --log-rates=@var{file}
+Log rates and error sizes every second into @var{file}. Every time the
+screen is updated with new details, some of those details (time, input
+position, current and average rates, number of errors and error size)
+are written to @var{file}. This allows a posterior analysis of the drive
+to see if it has any weak zones (areas where the transfer rate drops
+well below the sustained average).
+
+@item -2 @var{file}
+@itemx --log-reads=@var{file}
+Log all read operations into @var{file}. Every read attempt and its
+result (position, size, copied size and error size) is written to
+@var{file}. A line is also written at the beginning of each phase
+(copying, trimming, splitting and retrying). Finally, a line with a time
+mark is written every second (unless the read takes more time). Use this
+option with caution because @var{file} may become very large very
+quickly.
+
 @end table
 
-@sp 1
 Numbers given as arguments to options (positions, sizes, retries, etc)
 may be followed by a multiplier and an optional @samp{B} for "byte".
 
@@ -789,7 +806,7 @@ ddrescue -d -f -r3 /dev/hda /dev/hdb logfile
 @cindex direct disc access
 @cindex raw devices
 
-If you notice that the positions and sizes in the log file are ALWAYS
+If you notice that the positions and sizes in the logfile are ALWAYS
 multiples of the sector size, maybe your kernel is caching the disc
 accesses and grouping them. In this case you may want to use direct disc
 access or a raw device to bypass the kernel cache and rescue more of
@@ -1221,7 +1238,7 @@ caused ddrescuelog to panic.
 
 
 @node Problems
-@chapter Reporting Bugs
+@chapter Reporting bugs
 @cindex bugs
 @cindex getting help
 

@@ -26,7 +26,6 @@
 #include <stdint.h>
 
 #include "block.h"
-#include "ddrescue.h"
 
 
 // Align pos to next boundary if size is big enough

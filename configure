@@ -7,9 +7,9 @@
 # to copy, distribute and modify it.
 
 pkgname=ddrescue
-pkgversion=1.17
+pkgversion=1.18-pre1
 progname=ddrescue
-srctrigger=ddrescue.h
+srctrigger=doc/${pkgname}.texinfo
 
 # clear some things potentially inherited from environment.
 LC_ALL=C

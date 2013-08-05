@@ -122,7 +122,7 @@ class Fillbook : public Logbook
 					// variables for show_status
   long long a_rate, c_rate, first_size, last_size;
   long long last_ipos;
-  long t0, t1;
+  long t0, t1;				// start, current times
 
   int fill_areas( const std::string & filltypes );
   int fill_block( const Block & b );
@@ -151,7 +151,7 @@ class Genbook : public Logbook
 					// variables for show_status
   long long a_rate, c_rate, first_size, last_size;
   long long last_ipos;
-  long t0, t1;
+  long t0, t1;				// start, current times
   int oldlen;
 
   void check_block( const Block & b, int & copied_size, int & error_size );
@@ -288,14 +288,3 @@ inline int round_up( int size, const int hardbs )
 const char * format_time( long t );
 bool interrupted();
 void set_signals();
-
-
-// Defined in main_common.cc
-//
-extern int verbosity;
-void internal_error( const char * const msg );
-void show_error( const char * const msg,
-                 const int errcode = 0, const bool help = false );
-void write_logfile_header( FILE * const f );
-const char * format_num( long long num, long long limit = 999999,
-                         const int set_prefix = 0 );

@@ -461,8 +461,7 @@ int do_show_status( Domain & domain, const char * const logname )
                format_num( logbook.current_pos() ),
                logbook.status_name( logbook.current_status() ) );
   std::printf( "domain size: %10sB,  in %4d area(s)\n",
-               format_num( domain_size ),
-               logbook.domain().blocks() );
+               format_num( domain_size ), logbook.domain().blocks() );
   std::printf( "    rescued: %10sB,  in %4d area(s)  (%s)\n",
                format_num( size_finished ), areas_finished,
                format_percentage( size_finished, domain_size ) );

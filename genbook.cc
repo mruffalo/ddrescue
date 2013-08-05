@@ -90,8 +90,8 @@ int Genbook::do_generate( const int odes )
     if( logfile_exists() )
       {
       std::printf( "Initial status (read from logfile)\n" );
-      std::printf( "rescued: %10sB,", format_num( recsize ) );
-      std::printf( "  generated:%10sB\n", format_num( gensize ) );
+      std::printf( "rescued: %10sB,  generated:%10sB\n",
+                   format_num( recsize ), format_num( gensize ) );
       std::printf( "Current status\n" );
       }
     }

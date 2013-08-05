@@ -10,9 +10,9 @@ Procedure
 ---------
 1. Unpack the archive if you have not done so already:
 
-	lzip -cd ddrescue[version].tar.lz | tar -xf -
+	tar -xf ddrescue[version].tar.lz
 or
-	gzip -cd ddrescue[version].tar.gz | tar -xf -
+	lzip -cd ddrescue[version].tar.lz | tar -xf -
 
 This creates the directory ./ddrescue[version] containing the source from
 the main archive.

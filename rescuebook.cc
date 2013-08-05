@@ -29,6 +29,7 @@
 
 #include "block.h"
 #include "ddrescue.h"
+#include "loggers.h"
 
 
 namespace {
@@ -82,8 +83,9 @@ int Rescuebook::copy_and_update( const Block & b, const Sblock::Status st,
   if( errors_or_timeout() ) return 1;
   if( interrupted() ) return -1;
   int retval = copy_block( b, copied_size, error_size );
-  if( !retval )
+  if( retval == 0 )
     {
+    read_logger.print_line( b.pos(), b.size(), copied_size, error_size );
     if( copied_size + error_size < b.size() )			// EOF
       {
       if( complete_only ) truncate_domain( b.pos() + copied_size + error_size );
@@ -263,6 +265,7 @@ int Rescuebook::trim_errors()
   {
   const char * const msg = "Trimming failed blocks...";
   bool first_post = true;
+  read_logger.print_msg( t1 - t0, msg );
 
   while( true )
     {
@@ -326,6 +329,7 @@ int Rescuebook::split_errors( const bool reverse )
   {
   const char * const msg = "Splitting failed blocks...";
   bool first_post = true;
+  read_logger.print_msg( t1 - t0, msg );
 
   while( true )
     {
@@ -457,6 +461,7 @@ int Rescuebook::copy_errors()
     long long pos = 0;
     bool first_post = true, block_found = false;
     snprintf( msgbuf + msglen, ( sizeof msgbuf ) - msglen, "%d", retry );
+    read_logger.print_msg( t1 - t0, msgbuf );
 
     if( retry == 1 && current_status() == retrying &&
         domain().includes( current_pos() ) )
@@ -502,6 +507,7 @@ int Rescuebook::rcopy_errors()
     long long end = LLONG_MAX;
     bool first_post = true, block_found = false;
     snprintf( msgbuf + msglen, ( sizeof msgbuf ) - msglen, "%d", retry );
+    read_logger.print_msg( t1 - t0, msgbuf );
 
     if( retry == 1 && current_status() == retrying &&
         domain().includes( current_pos() - 1 ) )
@@ -608,13 +614,12 @@ int Rescuebook::do_rescue( const int ides, const int odes, const bool reverse )
     if( logfile_exists() )
       {
       std::printf( "Initial status (read from logfile)\n" );
-      std::printf( "rescued: %10sB,", format_num( recsize ) );
-      std::printf( "  errsize:%9sB,", format_num( errsize, 99999 ) );
-      std::printf( "  errors: %7u\n", errors );
+      std::printf( "rescued: %10sB,  errsize:%9sB,  errors: %7u\n",
+                   format_num( recsize ), format_num( errsize, 99999 ), errors );
       if( verbosity >= 2 )
         {
-        std::printf( "current position:  %10sB,", format_num( current_pos() ) );
-        std::printf( "     current sector: %7lld\n", current_pos() / hardbs() );
+        std::printf( "current position:  %10sB,     current sector: %7lld\n",
+                     format_num( current_pos() ), current_pos() / hardbs() );
         if( sblocks() )
           std::printf( "last block size:   %10sB\n",
                        format_num( sblock( sblocks() - 1 ).size() ) );
@@ -626,16 +631,19 @@ int Rescuebook::do_rescue( const int ides, const int odes, const bool reverse )
   int retval = 0;
   update_rates();				// first call
   if( copy_pending && !errors_or_timeout() )
+    {
+    read_logger.print_msg( t1 - t0, "Copying non-tried blocks..." );
     retval = ( reverse ? rcopy_non_tried() : copy_non_tried() );
-  if( !retval && trim_pending && !errors_or_timeout() )
+    }
+  if( retval == 0 && trim_pending && !errors_or_timeout() )
     retval = trim_errors();
-  if( !retval && split_pending && !nosplit && !errors_or_timeout() )
+  if( retval == 0 && split_pending && !nosplit && !errors_or_timeout() )
     retval = split_errors( reverse );
-  if( !retval && max_retries != 0 && !errors_or_timeout() )
+  if( retval == 0 && max_retries != 0 && !errors_or_timeout() )
     retval = ( reverse ? rcopy_errors() : copy_errors() );
   if( !rates_updated ) update_rates( true );	// force update of e_code
   show_status( -1, (retval ? 0 : "Finished"), true );
-  if( !retval && errors_or_timeout() ) retval = 1;
+  if( retval == 0 && errors_or_timeout() ) retval = 1;
   if( verbosity >= 0 )
     {
     if( retval == -2 ) std::printf( "\nLogfile error" );
@@ -663,6 +671,14 @@ int Rescuebook::do_rescue( const int ides, const int odes, const bool reverse )
     compact_sblock_vector();
     if( !update_logfile( odes_, true ) && retval == 0 ) retval = 1;
     }
+  while( close( odes_ ) != 0 )
+    if( errno != EINTR  )
+      { show_error( "Can't close outfile", errno );
+        if( retval == 0 ) retval = 1; }
+  if( !rate_logger.close_file() )
+    show_error( "warning: Error closing the rates logging file." );
+  if( !read_logger.close_file() )
+    show_error( "warning: Error closing the reads logging file." );
   if( final_msg() ) show_error( final_msg(), final_errno() );
   return retval;
   }

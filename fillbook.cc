@@ -97,10 +97,10 @@ int Fillbook::do_fill( const int odes, const std::string & filltypes )
     if( logfile_exists() )
       {
       std::printf( "Initial status (read from logfile)\n" );
-      std::printf( "filled size:    %10sB,", format_num( filled_size ) );
-      std::printf( "  filled areas:    %7u\n", filled_areas );
-      std::printf( "remaining size: %10sB,", format_num( remaining_size ) );
-      std::printf( "  remaining areas: %7u\n", remaining_areas );
+      std::printf( "filled size:    %10sB,  filled areas:    %7u\n",
+                   format_num( filled_size ), filled_areas );
+      std::printf( "remaining size: %10sB,  remaining areas: %7u\n",
+                   format_num( remaining_size ), remaining_areas );
       std::printf( "Current status\n" );
       }
     }

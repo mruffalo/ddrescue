@@ -166,3 +166,14 @@ public:
   void crop( const Block & b );
   void crop_by_file_size( const long long end );
   };
+
+
+// Defined in main_common.cc
+//
+extern int verbosity;
+void internal_error( const char * const msg );
+void show_error( const char * const msg,
+                 const int errcode = 0, const bool help = false );
+void write_logfile_header( FILE * const f );
+const char * format_num( long long num, long long limit = 999999,
+                         const int set_prefix = 0 );

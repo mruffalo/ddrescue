@@ -6,8 +6,8 @@ INSTALL_DATA = $(INSTALL) -p -m 644
 INSTALL_DIR = $(INSTALL) -d -m 755
 SHELL = /bin/sh
 
-ddobjs = block.o fillbook.o genbook.o io.o logbook.o rescuebook.o main.o
-objs = arg_parser.o rational.o $(ddobjs)
+ddobjs = fillbook.o genbook.o io.o logbook.o rescuebook.o main.o
+objs = arg_parser.o block.o loggers.o rational.o $(ddobjs)
 logobjs = arg_parser.o block.o logbook.o ddrescuelog.o
 
 
@@ -41,8 +41,12 @@ ddrescuelog.o : ddrescuelog.cc
 $(objs)       : Makefile
 $(ddobjs)     : block.h ddrescue.h
 arg_parser.o  : arg_parser.h
+block.o       : block.h
+io.o          : loggers.h
+loggers.o     : block.h loggers.h
 rational.o    : rational.h
-main.o        : arg_parser.h rational.h main_common.cc
+rescuebook.o  : loggers.h
+main.o        : arg_parser.h rational.h loggers.h main_common.cc
 ddrescuelog.o : Makefile arg_parser.h block.h ddrescue.h main_common.cc
 
 

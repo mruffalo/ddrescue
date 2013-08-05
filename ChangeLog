@@ -1,3 +1,10 @@
+2013-08-05  Antonio Diaz Diaz  <antonio@gnu.org>
+
+	* Version 1.18-pre1 released.
+	* Added new option '-1, --log-rates'.
+	* Added new option '-2, --log-reads'.
+	* Changed short name of option '--generate-mode' to '-G'.
+
 2013-07-09  Antonio Diaz Diaz  <antonio@gnu.org>
 
 	* Version 1.17 released.

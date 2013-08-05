@@ -40,6 +40,7 @@
 #include "rational.h"
 #include "block.h"
 #include "ddrescue.h"
+#include "loggers.h"
 
 #ifndef O_DIRECT
 #define O_DIRECT 0
@@ -70,7 +71,7 @@ void show_help( const int cluster, const int hardbs, const int skipbs )
                "\nUsage: %s [options] infile outfile [logfile]\n", invocation_name );
   std::printf( "You should use a logfile unless you know what you are doing.\n"
                "If you reboot, check the device names before restarting ddrescue.\n"
-               "Do not use options '-F' or '-g' without reading the manual first.\n"
+               "Do not use options '-F' or '-G' without reading the manual first.\n"
                "\nOptions:\n"
                "  -h, --help                     display this help and exit\n"
                "  -V, --version                  output version information and exit\n"
@@ -86,7 +87,7 @@ void show_help( const int cluster, const int hardbs, const int skipbs )
                "  -E, --max-error-rate=<bytes>   maximum allowed rate of read errors per second\n"
                "  -f, --force                    overwrite output device or partition\n"
                "  -F, --fill-mode=<types>        fill given type blocks with infile data (?*/-+)\n"
-               "  -g, --generate-mode            generate approximate logfile from partial copy\n"
+               "  -G, --generate-mode            generate approximate logfile from partial copy\n"
                "  -i, --input-position=<bytes>   starting position in input file [0]\n"
                "  -I, --verify-input-size        verify input file size with size in logfile\n"
                "  -K, --skip-size=<bytes>        initial size to skip on read error [%sB]\n",
@@ -107,6 +108,8 @@ void show_help( const int cluster, const int hardbs, const int skipbs )
                "  -v, --verbose                  be verbose (a 2nd -v gives more)\n"
                "  -w, --ignore-write-errors      make fill mode ignore write errors\n"
                "  -x, --extend-outfile=<bytes>   extend outfile size to be at least this long\n"
+               "  -1, --log-rates=<file>         log rates and error sizes into file\n"
+               "  -2, --log-reads=<file>         log all read operations into file\n"
                "Numbers may be followed by a multiplier: s = sectors, k = kB = 10^3 = 1000,\n"
                "Ki = KiB = 2^10 = 1024, M = 10^6, Mi = 2^20, G = 10^9, Gi = 2^30, etc...\n"
                "Time intervals have the format 1[.5][smhd] or 1/2[smhd].\n"
@@ -257,9 +260,8 @@ int do_fill( const long long offset, Domain & domain,
                  iname, oname, filltypes.c_str() );
     std::printf( "    Maximum size to fill: %sBytes\n",
                  format_num( fillbook.domain().in_size() ) );
-    std::printf( "    Starting positions: infile = %sB",
-                 format_num( fillbook.domain().pos() ) );
-    std::printf( ",  outfile = %sB\n",
+    std::printf( "    Starting positions: infile = %sB,  outfile = %sB\n",
+                 format_num( fillbook.domain().pos() ),
                  format_num( fillbook.domain().pos() + fillbook.offset() ) );
     std::printf( "    Copy block size: %3d sectors\n", cluster );
     std::printf( "Sector size: %sBytes\n\n", format_num( hardbs, 99999 ) );
@@ -308,9 +310,8 @@ int do_generate( const long long offset, Domain & domain,
     {
     std::printf( "About to generate an approximate logfile for %s and %s\n",
                  iname, oname );
-    std::printf( "    Starting positions: infile = %sB",
-                 format_num( genbook.domain().pos() ) );
-    std::printf( ",  outfile = %sB\n",
+    std::printf( "    Starting positions: infile = %sB,  outfile = %sB\n",
+                 format_num( genbook.domain().pos() ),
                  format_num( genbook.domain().pos() + genbook.offset() ) );
     std::printf( "    Copy block size: %3d sectors\n", cluster );
     std::printf( "Sector size: %sBytes\n\n", format_num( hardbs, 99999 ) );
@@ -383,6 +384,10 @@ int do_rescue( const long long offset, Domain & domain,
     show_error( "warning: Preallocation not available." ); break;
 #endif
     }
+  if( !rate_logger.open_file() )
+    { show_error( "Can't open file for logging rates", errno ); return 1; }
+  if( !read_logger.open_file() )
+    { show_error( "Can't open file for logging reads", errno ); return 1; }
 
   if( !rescuebook.update_logfile( -1, true ) ) return 1;
 
@@ -392,13 +397,12 @@ int do_rescue( const long long offset, Domain & domain,
     {
     std::printf( "About to copy %sBytes from %s to %s\n",
                  format_num( rescuebook.domain().in_size() ), iname, oname );
-    std::printf( "    Starting positions: infile = %sB",
-                 format_num( rescuebook.domain().pos() ) );
-    std::printf( ",  outfile = %sB\n",
+    std::printf( "    Starting positions: infile = %sB,  outfile = %sB\n",
+                 format_num( rescuebook.domain().pos() ),
                  format_num( rescuebook.domain().pos() + rescuebook.offset() ) );
-    std::printf( "    Copy block size: %3d sectors", cluster );
-    std::printf( "       Initial skip size: %d sectors\n",
-                 rb_opts.skipbs / hardbs );
+    std::printf( "    Copy block size: %3d sectors"
+                 "       Initial skip size: %d sectors\n",
+                 cluster, rb_opts.skipbs / hardbs );
     std::printf( "Sector size: %sBytes\n", format_num( hardbs, 99999 ) );
     if( verbosity >= 2 )
       {
@@ -472,6 +476,8 @@ int main( const int argc, const char * const argv[] )
 
   const Arg_parser::Option options[] =
     {
+    { '1', "log-rates",           Arg_parser::yes },
+    { '2', "log-reads",           Arg_parser::yes },
     { 'a', "min-read-rate",       Arg_parser::yes },
     { 'A', "try-again",           Arg_parser::no  },
     { 'b', "block-size",          Arg_parser::yes },
@@ -485,7 +491,7 @@ int main( const int argc, const char * const argv[] )
     { 'E', "max-error-rate",      Arg_parser::yes },
     { 'f', "force",               Arg_parser::no  },
     { 'F', "fill-mode",           Arg_parser::yes },
-    { 'g', "generate-mode",       Arg_parser::no  },
+    { 'G', "generate-mode",       Arg_parser::no  },
     { 'h', "help",                Arg_parser::no  },
     { 'i', "input-position",      Arg_parser::yes },
     { 'I', "verify-input-size",   Arg_parser::no  },
@@ -523,6 +529,8 @@ int main( const int argc, const char * const argv[] )
     const char * const arg = parser.argument( argind ).c_str();
     switch( code )
       {
+      case '1': rate_logger.set_filename( arg ); break;
+      case '2': read_logger.set_filename( arg ); break;
       case 'a': rb_opts.min_read_rate = getnum( arg, hardbs, 0 ); break;
       case 'A': rb_opts.try_again = true; break;
       case 'b': hardbs = getnum( arg, 0, 1, max_hardbs ); break;
@@ -540,7 +548,7 @@ int main( const int argc, const char * const argv[] )
       case 'f': force = true; break;
       case 'F': set_mode( program_mode, m_fill ); filltypes = arg;
                 check_types( filltypes, "fill-mode" ); break;
-      case 'g': set_mode( program_mode, m_generate ); break;
+      case 'G': set_mode( program_mode, m_generate ); break;
       case 'h': show_help( cluster_bytes / default_hardbs, default_hardbs,
                            Rb_options::default_skipbs );
                 return 0;

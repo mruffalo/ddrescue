@@ -175,17 +175,20 @@ const char * format_num( long long num, long long limit,
     { "k", "M", "G", "T", "P", "E", "Z", "Y" };
   const char * const binary_prefix[8] =
     { "Ki", "Mi", "Gi", "Ti", "Pi", "Ei", "Zi", "Yi" };
+  enum { buffers = 16, bufsize = 16 };
+  static char buffer[buffers][bufsize];	// circle of static buffers for printf
+  static int current = 0;
   static bool si = true;
-  static char buf[16];
 
   if( set_prefix ) si = ( set_prefix > 0 );
   const int factor = ( si ? 1000 : 1024 );
+  char * const buf = buffer[current++]; current %= buffers;
   const char * const * prefix = ( si ? si_prefix : binary_prefix );
   const char * p = "";
   limit = std::max( 999LL, std::min( 999999LL, limit ) );
 
   for( int i = 0; i < 8 && llabs( num ) > limit; ++i )
     { num /= factor; p = prefix[i]; }
-  snprintf( buf, sizeof buf, "%lld %s", num, p );
+  snprintf( buf, bufsize, "%lld %s", num, p );
   return buf;
   }

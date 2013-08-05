@@ -33,6 +33,7 @@
 
 #include "block.h"
 #include "ddrescue.h"
+#include "loggers.h"
 
 
 namespace {
@@ -133,12 +134,12 @@ void Fillbook::show_status( const long long ipos, bool force )
       last_size = filled_size;
       }
     std::printf( "\r%s%s%s", up, up, up );
-    std::printf( "filled size: %10sB,", format_num( filled_size ) );
-    std::printf( "  filled areas: %6u,", filled_areas );
-    std::printf( "  current rate: %9sB/s\n", format_num( c_rate, 99999 ) );
-    std::printf( "remain size: %10sB,", format_num( remaining_size ) );
-    std::printf( "  remain areas: %6u,", remaining_areas );
-    std::printf( "  average rate: %9sB/s\n", format_num( a_rate, 99999 ) );
+    std::printf( "filled size: %10sB,  filled areas: %6u,  current rate: %9sB/s\n",
+                 format_num( filled_size ), filled_areas,
+                 format_num( c_rate, 99999 ) );
+    std::printf( "remain size: %10sB,  remain areas: %6u,  average rate: %9sB/s\n",
+                 format_num( remaining_size ), remaining_areas,
+                 format_num( a_rate, 99999 ) );
     std::printf( "current pos: %10sB\n", format_num( last_ipos + offset() ) );
     std::fflush( stdout );
     }
@@ -209,12 +210,12 @@ void Genbook::show_status( const long long ipos, const char * const msg,
       last_size = gensize;
       }
     std::printf( "\r%s%s", up, up );
-    std::printf( "rescued: %10sB,", format_num( recsize ) );
-    std::printf( "  generated:%10sB,", format_num( gensize ) );
-    std::printf( "  current rate: %9sB/s\n", format_num( c_rate, 99999 ) );
-    std::printf( "   opos: %10sB,                        ",
-                 format_num( last_ipos + offset() ) );
-    std::printf( "  average rate: %9sB/s\n", format_num( a_rate, 99999 ) );
+    std::printf( "rescued: %10sB,  generated:%10sB,  current rate: %9sB/s\n",
+                 format_num( recsize ), format_num( gensize ),
+                 format_num( c_rate, 99999 ) );
+    std::printf( "   opos: %10sB,                          average rate: %9sB/s\n",
+                 format_num( last_ipos + offset() ),
+                 format_num( a_rate, 99999 ) );
     if( msg && msg[0] )
       {
       const int len = std::strlen( msg ); std::printf( "\r%s", msg );
@@ -330,15 +331,14 @@ void Rescuebook::show_status( const long long ipos, const char * const msg,
     if( verbosity >= 0 )
       {
       std::printf( "\r%s%s%s", up, up, up );
-      std::printf( "rescued: %10sB,", format_num( recsize ) );
-      std::printf( "  errsize:%9sB,", format_num( errsize, 99999 ) );
-      std::printf( "  current rate: %9sB/s\n", format_num( c_rate, 99999 ) );
-      std::printf( "   ipos: %10sB,   errors: %7u,  ",
-                   format_num( last_ipos ), errors );
-      std::printf( "  average rate: %9sB/s\n", format_num( a_rate, 99999 ) );
-      std::printf( "   opos: %10sB,", format_num( last_ipos + offset() ) );
-      std::printf( "    time since last successful read: %9s\n",
-                   format_time( t1 - ts ) );
+      std::printf( "rescued: %10sB,  errsize:%9sB,  current rate: %9sB/s\n",
+                   format_num( recsize ), format_num( errsize, 99999 ),
+                   format_num( c_rate, 99999 ) );
+      std::printf( "   ipos: %10sB,   errors: %7u,    average rate: %9sB/s\n",
+                   format_num( last_ipos ), errors,
+                   format_num( a_rate, 99999 ) );
+      std::printf( "   opos: %10sB,    time since last successful read: %9s\n",
+                   format_num( last_ipos + offset() ), format_time( t1 - ts ) );
       if( msg && msg[0] && !errors_or_timeout() )
         {
         const int len = std::strlen( msg ); std::printf( "\r%s", msg );
@@ -347,6 +347,8 @@ void Rescuebook::show_status( const long long ipos, const char * const msg,
         }
       std::fflush( stdout );
       }
+    rate_logger.print_line( t1 - t0, last_ipos, a_rate, c_rate, errors, errsize );
+    if( !force ) read_logger.print_time( t1 - t0 );
     rates_updated = false;
     }
   }
