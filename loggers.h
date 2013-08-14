@@ -32,7 +32,9 @@ public:
 
 class Rate_logger : public Logger
   {
+  long last_time;
 public:
+  Rate_logger() : last_time( -1 ) {}
   bool open_file();
   bool print_line( const long time, const long long ipos,
                    const long long a_rate, const long long c_rate,
@@ -44,7 +46,9 @@ extern Rate_logger rate_logger;
 
 class Read_logger : public Logger
   {
+  bool prev_is_msg;
 public:
+  Read_logger() : prev_is_msg( true ) {}
   bool open_file();
   bool print_line( const long long ipos, const long long size,
                    const int copied_size, const int error_size );

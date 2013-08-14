@@ -140,7 +140,8 @@ void Fillbook::show_status( const long long ipos, bool force )
     std::printf( "remain size: %10sB,  remain areas: %6u,  average rate: %9sB/s\n",
                  format_num( remaining_size ), remaining_areas,
                  format_num( a_rate, 99999 ) );
-    std::printf( "current pos: %10sB\n", format_num( last_ipos + offset() ) );
+    std::printf( "current pos: %10sB,  run time:  %9s\n",
+                 format_num( last_ipos + offset() ), format_time( t1 - t0 ) );
     std::fflush( stdout );
     }
   else if( t2 < t1 )			// clock jumped back
@@ -213,8 +214,8 @@ void Genbook::show_status( const long long ipos, const char * const msg,
     std::printf( "rescued: %10sB,  generated:%10sB,  current rate: %9sB/s\n",
                  format_num( recsize ), format_num( gensize ),
                  format_num( c_rate, 99999 ) );
-    std::printf( "   opos: %10sB,                          average rate: %9sB/s\n",
-                 format_num( last_ipos + offset() ),
+    std::printf( "   opos: %10sB,   run time:  %9s,  average rate: %9sB/s\n",
+                 format_num( last_ipos + offset() ), format_time( t1 - t0 ),
                  format_num( a_rate, 99999 ) );
     if( msg && msg[0] )
       {
@@ -337,8 +338,9 @@ void Rescuebook::show_status( const long long ipos, const char * const msg,
       std::printf( "   ipos: %10sB,   errors: %7u,    average rate: %9sB/s\n",
                    format_num( last_ipos ), errors,
                    format_num( a_rate, 99999 ) );
-      std::printf( "   opos: %10sB,    time since last successful read: %9s\n",
-                   format_num( last_ipos + offset() ), format_time( t1 - ts ) );
+      std::printf( "   opos: %10sB, run time: %9s,  successful read: %9s ago\n",
+                   format_num( last_ipos + offset() ),
+                   format_time( t1 - t0 ), format_time( t1 - ts ) );
       if( msg && msg[0] && !errors_or_timeout() )
         {
         const int len = std::strlen( msg ); std::printf( "\r%s", msg );
@@ -356,17 +358,20 @@ void Rescuebook::show_status( const long long ipos, const char * const msg,
 
 const char * format_time( long t )
   {
-  static char buf[16];
+  enum { buffers = 8, bufsize = 16 };
+  static char buffer[buffers][bufsize];	// circle of static buffers for printf
+  static int current = 0;
+  char * const buf = buffer[current++]; current %= buffers;
   int fraction = 0;
   char unit = 's';
 
-  if( t >= 86400 ) { fraction = ( t % 86400 ) / 8640; t /= 86400; unit = 'd'; }
-  else if( t >= 3600 ) { fraction = ( t % 3600 ) / 360; t /= 3600; unit = 'h'; }
-  else if( t >= 60 ) { fraction = ( t % 60 ) / 6; t /= 60; unit = 'm'; }
+  if( t >= 86400 ) { fraction = ( t % 86400 ) / 864; t /= 86400; unit = 'd'; }
+  else if( t >= 3600 ) { fraction = ( t % 3600 ) / 36; t /= 3600; unit = 'h'; }
+  else if( t >= 60 ) { fraction = (10 * ( t % 60 )) / 6; t /= 60; unit = 'm'; }
   if( fraction == 0 )
-    snprintf( buf, sizeof buf, "%ld %c", t, unit );
+    snprintf( buf, bufsize, "%ld %c", t, unit );
   else
-    snprintf( buf, sizeof buf, "%ld.%d %c", t, fraction, unit );
+    snprintf( buf, bufsize, "%ld.%02d %c", t, fraction, unit );
   return buf;
   }
 

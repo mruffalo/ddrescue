@@ -153,29 +153,25 @@ int Rescuebook::copy_non_tried()
                                           "Copying non-tried blocks...",
                                           first_post, true );
       if( error_size > 0 ) errsize += error_size;
-      else if( skip_size > 0 && copied_size > 0 )
-        { skip_size -= copied_size; if( skip_size < 0 ) skip_size = 0; }
       if( retval ) return retval;
       if( error_size > 0 ) error_rate += error_size;
       update_rates();
-      if( error_size > 0 || slow_read() )
+      if( ( error_size > 0 || slow_read() ) && pos >= 0 )
         {
-        if( pos >= 0 && skip_size > 0 )
-          {
-          b.assign( pos, skip_size ); b.fix_size();
-          find_chunk( b, Sblock::non_tried );
-          if( pos == b.pos() && b.size() > 0 )
-            {
-            if( error_size > 0 )
-              { errors += change_chunk_status( b, Sblock::non_trimmed );
-                errsize += b.size(); }
-            pos = b.end();
-            }
-          }
         if( skip_size < skipbs ) skip_size = skipbs;
         else if( skip_size <= max_skip_size / 2 ) skip_size *= 2;
         else skip_size = max_skip_size;
+        b.assign( pos, skip_size ); b.fix_size();
+        find_chunk( b, Sblock::non_tried );
+        if( pos == b.pos() && b.size() > 0 )
+          {
+          if( error_size > 0 )
+            { errors += change_chunk_status( b, Sblock::non_trimmed );
+              errsize += b.size(); }
+          pos = b.end();
+          }
         }
+      else if( copied_size > 0 && skip_size > 0 ) skip_size = 0;
       if( !update_logfile( odes_ ) ) return -2;
       }
     if( !block_found ) break;
@@ -226,29 +222,25 @@ int Rescuebook::rcopy_non_tried()
                                           "Copying non-tried blocks...",
                                           first_post, false );
       if( error_size > 0 ) errsize += error_size;
-      else if( skip_size > 0 && copied_size > 0 )
-        { skip_size -= copied_size; if( skip_size < 0 ) skip_size = 0; }
       if( retval ) return retval;
       if( error_size > 0 ) error_rate += error_size;
       update_rates();
-      if( error_size > 0 || slow_read() )
+      if( ( error_size > 0 || slow_read() ) && end > 0 )
         {
-        if( end > 0 && skip_size > 0 )
-          {
-          b.size( skip_size ); b.end( end ); pos = b.pos();
-          rfind_chunk( b, Sblock::non_tried );
-          if( pos == b.pos() && b.size() > 0 )
-            {
-            if( error_size > 0 )
-              { errors += change_chunk_status( b, Sblock::non_trimmed );
-                errsize += b.size(); }
-            end = b.pos();
-            }
-          }
         if( skip_size < skipbs ) skip_size = skipbs;
         else if( skip_size <= max_skip_size / 2 ) skip_size *= 2;
         else skip_size = max_skip_size;
+        b.size( skip_size ); b.end( end ); pos = b.pos();
+        rfind_chunk( b, Sblock::non_tried );
+        if( pos == b.pos() && b.size() > 0 )
+          {
+          if( error_size > 0 )
+            { errors += change_chunk_status( b, Sblock::non_trimmed );
+              errsize += b.size(); }
+          end = b.pos();
+          }
         }
+      else if( copied_size > 0 && skip_size > 0 ) skip_size = 0;
       if( !update_logfile( odes_ ) ) return -2;
       }
     if( !block_found ) break;

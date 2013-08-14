@@ -20,20 +20,23 @@
 #include <cstdio>
 #include <vector>
 
-#include "block.h"
 #include "loggers.h"
 
 
 namespace {
 
-const char * format_time_hms( long t )
+const char * format_time_dhms( const long t )
   {
-  static char buf[16];
+  static char buf[32];
   const long s = t % 60;
   const long m = ( t / 60 ) % 60;
-  const long h = t / 3600;
+  const long h = ( t / 3600 ) % 24;
+  const long d = t / 86400;
 
-  snprintf( buf, sizeof buf, "%2ld:%02ld:%02ld", h, m, s );
+  if( d ) snprintf( buf, sizeof buf, "%lud:%02luh:%02lum:%02lus", d, h, m, s );
+  else if( h ) snprintf( buf, sizeof buf, "%luh:%02lum:%02lus", h, m, s );
+  else if( m ) snprintf( buf, sizeof buf, "%lum:%02lus", m, s );
+  else snprintf( buf, sizeof buf, "%lus", s );
   return buf;
   }
 
@@ -57,8 +60,9 @@ bool Rate_logger::open_file()
   if( !filename_ ) return true;
   if( !f )
     {
+    last_time = -1;
     f = std::fopen( filename_, "w" );
-    error = !f || std::fprintf( f, "   Time       Ipos     Current_rate  Average_rate  Errors    Errsize\n" ) < 0;
+    error = !f || std::fprintf( f, "#Time  Ipos  Current_rate  Average_rate  Errors  Errsize\n" ) < 0;
     }
   return !error;
   }
@@ -68,12 +72,13 @@ bool Rate_logger::print_line( const long time, const long long ipos,
                               const long long a_rate, const long long c_rate,
                               const int errors, const long long errsize )
   {
-  if( f && !error &&
-      std::fprintf( f, "%s  0x%010llX %9sB/s %9sB/s  %7u %9sB\n",
-                    format_time_hms( time ), ipos,
-                    format_num( c_rate, 99999 ), format_num( a_rate, 99999 ),
-                    errors, format_num( errsize, 99999 ) ) < 0 )
-    error = true;
+  if( f && !error && time > last_time )
+    {
+    last_time = time;
+    if( std::fprintf( f, "%2lu  0x%08llX  %8llu  %8llu  %7u  %8llu\n",
+                    time, ipos, c_rate, a_rate, errors, errsize ) < 0 )
+      error = true;
+    }
   return !error;
   }
 
@@ -83,8 +88,9 @@ bool Read_logger::open_file()
   if( !filename_ ) return true;
   if( !f )
     {
+    prev_is_msg = true;
     f = std::fopen( filename_, "w" );
-    error = !f || std::fprintf( f, "    Ipos         Size    Copied_size  Error_size\n" ) < 0;
+    error = !f || std::fprintf( f, "#  Ipos       Size  Copied_size  Error_size\n" ) < 0;
     }
   return !error;
   }
@@ -94,10 +100,10 @@ bool Read_logger::print_line( const long long ipos, const long long size,
                               const int copied_size, const int error_size )
   {
   if( f && !error &&
-      std::fprintf( f, "0x%010llX %9sB %9sB %9sB\n", ipos,
-                    format_num( size, 99999 ), format_num( copied_size, 99999 ),
-                    format_num( error_size, 99999 ) ) < 0 )
+      std::fprintf( f, "0x%08llX  %6llu  %6u  %6u\n",
+                    ipos, size, copied_size, error_size ) < 0 )
     error = true;
+  prev_is_msg = false;
   return !error;
   }
 
@@ -105,8 +111,10 @@ bool Read_logger::print_line( const long long ipos, const long long size,
 bool Read_logger::print_msg( const long time, const char * const msg )
   {
   if( f && !error &&
-      std::fprintf( f, "Time %s  %s\n", format_time_hms( time ), msg ) < 0 )
+      std::fprintf( f, "%s# %s  %s\n", prev_is_msg ? "" : "\n\n",
+                    format_time_dhms( time ), msg ) < 0 )
     error = true;
+  prev_is_msg = true;
   return !error;
   }
 
@@ -114,7 +122,7 @@ bool Read_logger::print_msg( const long time, const char * const msg )
 bool Read_logger::print_time( const long time )
   {
   if( f && !error && time > 0 &&
-      std::fprintf( f, "Time %s\n", format_time_hms( time ) ) < 0 )
+      std::fprintf( f, "# %s\n", format_time_dhms( time ) ) < 0 )
     error = true;
   return !error;
   }

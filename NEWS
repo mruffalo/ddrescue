@@ -1,5 +1,15 @@
 Changes in version 1.18:
 
 The new options "-1, --log-rates" and "-2, --log-reads" have been added.
+They produce data files usable by plotting utilities like gnuplot.
+
+Skip size is now reset (instead of reduced) after good data is found.
+This should make ddrescue regain speed faster after leaving a bad or
+slow area. If ddrescue is having difficulties skipping away from a large
+area with scattered errors, or if the device has large error areas at
+regular intervals, you can increase the initial skip size with
+"--skip-size".
+
+Current total run time is now shown on the screen.
 
 The short name of option "--generate-mode" has been changed to "-G".

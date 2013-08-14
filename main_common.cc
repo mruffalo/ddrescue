@@ -175,7 +175,7 @@ const char * format_num( long long num, long long limit,
     { "k", "M", "G", "T", "P", "E", "Z", "Y" };
   const char * const binary_prefix[8] =
     { "Ki", "Mi", "Gi", "Ti", "Pi", "Ei", "Zi", "Yi" };
-  enum { buffers = 16, bufsize = 16 };
+  enum { buffers = 8, bufsize = 16 };
   static char buffer[buffers][bufsize];	// circle of static buffers for printf
   static int current = 0;
   static bool si = true;

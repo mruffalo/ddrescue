@@ -6,8 +6,8 @@
 @finalout
 @c %**end of header
 
-@set UPDATED 5 August 2013
-@set VERSION 1.18-pre1
+@set UPDATED 14 August 2013
+@set VERSION 1.18-pre2
 
 @dircategory GNU Packages
 @direntry
@@ -191,21 +191,26 @@ operating system that tries to mount and "fix" the partitions it sees.
 @chapter Algorithm
 @cindex algorithm
 
-GNU ddrescue manages efficiently the status of the rescue in progress
-and tries to rescue the good parts first, scheduling reads inside bad
-(or slow) areas for later. This maximizes the amount of data that can be
+GNU ddrescue is not a derivative of dd, nor is related to dd in any way
+except in that both can be used for copying data from one device to
+another. The difference is that ddrescue uses a sophisticated algorithm
+to copy data from failing drives causing them as little additional
+damage as possible.
+
+Ddrescue manages efficiently the status of the rescue in progress and
+tries to rescue the good parts first, scheduling reads inside bad (or
+slow) areas for later. This maximizes the amount of data that can be
 finally recovered from a failing drive.
 
 The standard dd utility can be used to save data from a failing drive,
 but it reads the data sequentially, which may wear out the drive without
 rescuing anything if the errors are at the beginning of the drive.
 
-Other programs switch to small size reads when they find errors, but
-they still read the data sequentially. This is a bad idea because it
-means spending more time at error areas, damaging the surface, the heads
-and the drive mechanics, instead of getting out of them as fast as
-possible. This behavior reduces the chances of rescuing the remaining
-good data.
+Other programs read the data sequentially but switch to small size reads
+when they find errors. This is a bad idea because it means spending more
+time at error areas, damaging the surface, the heads and the drive
+mechanics, instead of getting out of them as fast as possible. This
+behavior reduces the chances of rescuing the remaining good data.
 
 The algorithm of ddrescue is as follows (the user may interrupt the
 process at any point, but be aware that a bad drive can block ddrescue
@@ -217,11 +222,12 @@ does not exist, mark all the rescue domain as non-tried.
 
 2) (First phase; Copying) Read the non-tried parts of the input file,
 marking the failed blocks as non-trimmed and skipping beyond them, until
-all the rescue domain is tried. Only non-tried areas are read in large
-blocks. Trimming, splitting and retrying are done sector by sector. Each
-sector is tried at most two times; the first in this step as part of a
-large block read, the second in one of the steps below as a single
-sector read.
+all the rescue domain is tried. Slow areas are also skipped and tried
+later in additional passes (before trimming). Only non-tried areas are
+read in large blocks. Trimming, splitting and retrying are done sector
+by sector. Each sector is tried at most two times; the first in this
+step as part of a large block read, the second in one of the steps below
+as a single sector read.
 
 3) (Second phase; Trimming) Read forwards one sector at a time from the
 leading edge of the largest non-trimmed block, until a bad sector is
@@ -307,11 +313,12 @@ Print the version number of ddrescue on the standard output and exit.
 @itemx --min-read-rate=@var{bytes}
 Minimum read rate of good non-tried areas, in bytes per second. If the
 read rate falls below this value, ddrescue will skip ahead a variable
-amount depending on rate and error history. The skipped blocks are tried
-in additional passes (before trimming) where the minimum read rate is
-divided by ten before each pass, until there are no more non-tried
+amount depending on rate and error histories. The skipped blocks are
+tried in additional passes (before trimming) where the minimum read rate
+is divided by ten before each pass, until there are no more non-tried
 blocks left. If @var{bytes} is 0 (auto), the minimum read rate is
-recalculated for each block read as @w{(average_rate / 10)}.
+recalculated for each block read as @w{(average_rate / 10)}. Values
+above device capabilities will be ignored.
 
 @item -A
 @itemx --try-again
@@ -419,10 +426,14 @@ rescue.
 @item -K @var{bytes}
 @itemx --skip-size=@var{bytes}
 Set the initial size to skip on the first read error or slow read. The
-value given will be rounded to the next multiple of sector size. For
-subsequent read errors or slow reads, ddrescue will modify the skip size
-depending on error rate and error history. Valid values range from 64 KiB
-to 1 GiB. Defaults to 64 KiB.
+value given will be rounded to the next multiple of sector size. The
+skip size will be doubled for each read error or slow read until it
+reaches 1% of the size of @var{infile} or 1 GiB (whichever is smaller),
+and reset when good data is found. If ddrescue is having difficulties
+skipping away from a large area with scattered errors, or if the device
+has large error areas at regular intervals, you can increase the initial
+skip size with this option. Valid values range from 64 KiB to 1 GiB.
+Defaults to 64 KiB.
 
 @item -l @var{entries}
 @itemx --logfile-size=@var{entries}
@@ -533,22 +544,22 @@ size for @var{outfile}. Only regular files can be extended.
 
 @item -1 @var{file}
 @itemx --log-rates=@var{file}
-Log rates and error sizes every second into @var{file}. Every time the
+Log rates and error sizes every second in @var{file}. Every time the
 screen is updated with new details, some of those details (time, input
 position, current and average rates, number of errors and error size)
-are written to @var{file}. This allows a posterior analysis of the drive
-to see if it has any weak zones (areas where the transfer rate drops
-well below the sustained average).
+are written to @var{file} in a format usable by plotting utilities like
+gnuplot. This allows a posterior analysis of the drive to see if it has
+any weak zones (areas where the transfer rate drops well below the
+sustained average).
 
 @item -2 @var{file}
 @itemx --log-reads=@var{file}
-Log all read operations into @var{file}. Every read attempt and its
-result (position, size, copied size and error size) is written to
-@var{file}. A line is also written at the beginning of each phase
-(copying, trimming, splitting and retrying). Finally, a line with a time
-mark is written every second (unless the read takes more time). Use this
-option with caution because @var{file} may become very large very
-quickly.
+Log all read operations in @var{file}. Every read attempt and its result
+(position, size, copied size and error size) is written to @var{file}. A
+line is also written at the beginning of each phase (copying, trimming,
+splitting and retrying). Finally, a line with a time mark is written
+every second (unless the read takes more time). Use this option with
+caution because @var{file} may become very large very quickly.
 
 @end table
 

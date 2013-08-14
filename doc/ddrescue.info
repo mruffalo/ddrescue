@@ -12,7 +12,7 @@ File: ddrescue.info,  Node: Top,  Next: Introduction,  Up: (dir)
 GNU ddrescue Manual
 *******************
 
-This manual is for GNU ddrescue (version 1.18-pre1, 5 August 2013).
+This manual is for GNU ddrescue (version 1.18-pre2, 14 August 2013).
 
 * Menu:
 
@@ -173,9 +173,15 @@ File: ddrescue.info,  Node: Algorithm,  Next: Invoking ddrescue,  Prev: Importan
 4 Algorithm
 ***********
 
-GNU ddrescue manages efficiently the status of the rescue in progress
-and tries to rescue the good parts first, scheduling reads inside bad
-(or slow) areas for later. This maximizes the amount of data that can be
+GNU ddrescue is not a derivative of dd, nor is related to dd in any way
+except in that both can be used for copying data from one device to
+another. The difference is that ddrescue uses a sophisticated algorithm
+to copy data from failing drives causing them as little additional
+damage as possible.
+
+   Ddrescue manages efficiently the status of the rescue in progress and
+tries to rescue the good parts first, scheduling reads inside bad (or
+slow) areas for later. This maximizes the amount of data that can be
 finally recovered from a failing drive.
 
    The standard dd utility can be used to save data from a failing
@@ -183,10 +189,10 @@ drive, but it reads the data sequentially, which may wear out the drive
 without rescuing anything if the errors are at the beginning of the
 drive.
 
-   Other programs switch to small size reads when they find errors, but
-they still read the data sequentially. This is a bad idea because it
-means spending more time at error areas, damaging the surface, the heads
-and the drive mechanics, instead of getting out of them as fast as
+   Other programs read the data sequentially but switch to small size
+reads when they find errors. This is a bad idea because it means
+spending more time at error areas, damaging the surface, the heads and
+the drive mechanics, instead of getting out of them as fast as
 possible. This behavior reduces the chances of rescuing the remaining
 good data.
 
@@ -200,11 +206,12 @@ does not exist, mark all the rescue domain as non-tried.
 
    2) (First phase; Copying) Read the non-tried parts of the input file,
 marking the failed blocks as non-trimmed and skipping beyond them, until
-all the rescue domain is tried. Only non-tried areas are read in large
-blocks. Trimming, splitting and retrying are done sector by sector. Each
-sector is tried at most two times; the first in this step as part of a
-large block read, the second in one of the steps below as a single
-sector read.
+all the rescue domain is tried. Slow areas are also skipped and tried
+later in additional passes (before trimming). Only non-tried areas are
+read in large blocks. Trimming, splitting and retrying are done sector
+by sector. Each sector is tried at most two times; the first in this
+step as part of a large block read, the second in one of the steps below
+as a single sector read.
 
    3) (Second phase; Trimming) Read forwards one sector at a time from
 the leading edge of the largest non-trimmed block, until a bad sector is
@@ -277,12 +284,13 @@ The format for running ddrescue is:
 `--min-read-rate=BYTES'
      Minimum read rate of good non-tried areas, in bytes per second. If
      the read rate falls below this value, ddrescue will skip ahead a
-     variable amount depending on rate and error history. The skipped
+     variable amount depending on rate and error histories. The skipped
      blocks are tried in additional passes (before trimming) where the
      minimum read rate is divided by ten before each pass, until there
      are no more non-tried blocks left. If BYTES is 0 (auto), the
      minimum read rate is recalculated for each block read as
-     (average_rate / 10).
+     (average_rate / 10). Values above device capabilities will be
+     ignored.
 
 `-A'
 `--try-again'
@@ -392,9 +400,14 @@ The format for running ddrescue is:
 `--skip-size=BYTES'
      Set the initial size to skip on the first read error or slow read.
      The value given will be rounded to the next multiple of sector
-     size. For subsequent read errors or slow reads, ddrescue will
-     modify the skip size depending on error rate and error history.
-     Valid values range from 64 KiB to 1 GiB. Defaults to 64 KiB.
+     size. The skip size will be doubled for each read error or slow
+     read until it reaches 1% of the size of INFILE or 1 GiB (whichever
+     is smaller), and reset when good data is found. If ddrescue is
+     having difficulties skipping away from a large area with scattered
+     errors, or if the device has large error areas at regular
+     intervals, you can increase the initial skip size with this
+     option. Valid values range from 64 KiB to 1 GiB.  Defaults to 64
+     KiB.
 
 `-l ENTRIES'
 `--logfile-size=ENTRIES'
@@ -505,22 +518,23 @@ The format for running ddrescue is:
 
 `-1 FILE'
 `--log-rates=FILE'
-     Log rates and error sizes every second into FILE. Every time the
+     Log rates and error sizes every second in FILE. Every time the
      screen is updated with new details, some of those details (time,
      input position, current and average rates, number of errors and
-     error size) are written to FILE. This allows a posterior analysis
-     of the drive to see if it has any weak zones (areas where the
-     transfer rate drops well below the sustained average).
+     error size) are written to FILE in a format usable by plotting
+     utilities like gnuplot. This allows a posterior analysis of the
+     drive to see if it has any weak zones (areas where the transfer
+     rate drops well below the sustained average).
 
 `-2 FILE'
 `--log-reads=FILE'
-     Log all read operations into FILE. Every read attempt and its
-     result (position, size, copied size and error size) is written to
-     FILE. A line is also written at the beginning of each phase
-     (copying, trimming, splitting and retrying). Finally, a line with
-     a time mark is written every second (unless the read takes more
-     time). Use this option with caution because FILE may become very
-     large very quickly.
+     Log all read operations in FILE. Every read attempt and its result
+     (position, size, copied size and error size) is written to FILE. A
+     line is also written at the beginning of each phase (copying,
+     trimming, splitting and retrying). Finally, a line with a time
+     mark is written every second (unless the read takes more time).
+     Use this option with caution because FILE may become very large
+     very quickly.
 
 
    Numbers given as arguments to options (positions, sizes, retries,
@@ -595,7 +609,7 @@ Character   Meaning
 
 And here is an example logfile:
 
-# Rescue Logfile. Created by GNU ddrescue version 1.18-pre1
+# Rescue Logfile. Created by GNU ddrescue version 1.18-pre2
 # Command line: ddrescue /dev/fd0 fdimage logfile
 # current_pos  current_status
 0x00120000     ?
@@ -1181,21 +1195,21 @@ Concept index
 
 Tag Table:
 Node: Top203
-Node: Introduction1375
-Node: Basic concepts4064
-Node: Important advice5544
-Node: Algorithm6653
-Node: Invoking ddrescue10532
-Node: Logfile structure22171
-Node: Examples24426
-Ref: lziprecover-example27399
-Node: Direct disc access29239
-Node: Fill mode31316
-Node: Generate mode35456
-Node: Ddrescuelog37403
-Node: Invoking ddrescuelog39552
-Node: Problems45043
-Node: Concept index45600
+Node: Introduction1376
+Node: Basic concepts4065
+Node: Important advice5545
+Node: Algorithm6654
+Node: Invoking ddrescue10904
+Node: Logfile structure22942
+Node: Examples25197
+Ref: lziprecover-example28170
+Node: Direct disc access30010
+Node: Fill mode32087
+Node: Generate mode36227
+Node: Ddrescuelog38174
+Node: Invoking ddrescuelog40323
+Node: Problems45814
+Node: Concept index46371
 
 End Tag Table
 

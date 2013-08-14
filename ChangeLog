@@ -1,3 +1,10 @@
+2013-08-14  Antonio Diaz Diaz  <antonio@gnu.org>
+
+	* Version 1.18-pre2 released.
+	* rescuebook.cc: 'skip_size' is now reset after one good read.
+	* io.cc (show_status): Show the current total run time.
+	* Format of logging files has been made more machine-readable.
+
 2013-08-05  Antonio Diaz Diaz  <antonio@gnu.org>
 
 	* Version 1.18-pre1 released.
