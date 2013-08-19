@@ -79,10 +79,10 @@ cmp ${in} out || fail=1
 printf .
 
 rm -f out
-"${DDRESCUE}" -q -m ${logfile1} ${in} out || fail=1
+"${DDRESCUE}" -qO -m ${logfile1} ${in} out || fail=1
 cmp ${in1} out || fail=1
 printf .
-"${DDRESCUE}" -q -m ${logfile2} ${in} out || fail=1
+"${DDRESCUE}" -qO -m ${logfile2} ${in} out || fail=1
 cmp ${in} out || fail=1
 printf .
 

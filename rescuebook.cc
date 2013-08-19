@@ -104,11 +104,12 @@ int Rescuebook::copy_and_update( const Block & b, const Sblock::Status st,
       {
       errors += change_chunk_status( Block( b.pos() + copied_size, error_size ),
                 ( error_size > hardbs() ) ? st : Sblock::bad_sector );
-      if( iname_ && access( iname_, F_OK ) != 0 )
+      if( access_works && access( iname_, F_OK ) != 0 )
         {
         final_msg( "input file disappeared" ); final_errno( errno );
         retval = 1;
         }
+      else if( reopen_on_error && !reopen_infile() ) retval = 1;
       }
     }
   return retval;
@@ -317,7 +318,7 @@ int Rescuebook::trim_errors()
 // Split the damaged areas (largest first).
 // Then read the remaining small areas sequentially.
 //
-int Rescuebook::split_errors( const bool reverse )
+int Rescuebook::split_errors()
   {
   const char * const msg = "Splitting failed blocks...";
   bool first_post = true;
@@ -545,9 +546,10 @@ Rescuebook::Rescuebook( const long long offset, const long long isize,
     sparse_size( sparse ? 0 : -1 ),
     recsize( 0 ),
     errsize( 0 ),
-    iname_( ( access( iname, F_OK ) == 0 ) ? iname : 0 ),
+    iname_( iname ),
     max_skip_size( calculate_max_skip_size( isize, hardbs, skipbs ) ),
     e_code( 0 ),
+    access_works( access( iname, F_OK ) == 0 ),
     synchronous_( synchronous ),
     a_rate( 0 ), c_rate( 0 ), first_size( 0 ), last_size( 0 ),
     last_ipos( 0 ), t0( 0 ), t1( 0 ), ts( 0 ), oldlen( 0 ),
@@ -580,7 +582,7 @@ Rescuebook::Rescuebook( const long long offset, const long long isize,
 
 // Return values: 1 I/O error, 0 OK.
 //
-int Rescuebook::do_rescue( const int ides, const int odes, const bool reverse )
+int Rescuebook::do_rescue( const int ides, const int odes )
   {
   bool copy_pending = false, trim_pending = false, split_pending = false;
   ides_ = ides; odes_ = odes;
@@ -630,7 +632,7 @@ int Rescuebook::do_rescue( const int ides, const int odes, const bool reverse )
   if( retval == 0 && trim_pending && !errors_or_timeout() )
     retval = trim_errors();
   if( retval == 0 && split_pending && !nosplit && !errors_or_timeout() )
-    retval = split_errors( reverse );
+    retval = split_errors();
   if( retval == 0 && max_retries != 0 && !errors_or_timeout() )
     retval = ( reverse ? rcopy_errors() : copy_errors() );
   if( !rates_updated ) update_rates( true );	// force update of e_code

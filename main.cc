@@ -97,6 +97,7 @@ void show_help( const int cluster, const int hardbs, const int skipbs )
                "  -M, --retrim                   mark all failed blocks as non-trimmed\n"
                "  -n, --no-split                 do not try to split or retry failed blocks\n"
                "  -o, --output-position=<bytes>  starting position in output file [ipos]\n"
+               "  -O, --reopen-on-error          reopen input file after every read error\n"
                "  -p, --preallocate              preallocate space on disc for output file\n"
                "  -q, --quiet                    suppress all messages\n"
                "  -r, --retries=<n>              exit after given retries (-1=infinity) [0]\n"
@@ -324,11 +325,11 @@ int do_rescue( const long long offset, Domain & domain,
                const Rb_options & rb_opts,
                const char * const iname, const char * const oname,
                const char * const logname, const int cluster,
-               const int hardbs, const int o_direct, const int o_trunc,
-               const bool preallocate, const bool reverse,
-               const bool synchronous, const bool verify_input_size )
+               const int hardbs, const int o_trunc,
+               const bool preallocate, const bool synchronous,
+               const bool verify_input_size )
   {
-  const int ides = open( iname, O_RDONLY | o_direct | o_binary );
+  const int ides = open( iname, O_RDONLY | rb_opts.o_direct | o_binary );
   if( ides < 0 )
     { show_error( "Can't open input file", errno ); return 1; }
   const long long isize = lseek( ides, 0, SEEK_END );
@@ -428,23 +429,38 @@ int do_rescue( const long long offset, Domain & domain,
                                   format_time( rb_opts.timeout ) ); }
       if( nl ) { nl = false; std::printf( "\n" ); }
 
-      std::printf( "Direct: %s    ", o_direct ? "yes" : "no" );
+      std::printf( "Direct: %s    ", rb_opts.o_direct ? "yes" : "no" );
       std::printf( "Sparse: %s    ", rb_opts.sparse ? "yes" : "no" );
       std::printf( "Split: %s    ", !rb_opts.nosplit ? "yes" : "no" );
       std::printf( "Truncate: %s    ", o_trunc ? "yes" : "no" );
       if( rb_opts.complete_only ) std::printf( "Complete only" );
       std::printf( "\n" );
-      if( reverse ) std::printf( "Reverse mode\n" );
+      if( rb_opts.reverse ) std::printf( "Reverse mode\n" );
       }
     std::printf( "\n" );
     }
-  return rescuebook.do_rescue( ides, odes, reverse );
+  return rescuebook.do_rescue( ides, odes );
   }
 
 } // end namespace
 
 
 #include "main_common.cc"
+
+
+bool Rescuebook::reopen_infile()
+  {
+  if( ides_ >= 0 ) close( ides_ );
+  ides_ = open( iname_, O_RDONLY | o_direct | o_binary );
+  if( ides_ < 0 )
+    { final_msg( "Can't reopen input file" ); final_errno( errno );
+      return false; }
+  const long long isize = lseek( ides_, 0, SEEK_END );
+  if( isize < 0 )
+    { final_msg( "Input file has become not seekable" ); final_errno( errno );
+      return false; }
+  return true;
+  }
 
 
 int main( const int argc, const char * const argv[] )
@@ -458,14 +474,12 @@ int main( const int argc, const char * const argv[] )
   const int max_hardbs = Rb_options::max_skipbs;
   int cluster = 0;
   int hardbs = default_hardbs;
-  int o_direct = 0;
   int o_trunc = 0;
   Mode program_mode = m_none;
   struct Rb_options rb_opts;
   bool force = false;
   bool ignore_write_errors = false;
   bool preallocate = false;
-  bool reverse = false;
   bool synchronous = false;
   bool verify_input_size = false;
   std::string filltypes;
@@ -501,6 +515,7 @@ int main( const int argc, const char * const argv[] )
     { 'M', "retrim",              Arg_parser::no  },
     { 'n', "no-split",            Arg_parser::no  },
     { 'o', "output-position",     Arg_parser::yes },
+    { 'O', "reopen-on-error",     Arg_parser::no  },
     { 'p', "preallocate",         Arg_parser::no  },
     { 'q', "quiet",               Arg_parser::no  },
     { 'r', "retries",             Arg_parser::yes },
@@ -537,8 +552,8 @@ int main( const int argc, const char * const argv[] )
       case 'B': format_num( 0, 0, -1 ); break;		// set binary prefixes
       case 'c': cluster = getnum( arg, 0, 1, INT_MAX ); break;
       case 'C': rb_opts.complete_only = true; break;
-      case 'd': o_direct = O_DIRECT;
-                if( !o_direct )
+      case 'd': rb_opts.o_direct = O_DIRECT;
+                if( rb_opts.o_direct == 0 )
                   { show_error( "Direct disc access not available." ); return 1; }
                 break;
       case 'D': synchronous = true; break;
@@ -561,10 +576,11 @@ int main( const int argc, const char * const argv[] )
       case 'M': rb_opts.retrim = true; break;
       case 'n': rb_opts.nosplit = true; break;
       case 'o': opos = getnum( arg, hardbs, 0 ); break;
+      case 'O': rb_opts.reopen_on_error = true; break;
       case 'p': preallocate = true; break;
       case 'q': verbosity = -1; break;
       case 'r': rb_opts.max_retries = getnum( arg, 0, -1, INT_MAX ); break;
-      case 'R': reverse = true; break;
+      case 'R': rb_opts.reverse = true; break;
       case 's': max_size = getnum( arg, hardbs, -1 ); break;
       case 'S': rb_opts.sparse = true; break;
       case 't': o_trunc = O_TRUNC; break;
@@ -605,16 +621,15 @@ int main( const int argc, const char * const argv[] )
   switch( program_mode )
     {
     case m_fill:
-      if( rb_opts != Rb_options() || o_direct ||
-          verify_input_size || preallocate || reverse || o_trunc )
-        show_error( "warning: Options -aCdeEIMnOprRStTx are ignored in fill mode." );
+      if( rb_opts != Rb_options() ||
+          verify_input_size || preallocate || o_trunc )
+        show_error( "warning: Options -aACdeEIKlMnOprRStTx are ignored in fill mode." );
       return do_fill( opos - ipos, domain, iname, oname, logname, cluster,
                       hardbs, filltypes, ignore_write_errors, synchronous );
     case m_generate:
-      if( rb_opts != Rb_options() || o_direct || synchronous ||
-          verify_input_size || preallocate || reverse || o_trunc ||
-          ignore_write_errors )
-        show_error( "warning: Options -aCdDeEIMnOprRStTwx are ignored in generate mode." );
+      if( rb_opts != Rb_options() || synchronous ||
+          verify_input_size || preallocate || o_trunc || ignore_write_errors )
+        show_error( "warning: Options -aACdDeEIKlMnOprRStTwx are ignored in generate mode." );
       return do_generate( opos - ipos, domain, iname, oname, logname,
                           cluster, hardbs );
     case m_none:
@@ -622,7 +637,7 @@ int main( const int argc, const char * const argv[] )
         { show_error( "Option '-w' is incompatible with rescue mode.", 0, true );
           return 1; }
       return do_rescue( opos - ipos, domain, rb_opts, iname, oname, logname,
-                        cluster, hardbs, o_direct, o_trunc, preallocate,
-                        reverse, synchronous, verify_input_size );
+                        cluster, hardbs, o_trunc, preallocate,
+                        synchronous, verify_input_size );
     }
   }

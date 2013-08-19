@@ -182,19 +182,23 @@ struct Rb_options
   int max_errors;
   int max_logfile_size;
   int max_retries;
+  int o_direct;			// O_DIRECT or 0
   int skipbs;			// initial size to skip on read error
   bool complete_only;
   bool new_errors_only;
   bool nosplit;
+  bool reopen_on_error;
   bool retrim;
+  bool reverse;
   bool sparse;
   bool try_again;
 
   Rb_options()
     : max_error_rate( -1 ), min_outfile_size( -1 ), min_read_rate( -1 ),
       timeout( -1 ), max_errors( -1 ), max_logfile_size( 1000 ),
-      max_retries( 0 ), skipbs( default_skipbs ), complete_only( false ),
-      new_errors_only( false ), nosplit( false ), retrim( false ),
+      max_retries( 0 ), o_direct( 0 ), skipbs( default_skipbs ),
+      complete_only( false ), new_errors_only( false ), nosplit( false ),
+      reopen_on_error( false ), retrim( false ), reverse( false ),
       sparse( false ), try_again( false )
       {}
 
@@ -204,10 +208,11 @@ struct Rb_options
                min_read_rate == o.min_read_rate && timeout == o.timeout &&
                max_errors == o.max_errors &&
                max_logfile_size == o.max_logfile_size &&
-               max_retries == o.max_retries && skipbs == o.skipbs &&
-               complete_only == o.complete_only &&
+               max_retries == o.max_retries && o_direct == o.o_direct &&
+               skipbs == o.skipbs && complete_only == o.complete_only &&
                new_errors_only == o.new_errors_only &&
-               nosplit == o.nosplit && retrim == o.retrim &&
+               nosplit == o.nosplit && reopen_on_error == o.reopen_on_error &&
+               retrim == o.retrim && reverse == o.reverse &&
                sparse == o.sparse && try_again == o.try_again ); }
   bool operator!=( const Rb_options & o ) const
     { return !( *this == o ); }
@@ -225,7 +230,7 @@ class Rescuebook : public Logbook, public Rb_options
 					// 1 rate, 2 errors, 4 timeout
   int errors;				// error areas found so far
   int ides_, odes_;			// input and output file descriptors
-  const bool synchronous_;
+  const bool access_works, synchronous_;
 					// variables for update_rates
   long long a_rate, c_rate, first_size, last_size;
   long long last_ipos;
@@ -250,10 +255,11 @@ class Rescuebook : public Logbook, public Rb_options
                        int & copied_size, int & error_size,
                        const char * const msg, bool & first_post,
                        const bool forward );
+  bool reopen_infile();
   int copy_non_tried();
   int rcopy_non_tried();
   int trim_errors();
-  int split_errors( const bool reverse );
+  int split_errors();
   int copy_errors();
   int rcopy_errors();
   void update_rates( const bool force = false );
@@ -266,7 +272,7 @@ public:
               const int cluster, const int hardbs,
               const bool synchronous );
 
-  int do_rescue( const int ides, const int odes, const bool reverse );
+  int do_rescue( const int ides, const int odes );
   };
 
 

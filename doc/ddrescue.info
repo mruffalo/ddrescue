@@ -12,7 +12,7 @@ File: ddrescue.info,  Node: Top,  Next: Introduction,  Up: (dir)
 GNU ddrescue Manual
 *******************
 
-This manual is for GNU ddrescue (version 1.18-pre2, 14 August 2013).
+This manual is for GNU ddrescue (version 1.18-pre3, 19 August 2013).
 
 * Menu:
 
@@ -440,6 +440,13 @@ The format for running ddrescue is:
      `--input-position'. The bytes below BYTES aren't touched if they
      exist and truncation is not requested. Else they are set to 0.
 
+`-O'
+`--reopen-on-error'
+     Close the input file and then reopen it after every read error.
+     Use this option if you notice a permanent drop in transfer rate
+     after finding read errors. Most probably the drop is caused by a
+     bug or misfeature in the kernel or in the device driver.
+
 `-p'
 `--preallocate'
      Preallocate space on disc for OUTFILE. Only space for regular
@@ -609,7 +616,7 @@ Character   Meaning
 
 And here is an example logfile:
 
-# Rescue Logfile. Created by GNU ddrescue version 1.18-pre2
+# Rescue Logfile. Created by GNU ddrescue version 1.18-pre3
 # Command line: ddrescue /dev/fd0 fdimage logfile
 # current_pos  current_status
 0x00120000     ?
@@ -1200,16 +1207,16 @@ Node: Basic concepts4065
 Node: Important advice5545
 Node: Algorithm6654
 Node: Invoking ddrescue10904
-Node: Logfile structure22942
-Node: Examples25197
-Ref: lziprecover-example28170
-Node: Direct disc access30010
-Node: Fill mode32087
-Node: Generate mode36227
-Node: Ddrescuelog38174
-Node: Invoking ddrescuelog40323
-Node: Problems45814
-Node: Concept index46371
+Node: Logfile structure23238
+Node: Examples25493
+Ref: lziprecover-example28466
+Node: Direct disc access30306
+Node: Fill mode32383
+Node: Generate mode36523
+Node: Ddrescuelog38470
+Node: Invoking ddrescuelog40619
+Node: Problems46110
+Node: Concept index46667
 
 End Tag Table
 

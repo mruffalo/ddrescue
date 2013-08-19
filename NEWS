@@ -1,5 +1,7 @@
 Changes in version 1.18:
 
+The new option "-O, --reopen-on-error" has been added.
+
 The new options "-1, --log-rates" and "-2, --log-reads" have been added.
 They produce data files usable by plotting utilities like gnuplot.
 
