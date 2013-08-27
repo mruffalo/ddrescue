@@ -1,9 +1,15 @@
 Changes in version 1.18:
 
+The long name of option "-r" has been changed to "--retry-passes" to
+make it clear that ddrescue tries each sector only once per retry pass.
+
 The new option "-O, --reopen-on-error" has been added.
 
 The new options "-1, --log-rates" and "-2, --log-reads" have been added.
 They produce data files usable by plotting utilities like gnuplot.
+
+The default value of option "-a, --min-read-rate" has been changed to 0
+(auto).
 
 Skip size is now reset (instead of reduced) after good data is found.
 This should make ddrescue regain speed faster after leaving a bad or

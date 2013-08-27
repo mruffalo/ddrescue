@@ -194,7 +194,7 @@ struct Rb_options
   bool try_again;
 
   Rb_options()
-    : max_error_rate( -1 ), min_outfile_size( -1 ), min_read_rate( -1 ),
+    : max_error_rate( -1 ), min_outfile_size( -1 ), min_read_rate( 0 ),
       timeout( -1 ), max_errors( -1 ), max_logfile_size( 1000 ),
       max_retries( 0 ), o_direct( 0 ), skipbs( default_skipbs ),
       complete_only( false ), new_errors_only( false ), nosplit( false ),

@@ -12,7 +12,7 @@ File: ddrescue.info,  Node: Top,  Next: Introduction,  Up: (dir)
 GNU ddrescue Manual
 *******************
 
-This manual is for GNU ddrescue (version 1.18-pre3, 19 August 2013).
+This manual is for GNU ddrescue (version 1.18-pre4, 27 August 2013).
 
 * Menu:
 
@@ -223,15 +223,17 @@ blocks.
 
    4) (Third phase; Splitting) Read forwards one sector at a time from
 the center of the largest non-split block, until a bad sector is found.
-Then read backwards one sector at a time from the center of the same
-block, until a bad sector is found. If the logfile is larger than
-`--logfile-size', read the smallest non-split blocks until the number
-of entries in the logfile drops below `--logfile-size'.  Repeat until
-all remaining non-split blocks have less than 5 sectors.  Then read the
-remaining non-split blocks sequentially.
+Then, if the bad sector found is not the first one tried, read backwards
+one sector at a time from the center of the same block, until a bad
+sector is found. If the logfile is larger than `--logfile-size', read
+the smallest non-split blocks until the number of entries in the
+logfile drops below `--logfile-size'. Repeat until all remaining
+non-split blocks have less than 5 sectors. Then read the remaining
+non-split blocks sequentially.
 
    5) (Fourth phase; Retrying) Optionally try to read again the bad
-sectors until the specified number of retries is reached.
+sectors until the specified number of retry passes is reached. Every
+bad sector is tried only once in each pass.
 
    6) Optionally write a logfile for later use.
 
@@ -287,9 +289,11 @@ The format for running ddrescue is:
      variable amount depending on rate and error histories. The skipped
      blocks are tried in additional passes (before trimming) where the
      minimum read rate is divided by ten before each pass, until there
-     are no more non-tried blocks left. If BYTES is 0 (auto), the
-     minimum read rate is recalculated for each block read as
-     (average_rate / 10). Values above device capabilities will be
+     are no more non-tried blocks left.
+
+     If BYTES is 0 (auto), the minimum read rate is recalculated for
+     each block as (average_rate / 10). If BYTES is -1, skipping over
+     slow areas is disabled. Values above device capabilities will be
      ignored.
 
 `-A'
@@ -426,8 +430,8 @@ The format for running ddrescue is:
 `--retrim'
      Mark all failed blocks inside the rescue domain as non-trimmed
      before beginning the rescue. The effect is similar to
-     `--retries=1', but the bad sectors are tried in a different order,
-     making perhaps possible to rescue some of them.
+     `--retry-passes=1', but the bad sectors are tried in a different
+     order, making perhaps possible to rescue some of them.
 
 `-n'
 `--no-split'
@@ -442,10 +446,12 @@ The format for running ddrescue is:
 
 `-O'
 `--reopen-on-error'
-     Close the input file and then reopen it after every read error.
-     Use this option if you notice a permanent drop in transfer rate
-     after finding read errors. Most probably the drop is caused by a
-     bug or misfeature in the kernel or in the device driver.
+     Close the input file and then reopen it after every read error or
+     slow read encountered during the copying phase (i.e., every time
+     it skips ahead). Use this option if you notice a permanent drop in
+     transfer rate after finding read errors. Most probably the
+     slowing-down is intentionally caused by the kernel trying to
+     increase the probability of reading data from the device.
 
 `-p'
 `--preallocate'
@@ -461,11 +467,11 @@ The format for running ddrescue is:
      Quiet operation. Suppress all messages.
 
 `-r N'
-`--retries=N'
+`--retry-passes=N'
      Exit after given number of retry passes. Defaults to 0. -1 means
-     infinity. Every bad sector is tried only one time per pass. To
+     infinity. Every bad sector is tried only once in each pass. To
      retry bad sectors detected on a previous run, you must specify a
-     non-zero number of retries.
+     non-zero number of retry passes.
 
 `-R'
 `--reverse'
@@ -544,8 +550,8 @@ The format for running ddrescue is:
      very quickly.
 
 
-   Numbers given as arguments to options (positions, sizes, retries,
-etc) may be followed by a multiplier and an optional `B' for "byte".
+   Numbers given as arguments to options (positions, sizes, rates, etc)
+may be followed by a multiplier and an optional `B' for "byte".
 
    Table of SI and binary prefixes (unit multipliers):
 
@@ -616,7 +622,7 @@ Character   Meaning
 
 And here is an example logfile:
 
-# Rescue Logfile. Created by GNU ddrescue version 1.18-pre3
+# Rescue Logfile. Created by GNU ddrescue version 1.18-pre4
 # Command line: ddrescue /dev/fd0 fdimage logfile
 # current_pos  current_status
 0x00120000     ?
@@ -1206,17 +1212,17 @@ Node: Introduction1376
 Node: Basic concepts4065
 Node: Important advice5545
 Node: Algorithm6654
-Node: Invoking ddrescue10904
-Node: Logfile structure23238
-Node: Examples25493
-Ref: lziprecover-example28466
-Node: Direct disc access30306
-Node: Fill mode32383
-Node: Generate mode36523
-Node: Ddrescuelog38470
-Node: Invoking ddrescuelog40619
-Node: Problems46110
-Node: Concept index46667
+Node: Invoking ddrescue11010
+Node: Logfile structure23548
+Node: Examples25803
+Ref: lziprecover-example28776
+Node: Direct disc access30616
+Node: Fill mode32693
+Node: Generate mode36833
+Node: Ddrescuelog38780
+Node: Invoking ddrescuelog40929
+Node: Problems46420
+Node: Concept index46977
 
 End Tag Table
 

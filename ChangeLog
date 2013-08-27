@@ -1,3 +1,11 @@
+2013-08-27  Antonio Diaz Diaz  <antonio@gnu.org>
+
+	* Version 1.18-pre4 released.
+	* Changed long name of option '-r' to '--retry-passes'.
+	* Changed default value of option '-a, --min-read-rate' to 0 (auto).
+	* Limit the effect of option '-O, --reopen-on-error' to the
+	  copying phase, but reopen the file also on slow reads.
+
 2013-08-19  Antonio Diaz Diaz  <antonio@gnu.org>
 
 	* Version 1.18-pre3 released.

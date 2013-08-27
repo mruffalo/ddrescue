@@ -106,10 +106,9 @@ int Rescuebook::copy_and_update( const Block & b, const Sblock::Status st,
                 ( error_size > hardbs() ) ? st : Sblock::bad_sector );
       if( access_works && access( iname_, F_OK ) != 0 )
         {
-        final_msg( "input file disappeared" ); final_errno( errno );
+        final_msg( "Input file disappeared" ); final_errno( errno );
         retval = 1;
         }
-      else if( reopen_on_error && !reopen_infile() ) retval = 1;
       }
     }
   return retval;
@@ -159,6 +158,7 @@ int Rescuebook::copy_non_tried()
       update_rates();
       if( ( error_size > 0 || slow_read() ) && pos >= 0 )
         {
+        if( reopen_on_error && !reopen_infile() ) return 1;
         if( skip_size < skipbs ) skip_size = skipbs;
         else if( skip_size <= max_skip_size / 2 ) skip_size *= 2;
         else skip_size = max_skip_size;
@@ -228,6 +228,7 @@ int Rescuebook::rcopy_non_tried()
       update_rates();
       if( ( error_size > 0 || slow_read() ) && end > 0 )
         {
+        if( reopen_on_error && !reopen_infile() ) return 1;
         if( skip_size < skipbs ) skip_size = skipbs;
         else if( skip_size <= max_skip_size / 2 ) skip_size *= 2;
         else skip_size = max_skip_size;
@@ -332,7 +333,7 @@ int Rescuebook::split_errors()
       if( index < 0 ) break;				// no more blocks
       const Block block = sblock( index );
       if( block.size() / hardbs() < 5 ) break;		// no more large blocks
-      const long long midpos =
+      long long midpos =
         block.pos() + ( ( block.size() / ( 2 * hardbs() ) ) * hardbs() );
       long long pos = midpos;
       while( pos >= 0 )
@@ -347,7 +348,9 @@ int Rescuebook::split_errors()
                                             error_size, msg, first_post, true );
         if( copied_size > 0 ) errsize -= copied_size;
         if( retval ) return retval;
-        if( error_size > 0 ) { error_rate += error_size; pos = -1; }
+        if( error_size > 0 )
+          { error_rate += error_size; pos = -1;
+            if( b.pos() == midpos ) midpos = -1; }	// skip backwards reads
         update_rates();
         if( !update_logfile( odes_ ) ) return -2;
         }

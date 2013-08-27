@@ -100,7 +100,7 @@ void show_help( const int cluster, const int hardbs, const int skipbs )
                "  -O, --reopen-on-error          reopen input file after every read error\n"
                "  -p, --preallocate              preallocate space on disc for output file\n"
                "  -q, --quiet                    suppress all messages\n"
-               "  -r, --retries=<n>              exit after given retries (-1=infinity) [0]\n"
+               "  -r, --retry-passes=<n>         exit after <n> retry passes (-1=infinity) [0]\n"
                "  -R, --reverse                  reverse direction of copy operations\n"
                "  -s, --size=<bytes>             maximum size of input data to be copied\n"
                "  -S, --sparse                   use sparse writes for output file\n"
@@ -409,7 +409,7 @@ int do_rescue( const long long offset, Domain & domain,
       {
       bool nl = false;
       if( rb_opts.max_error_rate >= 0 )
-        { nl = true; std::printf( "Max error rate: %8sB/s    ",
+        { nl = true; std::printf( "Max error rate: %6sB/s    ",
                                   format_num( rb_opts.max_error_rate, 99999 ) ); }
       if( rb_opts.max_errors >= 0 )
         {
@@ -418,11 +418,13 @@ int do_rescue( const long long offset, Domain & domain,
                      rb_opts.new_errors_only ? "new " : "", rb_opts.max_errors );
         }
       if( rb_opts.max_retries >= 0 )
-        { nl = true; std::printf( "Max retries: %d    ", rb_opts.max_retries ); }
+        { nl = true; std::printf( "Max retry passes: %d    ", rb_opts.max_retries ); }
       if( nl ) { nl = false; std::printf( "\n" ); }
 
-      if( rb_opts.min_read_rate >= 0 )
-        { nl = true; std::printf( "Min read rate:  %8sB/s    ",
+      if( rb_opts.min_read_rate == 0 )
+        { nl = true; std::printf( "Min read rate: auto    " ); }
+      else if( rb_opts.min_read_rate > 0 )
+        { nl = true; std::printf( "Min read rate:  %6sB/s    ",
                                   format_num( rb_opts.min_read_rate, 99999 ) ); }
       if( rb_opts.timeout >= 0 )
         { nl = true; std::printf( "Max time since last successful read: %s",
@@ -518,8 +520,7 @@ int main( const int argc, const char * const argv[] )
     { 'O', "reopen-on-error",     Arg_parser::no  },
     { 'p', "preallocate",         Arg_parser::no  },
     { 'q', "quiet",               Arg_parser::no  },
-    { 'r', "retries",             Arg_parser::yes },
-    { 'r', "max-retries",         Arg_parser::yes },
+    { 'r', "retry-passes",        Arg_parser::yes },
     { 'R', "reverse",             Arg_parser::no  },
     { 's', "size",                Arg_parser::yes },
     { 's', "max-size",            Arg_parser::yes },
@@ -546,7 +547,7 @@ int main( const int argc, const char * const argv[] )
       {
       case '1': rate_logger.set_filename( arg ); break;
       case '2': read_logger.set_filename( arg ); break;
-      case 'a': rb_opts.min_read_rate = getnum( arg, hardbs, 0 ); break;
+      case 'a': rb_opts.min_read_rate = getnum( arg, hardbs, -1 ); break;
       case 'A': rb_opts.try_again = true; break;
       case 'b': hardbs = getnum( arg, 0, 1, max_hardbs ); break;
       case 'B': format_num( 0, 0, -1 ); break;		// set binary prefixes
