@@ -21,6 +21,7 @@
 #include <algorithm>
 #include <climits>
 #include <cstdio>
+#include <cstdlib>
 #include <string>
 #include <vector>
 #include <stdint.h>
@@ -82,6 +83,31 @@ Block Block::split( long long pos, const int hardbs )
     return b;
     }
   return Block( 0, 0 );
+  }
+
+
+Domain::Domain( const long long p, const long long s,
+                const char * const logname, const bool loose )
+  {
+  Block b( p, s ); b.fix_size();
+  if( !logname || !logname[0] ) { block_vector.push_back( b ); return; }
+  Logfile logfile( logname );
+  if( !logfile.read_logfile( loose ? '?' : 0 ) )
+    {
+    char buf[80];
+    snprintf( buf, sizeof buf,
+              "Logfile '%s' does not exist or is not readable.", logname );
+    show_error( buf );
+    std::exit( 1 );
+    }
+  logfile.compact_sblock_vector();
+  for( int i = 0; i < logfile.sblocks(); ++i )
+    {
+    const Sblock & sb = logfile.sblock( i );
+    if( sb.status() == Sblock::finished ) block_vector.push_back( sb );
+    }
+  if( block_vector.size() == 0 ) block_vector.push_back( Block( 0, 0 ) );
+  else this->crop( b );
   }
 
 

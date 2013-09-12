@@ -33,7 +33,6 @@
 
 #include "block.h"
 #include "ddrescue.h"
-#include "loggers.h"
 
 
 namespace {
@@ -111,47 +110,6 @@ int Fillbook::fill_block( const Block & b )
   }
 
 
-void Fillbook::show_status( const long long ipos, bool force )
-  {
-  const char * const up = "\x1b[A";
-  if( t0 == 0 )
-    {
-    t0 = t1 = std::time( 0 );
-    first_size = last_size = filled_size;
-    force = true;
-    std::printf( "\n\n\n" );
-    }
-
-  if( ipos >= 0 ) last_ipos = ipos;
-  const long t2 = std::time( 0 );
-  if( t2 > t1 || force )
-    {
-    if( t2 > t1 )
-      {
-      a_rate = ( filled_size - first_size ) / ( t2 - t0 );
-      c_rate = ( filled_size - last_size ) / ( t2 - t1 );
-      t1 = t2;
-      last_size = filled_size;
-      }
-    std::printf( "\r%s%s%s", up, up, up );
-    std::printf( "filled size: %10sB,  filled areas: %6u,  current rate: %9sB/s\n",
-                 format_num( filled_size ), filled_areas,
-                 format_num( c_rate, 99999 ) );
-    std::printf( "remain size: %10sB,  remain areas: %6u,  average rate: %9sB/s\n",
-                 format_num( remaining_size ), remaining_areas,
-                 format_num( a_rate, 99999 ) );
-    std::printf( "current pos: %10sB,  run time:  %9s\n",
-                 format_num( last_ipos + offset() ), format_time( t1 - t0 ) );
-    std::fflush( stdout );
-    }
-  else if( t2 < t1 )			// clock jumped back
-    {
-    t0 -= std::min( t0, t1 - t2 );
-    t1 = t2;
-    }
-  }
-
-
 bool Fillbook::read_buffer( const int ides )
   {
   const int rd = readblock( ides, iobuf(), softbs(), 0 );
@@ -178,57 +136,12 @@ void Genbook::check_block( const Block & b, int & copied_size, int & error_size 
     const int size = std::min( hardbs(), copied_size - pos );
     if( !block_is_zero( iobuf() + pos, size ) )
       {
-      change_chunk_status( Block( b.pos() + pos, size ), Sblock::finished );
+      change_chunk_status( Block( b.pos() + pos, size ),
+                           Sblock::finished, domain() );
       recsize += size;
       }
     gensize += size;
     pos += size;
-    }
-  }
-
-
-void Genbook::show_status( const long long ipos, const char * const msg,
-                           bool force )
-  {
-  const char * const up = "\x1b[A";
-  if( t0 == 0 )
-    {
-    t0 = t1 = std::time( 0 );
-    first_size = last_size = gensize;
-    force = true;
-    std::printf( "\n\n" );
-    }
-
-  if( ipos >= 0 ) last_ipos = ipos;
-  const long t2 = std::time( 0 );
-  if( t2 > t1 || force )
-    {
-    if( t2 > t1 )
-      {
-      a_rate = ( gensize - first_size ) / ( t2 - t0 );
-      c_rate = ( gensize - last_size ) / ( t2 - t1 );
-      t1 = t2;
-      last_size = gensize;
-      }
-    std::printf( "\r%s%s", up, up );
-    std::printf( "rescued: %10sB,  generated:%10sB,  current rate: %9sB/s\n",
-                 format_num( recsize ), format_num( gensize ),
-                 format_num( c_rate, 99999 ) );
-    std::printf( "   opos: %10sB,   run time:  %9s,  average rate: %9sB/s\n",
-                 format_num( last_ipos + offset() ), format_time( t1 - t0 ),
-                 format_num( a_rate, 99999 ) );
-    if( msg && msg[0] )
-      {
-      const int len = std::strlen( msg ); std::printf( "\r%s", msg );
-      for( int i = len; i < oldlen; ++i ) std::fputc( ' ', stdout );
-      oldlen = len;
-      }
-    std::fflush( stdout );
-    }
-  else if( t2 < t1 )			// clock jumped back
-    {
-    t0 -= std::min( t0, t1 - t2 );
-    t1 = t2;
     }
   }
 
@@ -278,81 +191,6 @@ int Rescuebook::copy_block( const Block & b, int & copied_size, int & error_size
       }
     }
   return 0;
-  }
-
-
-void Rescuebook::update_rates( const bool force )
-  {
-  if( t0 == 0 )
-    {
-    t0 = t1 = ts = std::time( 0 );
-    first_size = last_size = recsize;
-    rates_updated = true;
-    if( verbosity >= 0 ) std::printf( "\n\n\n" );
-    }
-
-  long t2 = std::time( 0 );
-  if( force && t2 <= t1 ) t2 = t1 + 1;		// force update of e_code
-  if( t2 > t1 )
-    {
-    a_rate = ( recsize - first_size ) / ( t2 - t0 );
-    c_rate = ( recsize - last_size ) / ( t2 - t1 );
-    if( !( e_code & 4 ) )
-      {
-      if( recsize != last_size ) { last_size = recsize; ts = t2; }
-      else if( timeout >= 0 && t2 - ts > timeout ) e_code |= 4;
-      }
-    if( max_error_rate >= 0 && !( e_code & 1 ) )
-      {
-      error_rate /= ( t2 - t1 );
-      if( error_rate > max_error_rate ) e_code |= 1;
-      else error_rate = 0;
-      }
-    t1 = t2;
-    rates_updated = true;
-    }
-  else if( t2 < t1 )			// clock jumped back
-    {
-    const long delta = std::min( t0, t1 - t2 );
-    t0 -= delta;
-    ts -= delta;
-    t1 = t2;
-    }
-  }
-
-
-void Rescuebook::show_status( const long long ipos, const char * const msg,
-                              const bool force )
-  {
-  const char * const up = "\x1b[A";
-
-  if( ipos >= 0 ) last_ipos = ipos;
-  if( rates_updated || force )
-    {
-    if( verbosity >= 0 )
-      {
-      std::printf( "\r%s%s%s", up, up, up );
-      std::printf( "rescued: %10sB,  errsize:%9sB,  current rate: %9sB/s\n",
-                   format_num( recsize ), format_num( errsize, 99999 ),
-                   format_num( c_rate, 99999 ) );
-      std::printf( "   ipos: %10sB,   errors: %7u,    average rate: %9sB/s\n",
-                   format_num( last_ipos ), errors,
-                   format_num( a_rate, 99999 ) );
-      std::printf( "   opos: %10sB, run time: %9s,  successful read: %9s ago\n",
-                   format_num( last_ipos + offset() ),
-                   format_time( t1 - t0 ), format_time( t1 - ts ) );
-      if( msg && msg[0] && !errors_or_timeout() )
-        {
-        const int len = std::strlen( msg ); std::printf( "\r%s", msg );
-        for( int i = len; i < oldlen; ++i ) std::fputc( ' ', stdout );
-        oldlen = len;
-        }
-      std::fflush( stdout );
-      }
-    rate_logger.print_line( t1 - t0, last_ipos, a_rate, c_rate, errors, errsize );
-    if( !force ) read_logger.print_time( t1 - t0 );
-    rates_updated = false;
-    }
   }
 
 

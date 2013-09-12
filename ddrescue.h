@@ -16,55 +16,30 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-class Logbook
+class Logbook : public Logfile
   {
-public:
-  enum Status
-    { copying = '?', trimming = '*', splitting = '/', retrying = '-',
-      filling = 'F', generating = 'G', finished = '+' };
-
-private:
   const long long offset_;		// outfile offset (opos - ipos);
-  long long current_pos_;
   long long logfile_isize_;
-  Status current_status_;
   Domain & domain_;			// rescue domain
   uint8_t *iobuf_base, *iobuf_;		// iobuf is aligned to page and hardbs
-  const char * const filename_;
   const int hardbs_, softbs_;
   const char * final_msg_;
   int final_errno_;
-  mutable int index_;			// cached index of last find or change
-  std::vector< Sblock > sblock_vector;	// note: blocks are consecutive
   long ul_t1;				// variable for update_logfile
   bool logfile_exists_;
 
   Logbook( const Logbook & );		// declared as private
   void operator=( const Logbook & );	// declared as private
 
-  void erase_sblock( const int i )
-    { sblock_vector.erase( sblock_vector.begin() + i ); }
-  void insert_sblock( const int i, const Sblock & sb )
-    { sblock_vector.insert( sblock_vector.begin() + i, sb ); }
-  void split_domain_border_sblocks();
-
 public:
-  Logbook( const long long offset, const long long isize,
-           Domain & dom, const char * const logname,
-           const int cluster, const int hardbs,
-           const bool complete_only, const bool do_not_read = false );
+  Logbook( const long long offset, const long long isize, Domain & dom,
+           const char * const logname, const int cluster,
+           const int hardbs, const bool complete_only );
   ~Logbook() { delete[] iobuf_base; }
 
-  bool blank() const;
-  void compact_sblock_vector();
-  bool update_logfile( const int odes = -1, const bool force = false,
-                       const bool retry = true );
-  void write_logfile( FILE * const f ) const;
+  bool update_logfile( const int odes = -1, const bool force = false );
 
-  long long current_pos() const { return current_pos_; }
-  Status current_status() const { return current_status_; }
   const Domain & domain() const { return domain_; }
-  const char * filename() const { return filename_; }
   uint8_t * iobuf() const { return iobuf_; }
   int hardbs() const { return hardbs_; }
   int softbs() const { return softbs_; }
@@ -74,39 +49,11 @@ public:
   bool logfile_exists() const { return logfile_exists_; }
   long long logfile_isize() const { return logfile_isize_; }
 
-  void current_pos( const long long pos ) { current_pos_ = pos; }
-  void current_status( const Status st ) { current_status_ = st; }
   void final_msg( const char * const msg ) { final_msg_ = msg; }
   void final_errno( const int e ) { final_errno_ = e; }
 
-  const Sblock & sblock( const int i ) const
-    { return sblock_vector[i]; }
-  int sblocks() const { return (int)sblock_vector.size(); }
-  void change_sblock_status( const int i, const Sblock::Status st )
-    { sblock_vector[i].status( st ); }
-  void split_sblock_by( const long long pos, const int i )
-    {
-    if( sblock_vector[i].includes( pos ) )
-      insert_sblock( i, sblock_vector[i].split( pos ) );
-    }
-  bool truncate_vector( const long long end, const bool force = false );
   void truncate_domain( const long long end )
     { domain_.crop_by_file_size( end ); }
-
-  int find_index( const long long pos ) const;
-  int find_largest_sblock( const Sblock::Status st ) const;
-  int find_smallest_sblock( const Sblock::Status st ) const;
-  void find_chunk( Block & b, const Sblock::Status st,
-                   const int alignment = 0 ) const;
-  void rfind_chunk( Block & b, const Sblock::Status st,
-                    const int alignment = 0 ) const;
-  int change_chunk_status( const Block & b, const Sblock::Status st );
-
-  static bool isstatus( const int st )
-    { return ( st == copying || st == trimming || st == splitting ||
-               st == retrying || st == filling || st == generating ||
-               st == finished ); }
-  static const char * status_name( const Status st );
   };
 
 
@@ -187,6 +134,7 @@ struct Rb_options
   bool complete_only;
   bool new_errors_only;
   bool nosplit;
+  bool notrim;
   bool reopen_on_error;
   bool retrim;
   bool reverse;
@@ -194,12 +142,12 @@ struct Rb_options
   bool try_again;
 
   Rb_options()
-    : max_error_rate( -1 ), min_outfile_size( -1 ), min_read_rate( 0 ),
+    : max_error_rate( -1 ), min_outfile_size( -1 ), min_read_rate( -1 ),
       timeout( -1 ), max_errors( -1 ), max_logfile_size( 1000 ),
       max_retries( 0 ), o_direct( 0 ), skipbs( default_skipbs ),
       complete_only( false ), new_errors_only( false ), nosplit( false ),
-      reopen_on_error( false ), retrim( false ), reverse( false ),
-      sparse( false ), try_again( false )
+      notrim( false ), reopen_on_error( false ), retrim( false ),
+      reverse( false ), sparse( false ), try_again( false )
       {}
 
   bool operator==( const Rb_options & o ) const
@@ -211,7 +159,8 @@ struct Rb_options
                max_retries == o.max_retries && o_direct == o.o_direct &&
                skipbs == o.skipbs && complete_only == o.complete_only &&
                new_errors_only == o.new_errors_only &&
-               nosplit == o.nosplit && reopen_on_error == o.reopen_on_error &&
+               nosplit == o.nosplit && notrim == o.notrim &&
+               reopen_on_error == o.reopen_on_error &&
                retrim == o.retrim && reverse == o.reverse &&
                sparse == o.sparse && try_again == o.try_again ); }
   bool operator!=( const Rb_options & o ) const

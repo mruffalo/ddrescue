@@ -20,6 +20,7 @@
 
 #include <climits>
 #include <cstdio>
+#include <ctime>
 #include <string>
 #include <vector>
 #include <stdint.h>
@@ -64,6 +65,47 @@ int Fillbook::fill_areas( const std::string & filltypes )
     ++filled_areas; --remaining_areas;
     }
   return 0;
+  }
+
+
+void Fillbook::show_status( const long long ipos, bool force )
+  {
+  const char * const up = "\x1b[A";
+  if( t0 == 0 )
+    {
+    t0 = t1 = std::time( 0 );
+    first_size = last_size = filled_size;
+    force = true;
+    std::printf( "\n\n\n" );
+    }
+
+  if( ipos >= 0 ) last_ipos = ipos;
+  const long t2 = std::time( 0 );
+  if( t2 > t1 || force )
+    {
+    if( t2 > t1 )
+      {
+      a_rate = ( filled_size - first_size ) / ( t2 - t0 );
+      c_rate = ( filled_size - last_size ) / ( t2 - t1 );
+      t1 = t2;
+      last_size = filled_size;
+      }
+    std::printf( "\r%s%s%s", up, up, up );
+    std::printf( "filled size: %10sB,  filled areas: %6u,  current rate: %9sB/s\n",
+                 format_num( filled_size ), filled_areas,
+                 format_num( c_rate, 99999 ) );
+    std::printf( "remain size: %10sB,  remain areas: %6u,  average rate: %9sB/s\n",
+                 format_num( remaining_size ), remaining_areas,
+                 format_num( a_rate, 99999 ) );
+    std::printf( "current pos: %10sB,  run time:  %9s\n",
+                 format_num( last_ipos + offset() ), format_time( t1 - t0 ) );
+    std::fflush( stdout );
+    }
+  else if( t2 < t1 )			// clock jumped back
+    {
+    t0 -= std::min( t0, t1 - t2 );
+    t1 = t2;
+    }
   }
 
 

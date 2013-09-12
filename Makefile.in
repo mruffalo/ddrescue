@@ -7,8 +7,8 @@ INSTALL_DIR = $(INSTALL) -d -m 755
 SHELL = /bin/sh
 
 ddobjs = fillbook.o genbook.o io.o logbook.o rescuebook.o main.o
-objs = arg_parser.o block.o loggers.o rational.o $(ddobjs)
-logobjs = arg_parser.o block.o logbook.o ddrescuelog.o
+objs = arg_parser.o block.o logfile.o loggers.o rational.o $(ddobjs)
+logobjs = arg_parser.o block.o logbook.o logfile.o ddrescuelog.o
 
 
 .PHONY : all install install-bin install-info install-man install-strip \
@@ -42,7 +42,7 @@ $(objs)       : Makefile
 $(ddobjs)     : block.h ddrescue.h
 arg_parser.o  : arg_parser.h
 block.o       : block.h
-io.o          : loggers.h
+logfile.o     : block.h
 loggers.o     : loggers.h
 rational.o    : rational.h
 rescuebook.o  : loggers.h
@@ -125,6 +125,7 @@ dist : doc
 	  $(DISTNAME)/testsuite/check.sh \
 	  $(DISTNAME)/testsuite/logfile1 \
 	  $(DISTNAME)/testsuite/logfile2 \
+	  $(DISTNAME)/testsuite/logfile2i \
 	  $(DISTNAME)/testsuite/test.txt \
 	  $(DISTNAME)/testsuite/test1.txt \
 	  $(DISTNAME)/testsuite/test2.txt \

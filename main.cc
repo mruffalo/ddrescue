@@ -93,9 +93,11 @@ void show_help( const int cluster, const int hardbs, const int skipbs )
                "  -K, --skip-size=<bytes>        initial size to skip on read error [%sB]\n",
                format_num( skipbs, 9999, -1 ) );
   std::printf( "  -l, --logfile-size=<entries>   do not grow logfile beyond this size [1000]\n"
+               "  -L, --loose-domain             accept a incomplete domain logfile\n"
                "  -m, --domain-logfile=<file>    restrict domain to finished blocks in file\n"
                "  -M, --retrim                   mark all failed blocks as non-trimmed\n"
-               "  -n, --no-split                 do not try to split or retry failed blocks\n"
+               "  -n, --no-split                 skip the splitting phase\n"
+               "  -N, --no-trim                  skip the trimming phase\n"
                "  -o, --output-position=<bytes>  starting position in output file [ipos]\n"
                "  -O, --reopen-on-error          reopen input file after every read error\n"
                "  -p, --preallocate              preallocate space on disc for output file\n"
@@ -238,8 +240,9 @@ int do_fill( const long long offset, Domain & domain,
 
   Fillbook fillbook( offset, domain, logname, cluster, hardbs,
                      ignore_write_errors, synchronous );
-  if( fillbook.domain().size() == 0 )
-    { show_error( "Nothing to do." ); return 0; }
+  if( !fillbook.logfile_exists() ) return not_readable( logname );
+  if( fillbook.domain().size() == 0 ) return empty_domain();
+  if( fillbook.read_only() ) return not_writable( logname );
 
   const int ides = open( iname, O_RDONLY | o_binary );
   if( ides < 0 )
@@ -291,13 +294,13 @@ int do_generate( const long long offset, Domain & domain,
     { show_error( "Input file is not seekable." ); return 1; }
 
   Genbook genbook( offset, isize, domain, logname, cluster, hardbs );
-  if( genbook.domain().size() == 0 )
-    { show_error( "Nothing to do." ); return 0; }
+  if( genbook.domain().size() == 0 ) return empty_domain();
   if( !genbook.blank() && genbook.current_status() != Logbook::generating )
     {
     show_error( "Logfile alredy exists and is non-empty.", 0, true );
     return 1;
     }
+  if( genbook.read_only() ) return not_writable( logname );
 
   const int odes = open( oname, O_RDONLY | o_binary );
   if( odes < 0 )
@@ -357,16 +360,17 @@ int do_rescue( const long long offset, Domain & domain,
     }
   if( rescuebook.domain().size() == 0 )
     {
-    if( rb_opts.complete_only )
+    if( rb_opts.complete_only && !rescuebook.logfile_exists() )
       { show_error( "Nothing to complete; logfile is missing or empty.", 0, true );
         return 1; }
-    show_error( "Nothing to do." ); return 0;
+    return empty_domain();
     }
   if( o_trunc && !rescuebook.blank() )
     {
     show_error( "Outfile truncation and logfile input are incompatible.", 0, true );
     return 1;
     }
+  if( rescuebook.read_only() ) return not_writable( logname );
 
   const int odes = open( oname, O_CREAT | O_WRONLY | o_trunc | o_binary,
                          outmode );
@@ -389,8 +393,6 @@ int do_rescue( const long long offset, Domain & domain,
     { show_error( "Can't open file for logging rates", errno ); return 1; }
   if( !read_logger.open_file() )
     { show_error( "Can't open file for logging reads", errno ); return 1; }
-
-  if( !rescuebook.update_logfile( -1, true ) ) return 1;
 
   if( verbosity >= 0 )
     std::printf( "\n\n%s %s\n", Program_name, PROGVERSION );
@@ -434,10 +436,12 @@ int do_rescue( const long long offset, Domain & domain,
       std::printf( "Direct: %s    ", rb_opts.o_direct ? "yes" : "no" );
       std::printf( "Sparse: %s    ", rb_opts.sparse ? "yes" : "no" );
       std::printf( "Split: %s    ", !rb_opts.nosplit ? "yes" : "no" );
+      std::printf( "Trim: %s    ", !rb_opts.notrim ? "yes" : "no" );
       std::printf( "Truncate: %s    ", o_trunc ? "yes" : "no" );
-      if( rb_opts.complete_only ) std::printf( "Complete only" );
       std::printf( "\n" );
-      if( rb_opts.reverse ) std::printf( "Reverse mode\n" );
+      if( rb_opts.complete_only ) { nl = true; std::printf( "Complete only    " ); }
+      if( rb_opts.reverse ) { nl = true; std::printf( "Reverse mode" ); }
+      if( nl ) { nl = false; std::printf( "\n" ); }
       }
     std::printf( "\n" );
     }
@@ -481,6 +485,7 @@ int main( const int argc, const char * const argv[] )
   struct Rb_options rb_opts;
   bool force = false;
   bool ignore_write_errors = false;
+  bool loose = false;
   bool preallocate = false;
   bool synchronous = false;
   bool verify_input_size = false;
@@ -513,9 +518,11 @@ int main( const int argc, const char * const argv[] )
     { 'I', "verify-input-size",   Arg_parser::no  },
     { 'K', "skip-size",           Arg_parser::yes },
     { 'l', "logfile-size",        Arg_parser::yes },
+    { 'L', "loose-domain",        Arg_parser::no  },
     { 'm', "domain-logfile",      Arg_parser::yes },
     { 'M', "retrim",              Arg_parser::no  },
     { 'n', "no-split",            Arg_parser::no  },
+    { 'N', "no-trim",             Arg_parser::no  },
     { 'o', "output-position",     Arg_parser::yes },
     { 'O', "reopen-on-error",     Arg_parser::no  },
     { 'p', "preallocate",         Arg_parser::no  },
@@ -547,7 +554,7 @@ int main( const int argc, const char * const argv[] )
       {
       case '1': rate_logger.set_filename( arg ); break;
       case '2': read_logger.set_filename( arg ); break;
-      case 'a': rb_opts.min_read_rate = getnum( arg, hardbs, -1 ); break;
+      case 'a': rb_opts.min_read_rate = getnum( arg, hardbs, 0 ); break;
       case 'A': rb_opts.try_again = true; break;
       case 'b': hardbs = getnum( arg, 0, 1, max_hardbs ); break;
       case 'B': format_num( 0, 0, -1 ); break;		// set binary prefixes
@@ -573,9 +580,11 @@ int main( const int argc, const char * const argv[] )
       case 'K': rb_opts.skipbs = getnum( arg, hardbs, Rb_options::default_skipbs,
                                          Rb_options::max_skipbs ); break;
       case 'l': rb_opts.max_logfile_size = getnum( arg, 0, 1, INT_MAX ); break;
+      case 'L': loose = true; break;
       case 'm': set_name( &domain_logfile_name, arg ); break;
       case 'M': rb_opts.retrim = true; break;
       case 'n': rb_opts.nosplit = true; break;
+      case 'N': rb_opts.notrim = true; break;
       case 'o': opos = getnum( arg, hardbs, 0 ); break;
       case 'O': rb_opts.reopen_on_error = true; break;
       case 'p': preallocate = true; break;
@@ -617,7 +626,7 @@ int main( const int argc, const char * const argv[] )
                     program_mode == m_generate, preallocate, rb_opts.sparse ) )
     return 1;
 
-  Domain domain( ipos, max_size, domain_logfile_name );
+  Domain domain( ipos, max_size, domain_logfile_name, loose );
 
   switch( program_mode )
     {

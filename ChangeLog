@@ -1,3 +1,14 @@
+2013-09-12  Antonio Diaz Diaz  <antonio@gnu.org>
+
+	* Version 1.18-pre5 released.
+	* Added new option '-L, --loose-domain' to ddrescue and ddrescuelog.
+	* Added new option '-N, --no-trim' to disable trimming of
+	  damaged areas.
+	* Restored default value of option '-a, --min-read-rate' to -1.
+	* Added option '-B, --binary-prefixes' to ddrescuelog.
+	* Added new option '-C, --complete-logfile' to ddrescuelog.
+	* Code reorganization. New class 'Logfile'.
+
 2013-08-27  Antonio Diaz Diaz  <antonio@gnu.org>
 
 	* Version 1.18-pre4 released.
@@ -44,7 +55,7 @@
 	* rescuebook.cc: Mark failed blocks with 1 sector as bad-sector.
 	* logbook.cc (extend_sblock_vector): Remove last block of
 	  logfile if it starts at isize and is not marked as finished.
-	* io.cc (show_status,update_rates): Detect a jump back in time
+	* io.cc (show_status, update_rates): Detect a jump back in time
 	  and adjust status.
 	* ddrescue.h (slow_read): Return false for the first 10 seconds.
 	* io.cc (show_status) Leave cursor after message so that ^C does

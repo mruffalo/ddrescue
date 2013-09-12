@@ -6,8 +6,8 @@
 @finalout
 @c %**end of header
 
-@set UPDATED 27 August 2013
-@set VERSION 1.18-pre4
+@set UPDATED 12 September 2013
+@set VERSION 1.18-pre5
 
 @dircategory GNU Packages
 @direntry
@@ -193,9 +193,9 @@ operating system that tries to mount and "fix" the partitions it sees.
 
 GNU ddrescue is not a derivative of dd, nor is related to dd in any way
 except in that both can be used for copying data from one device to
-another. The difference is that ddrescue uses a sophisticated algorithm
-to copy data from failing drives causing them as little additional
-damage as possible.
+another. The key difference is that ddrescue uses a sophisticated
+algorithm to copy data from failing drives causing them as little
+additional damage as possible.
 
 Ddrescue manages efficiently the status of the rescue in progress and
 tries to rescue the good parts first, scheduling reads inside bad (or
@@ -321,9 +321,8 @@ is divided by ten before each pass, until there are no more non-tried
 blocks left.
 
 If @var{bytes} is 0 (auto), the minimum read rate is recalculated for
-each block as @w{(average_rate / 10)}. If @var{bytes} is -1, skipping
-over slow areas is disabled. Values above device capabilities will be
-ignored.
+each block as @w{(average_rate / 10)}. Values above device capabilities
+are ignored.
 
 @item -A
 @itemx --try-again
@@ -401,7 +400,7 @@ regular file, but a device or partition.
 Fill the blocks in @var{outfile} specified as any of @var{types} in
 @var{logfile}, with data read from @var{infile}. @var{types} contains
 one or more of the status characters defined in the chapter Logfile
-Structure (@pxref{Logfile structure}). See the chapter Fill mode
+structure (@pxref{Logfile structure}). See the chapter Fill mode
 (@pxref{Fill mode}) for a complete description of the fill mode.
 
 @item -G
@@ -447,11 +446,20 @@ entries. Logfile may be larger if it was larger at startup or if it
 became larger during the copying or trimming phases. Defaults to 1000.
 (Each entry is about 26-30 bytes in size).
 
+@item -L
+@itemx --loose-domain
+Accept a incomplete synthetic (user fabricated) domain logfile and fill
+the gaps with non-tried blocks. The blocks in the logfile must be
+strictly ascending and non-overlapping, but they do not need to be
+contiguous. This option allows making quick edits to a logfile without
+all the size calculations involved in making all data blocks contiguous
+again.
+
 @item -m @var{file}
 @itemx --domain-logfile=@var{file}
 Restrict the rescue domain to the blocks marked as finished in the
-logfile @var{file}. This is useful if the destination drive fails during
-the rescue.
+logfile @var{file}. This is useful for merging partially recovered
+images of backups, or if the destination drive fails during the rescue.
 
 @item -M
 @itemx --retrim
@@ -465,6 +473,11 @@ possible to rescue some of them.
 Skip the splitting phase. Avoids spending a lot of time trying to rescue
 the most difficult parts of the file.
 
+@item -N
+@itemx --no-trim
+Skip the trimming phase. Specially useful in the first parts of a
+multi-part rescue.
+
 @item -o @var{bytes}
 @itemx --output-position=@var{bytes}
 Starting position in @var{outfile}, in bytes. Defaults to
@@ -473,12 +486,13 @@ they exist and truncation is not requested. Else they are set to 0.
 
 @item -O
 @itemx --reopen-on-error
-Close the input file and then reopen it after every read error or slow
-read encountered during the copying phase (i.e., every time it skips
-ahead). Use this option if you notice a permanent drop in transfer rate
-after finding read errors. Most probably the slowing-down is
-intentionally caused by the kernel trying to increase the probability of
-reading data from the device.
+Close the input file and then reopen it after every read error and, if
+@samp{--min-read-rate} is set, after every slow read encountered during
+the copying phase (i.e., every time ddrescue skips ahead). Use this
+option if you notice a permanent drop in transfer rate after finding
+read errors or slow areas. Most probably the slowing-down is
+intentionally caused by the kernel in an attempt to increase the
+probability of reading data from the device.
 
 @item -p
 @itemx --preallocate
@@ -573,7 +587,9 @@ Log all read operations in @var{file}. Every read attempt and its result
 line is also written at the beginning of each phase (copying, trimming,
 splitting and retrying). Finally, a line with a time mark is written
 every second (unless the read takes more time). Use this option with
-caution because @var{file} may become very large very quickly.
+caution because @var{file} may become very large very quickly. Use
+@samp{lzip -7} to compress @var{file} if you need to store or transmit
+it.
 
 @end table
 
@@ -745,7 +761,8 @@ Example 3: Rescue a CD-ROM in /dev/cdrom.
 @example
 ddrescue -n -b2048 /dev/cdrom cdimage logfile
 ddrescue -d -b2048 /dev/cdrom cdimage logfile
-  (write cdimage to a blank CD-ROM)
+  (if errsize is zero, cdimage now contains a complete image of the
+   CD-ROM and you can write it to a blank CD-ROM)
 @end example
 
 @sp 1
@@ -757,13 +774,27 @@ ddrescue -n -b2048 /dev/cdrom cdimage logfile
 ddrescue -d -b2048 /dev/cdrom cdimage logfile
   (insert second copy in the CD drive)
 ddrescue -d -r1 -b2048 /dev/cdrom cdimage logfile
-  (write cdimage to a blank CD-ROM)
+  (if errsize is zero, cdimage now contains a complete image of the
+   CD-ROM and you can write it to a blank CD-ROM)
+@end example
+
+@sp 1
+@noindent
+Example 5: Merge the partially recovered images of 3 identical DVDs
+using their logfiles as domain logfiles.
+
+@example
+ddrescue -m logfile1 dvdimage1 dvdimage logfile
+ddrescue -m logfile2 dvdimage2 dvdimage logfile
+ddrescue -m logfile3 dvdimage3 dvdimage logfile
+  (if errsize is zero, dvdimage now contains a complete image of the DVD
+   and you can write it to a blank DVD)
 @end example
 
 @sp 1
 @anchor{lziprecover-example}
 @noindent
-Example 5: Rescue a lzip compressed backup from two copies on CD-ROM
+Example 6: Rescue a lzip compressed backup from two copies on CD-ROM
 with error-checked merging of copies
 @ifnothtml
 (@xref{Top,lziprecover manual,,lziprecover},
@@ -789,7 +820,7 @@ lziprecover -m -v -o backup.tar.lz rescued1.tar.lz rescued2.tar.lz
 
 @sp 1
 @noindent
-Example 6: While rescuing the whole drive /dev/hda to /dev/hdb, /dev/hda
+Example 7: While rescuing the whole drive /dev/hda to /dev/hdb, /dev/hda
 freezes up at position 12345678.
 
 @example
@@ -803,7 +834,7 @@ ddrescue -f -R /dev/hda /dev/hdb logfile
 
 @sp 1
 @noindent
-Example 7: While rescuing the whole drive /dev/hda to /dev/hdb, /dev/hdb
+Example 8: While rescuing the whole drive /dev/hda to /dev/hdb, /dev/hdb
 fails and you have to rescue data to a third drive, /dev/hdc.
 
 @example
@@ -815,7 +846,7 @@ ddrescue -d -f -r3 /dev/hda /dev/hdc logfile2
 
 @sp 1
 @noindent
-Example 8: While rescuing the whole drive /dev/hda to /dev/hdb, /dev/hda
+Example 9: While rescuing the whole drive /dev/hda to /dev/hdb, /dev/hda
 stops responding and disappears from /dev.
 
 @example
@@ -1146,6 +1177,12 @@ Block size used by ddrescuelog. Depending on the requested operation it
 may be the sector size of the input device, the block size of the
 rescued file system, etc. Defaults to 512.
 
+@item -B
+@itemx --binary-prefixes
+Show units with binary prefixes (powers of 1024).@*
+SI prefixes (powers of 1000) are used by default. (See table above,
+@ref{Invoking ddrescue}).
+
 @item -c[@var{type1}@var{type2}]
 @itemx --create-logfile[=@var{type1}@var{type2}]
 Create a logfile from a list of block numbers read from standard input.
@@ -1156,6 +1193,15 @@ the chapter Logfile structure (@pxref{Logfile structure}). @var{type1}
 sets the type for blocks included in the list, while @var{type2} sets
 the type for the rest of the logfile. If not specified, @var{type1}
 defaults to @samp{+} and @var{type2} defaults to @samp{-}.
+
+@item -C[@var{type}]
+@itemx --complete-logfile[=@var{type}]
+Complete a synthetic (user fabricated) @var{logfile} by filling the gaps
+with blocks of type @var{type}, and write the completed logfile to
+standard output. @var{type} is one of the block status characters
+defined in the chapter Logfile structure (@pxref{Logfile structure}). If
+@var{type} is not specified, the gaps are filled with non-tried blocks.
+All gaps in the logfile are filled. Domain options are ignored.
 
 @item -d
 @itemx --delete-if-done
@@ -1188,6 +1234,15 @@ in the chapter Logfile structure (@pxref{Logfile structure}).
 The list format is one block number per line in decimal, like the output
 of the badblocks program, so that it can be used as input for e2fsck or
 other similar filesystem repairing tool.
+
+@item -L
+@itemx --loose-domain
+Accept a incomplete synthetic (user fabricated) domain logfile and fill
+the gaps with non-tried blocks. The blocks in the logfile must be
+strictly ascending and non-overlapping, but they do not need to be
+contiguous. This option allows making quick edits to a logfile without
+all the size calculations involved in making all data blocks contiguous
+again.
 
 @item -m @var{file}
 @itemx --domain-logfile=@var{file}

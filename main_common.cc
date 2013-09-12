@@ -160,6 +160,28 @@ void internal_error( const char * const msg )
   }
 
 
+int empty_domain() { show_error( "Empty domain." ); return 0; }
+
+
+int not_readable( const char * const logname )
+  {
+  char buf[80];
+  snprintf( buf, sizeof buf,
+            "Logfile '%s' does not exist or is not readable.", logname );
+  show_error( buf );
+  return 1;
+  }
+
+
+int not_writable( const char * const logname )
+  {
+  char buf[80];
+  snprintf( buf, sizeof buf, "Logfile '%s' is not writable.", logname );
+  show_error( buf );
+  return 1;
+  }
+
+
 void write_logfile_header( FILE * const f )
   {
   std::fprintf( f, "# Rescue Logfile. Created by %s version %s\n",
@@ -181,9 +203,9 @@ const char * format_num( long long num, long long limit,
   static bool si = true;
 
   if( set_prefix ) si = ( set_prefix > 0 );
-  const int factor = ( si ? 1000 : 1024 );
+  const int factor = si ? 1000 : 1024;
   char * const buf = buffer[current++]; current %= buffers;
-  const char * const * prefix = ( si ? si_prefix : binary_prefix );
+  const char * const * prefix = si ? si_prefix : binary_prefix;
   const char * p = "";
   limit = std::max( 999LL, std::min( 999999LL, limit ) );
 

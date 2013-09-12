@@ -41,8 +41,8 @@ const char * const Program_name = "GNU ddrescuelog";
 const char * const program_name = "ddrescuelog";
 const char * invocation_name = 0;
 
-enum Mode { m_none, m_and, m_change, m_compare, m_create, m_delete,
-            m_done_st, m_invert, m_list, m_or, m_status, m_xor };
+enum Mode { m_none, m_and, m_change, m_compare, m_complete, m_create,
+            m_delete, m_done_st, m_invert, m_list, m_or, m_status, m_xor };
 
 
 void show_help( const int hardbs )
@@ -56,14 +56,17 @@ void show_help( const int hardbs )
                "  -V, --version                  output version information and exit\n"
                "  -a, --change-types=<ot>,<nt>   change the block types of a logfile\n"
                "  -b, --block-size=<bytes>       block size in bytes [default %d]\n", hardbs );
-  std::printf( "  -c, --create-logfile[=<tt>]    create logfile from list of blocks [+-]\n"
+  std::printf( "  -B, --binary-prefixes          show binary multipliers in numbers [SI]\n"
+               "  -c, --create-logfile[=<tt>]    create logfile from list of blocks [+-]\n"
+               "  -C, --complete-logfile[=<t>]   complete a logfile adding blocks of type t [?]\n"
                "  -d, --delete-if-done           delete the logfile if rescue is finished\n"
                "  -D, --done-status              return 0 if rescue is finished\n"
                "  -f, --force                    overwrite existing output files\n"
                "  -i, --input-position=<bytes>   starting position of rescue domain [0]\n"
                "  -l, --list-blocks=<types>      print block numbers of given types (?*/-+)\n"
+               "  -L, --loose-domain             accept a incomplete domain logfile\n"
                "  -m, --domain-logfile=<file>    restrict domain to finished blocks in file\n"
-               "  -n, --invert-logfile           invert block types (finished <-> others)\n"
+               "  -n, --invert-logfile           invert block types (finished <--> others)\n"
                "  -o, --output-position=<bytes>  starting position in output file [ipos]\n"
                "  -p, --compare-logfile=<file>   compare block types in domain of both files\n"
                "  -q, --quiet                    suppress all messages\n"
@@ -85,8 +88,8 @@ void show_help( const int hardbs )
   }
 
 
-void set_types( const std::string & arg,
-                std::string & types1, std::string & types2 )
+void parse_types( const std::string & arg,
+                  std::string & types1, std::string & types2 )
   {
   std::string * p = &types1;
   bool error = false, comma_found = false;
@@ -115,8 +118,8 @@ void set_types( const std::string & arg,
   }
 
 
-void set_types( const std::string & arg,
-                Sblock::Status & type1, Sblock::Status & type2 )
+void parse_2types( const std::string & arg,
+                   Sblock::Status & type1, Sblock::Status & type2 )
   {
   if( arg.size() == 0 ) return;
   if( arg.size() != 2 || arg[0] == arg[1] ||
@@ -130,79 +133,84 @@ void set_types( const std::string & arg,
   }
 
 
-void verify_logname_and_domain( const Logbook & logbook )
+void parse_type( const std::string & arg, Sblock::Status & complete_type )
   {
-  if( !logbook.logfile_exists() )
+  if( arg.size() == 0 ) return;
+  if( arg.size() != 1 || !Sblock::isstatus( arg[0] ) )
     {
-    char buf[80];
-    snprintf( buf, sizeof buf, "Logfile '%s' does not exist.",
-              logbook.filename() );
-    show_error( buf );
+    show_error( "Invalid type for 'complete-logfile' option.", 0, true );
     std::exit( 1 );
     }
-  if( logbook.domain().size() == 0 )
-    { show_error( "Empty domain." ); std::exit( 0 ); }
+  complete_type = Sblock::Status( arg[0] );
   }
 
 
 int do_logic_ops( Domain & domain, const char * const logname,
                   const char * const second_logname, const Mode program_mode )
   {
-  Domain domain2( domain );
-  Logbook logbook( 0, 0, domain, logname, 1, 1, true );
-  verify_logname_and_domain( logbook );
-  const Logbook logbook2( 0, 0, domain2, second_logname, 1, 1, true );
-  verify_logname_and_domain( logbook2 );
+  Logfile logfile( logname );
+  if( !logfile.read_logfile() ) return not_readable( logname );
+  logfile.compact_sblock_vector();
 
-  for( int i = 0; i < logbook.sblocks(); ++i )
+  Logfile logfile2( second_logname );
+  if( !logfile2.read_logfile() ) return not_readable( second_logname );
+  logfile2.compact_sblock_vector();
+
+  domain.crop( logfile.extent() );
+  domain.crop( logfile2.extent() );
+  if( domain.size() == 0 ) return empty_domain();
+  logfile.split_domain_border_sblocks( domain );
+  logfile2.split_domain_border_sblocks( domain );
+
+  for( int i = 0; i < logfile.sblocks(); ++i )
     {
-    const Sblock & sb = logbook.sblock( i );
-    if( !logbook.domain().includes( sb ) )
-      { if( logbook.domain() < sb ) break; else continue; }
+    const Sblock & sb = logfile.sblock( i );
+    if( !domain.includes( sb ) )
+      { if( domain < sb ) break; else continue; }
     switch( program_mode )
       {
       case m_and:
         {
         if( sb.status() != Sblock::finished ) continue;
         Block b( sb );
-        logbook2.find_chunk( b, Sblock::finished );
+        logfile2.find_chunk( b, Sblock::finished, domain );
         if( b.size() <= 0 || b.pos() >= sb.end() )
-          logbook.change_sblock_status( i, Sblock::bad_sector );
+          logfile.change_sblock_status( i, Sblock::bad_sector );
         else if( b == sb ) continue;
-        else if( b.pos() == sb.pos() ) logbook.split_sblock_by( b.end(), i );
+        else if( b.pos() == sb.pos() ) logfile.split_sblock_by( b.end(), i );
         else
-          { logbook.change_chunk_status( Block( sb.pos(), b.pos() - sb.pos() ),
-                                         Sblock::bad_sector ); --i; }
+          { logfile.change_chunk_status( Block( sb.pos(), b.pos() - sb.pos() ),
+                                         Sblock::bad_sector, domain ); --i; }
         } break;
       case m_or:
         {
         if( sb.status() == Sblock::finished ) continue;
         Block b( sb );
-        logbook2.find_chunk( b, Sblock::finished );
+        logfile2.find_chunk( b, Sblock::finished, domain );
         if( b.size() <= 0 || b.pos() >= sb.end() ) continue;
         else if( b == sb )
-          logbook.change_sblock_status( i, Sblock::finished );
+          logfile.change_sblock_status( i, Sblock::finished );
         else if( b.pos() == sb.pos() )
-          { logbook.change_chunk_status( b, Sblock::finished ); --i; }
-        else logbook.split_sblock_by( b.end(), i );
+          { logfile.change_chunk_status( b, Sblock::finished, domain ); --i; }
+        else logfile.split_sblock_by( b.end(), i );
         } break;
       case m_xor:
         {
-        const Sblock::Status st = ( ( sb.status() == Sblock::finished ) ?
-                                  Sblock::bad_sector : Sblock::finished );
+        const Sblock::Status st = ( sb.status() == Sblock::finished ) ?
+                                  Sblock::bad_sector : Sblock::finished;
         Block b( sb );
-        logbook2.find_chunk( b, Sblock::finished );
+        logfile2.find_chunk( b, Sblock::finished, domain );
         if( b.size() <= 0 || b.pos() >= sb.end() ) continue;
-        else if( b == sb ) logbook.change_sblock_status( i, st );
+        else if( b == sb ) logfile.change_sblock_status( i, st );
         else if( b.pos() == sb.pos() )
-          { logbook.change_chunk_status( b, st ); --i; }
-        else logbook.split_sblock_by( b.end(), i );
+          { logfile.change_chunk_status( b, st, domain ); --i; }
+        else logfile.split_sblock_by( b.end(), i );
         } break;
       default: internal_error( "invalid program_mode" );
       }
     }
-  logbook.compact_sblock_vector();
-  logbook.write_logfile( stdout );
+  logfile.compact_sblock_vector();
+  logfile.write_logfile( stdout );
   if( std::fclose( stdout ) != 0 )
     { show_error( "Can't close stdout", errno ); return 1; }
   return 0;
@@ -212,20 +220,23 @@ int do_logic_ops( Domain & domain, const char * const logname,
 int change_types( Domain & domain, const char * const logname,
                   const std::string & types1, const std::string & types2 )
   {
-  Logbook logbook( 0, 0, domain, logname, 1, 1, true );
-  verify_logname_and_domain( logbook );
+  Logfile logfile( logname );
+  if( !logfile.read_logfile() ) return not_readable( logname );
+  domain.crop( logfile.extent() );
+  if( domain.size() == 0 ) return empty_domain();
+  logfile.split_domain_border_sblocks( domain );
 
-  for( int i = 0; i < logbook.sblocks(); ++i )
+  for( int i = 0; i < logfile.sblocks(); ++i )
     {
-    const Sblock & sb = logbook.sblock( i );
-    if( !logbook.domain().includes( sb ) )
-      { if( logbook.domain() < sb ) break; else continue; }
+    const Sblock & sb = logfile.sblock( i );
+    if( !domain.includes( sb ) )
+      { if( domain < sb ) break; else continue; }
     const unsigned j = types1.find( sb.status() );
     if( j < types1.size() )
-      logbook.change_sblock_status( i, Sblock::Status( types2[j] ) );
+      logfile.change_sblock_status( i, Sblock::Status( types2[j] ) );
     }
-  logbook.compact_sblock_vector();
-  logbook.write_logfile( stdout );
+  logfile.compact_sblock_vector();
+  logfile.write_logfile( stdout );
   if( std::fclose( stdout ) != 0 )
     { show_error( "Can't close stdout", errno ); return 1; }
   return 0;
@@ -236,29 +247,51 @@ int compare_logfiles( Domain & domain, const char * const logname,
                       const char * const second_logname )
   {
   Domain domain2( domain );
-  const Logbook logbook( 0, 0, domain, logname, 1, 1, true );
-  verify_logname_and_domain( logbook );
-  const Logbook logbook2( 0, 0, domain2, second_logname, 1, 1, true );
-  verify_logname_and_domain( logbook2 );
+  Logfile logfile( logname );
+  if( !logfile.read_logfile() ) return not_readable( logname );
+  logfile.compact_sblock_vector();
+  domain.crop( logfile.extent() );
+  if( domain.size() == 0 ) return empty_domain();
+  logfile.split_domain_border_sblocks( domain );
+
+  Logfile logfile2( second_logname );
+  if( !logfile2.read_logfile() ) return not_readable( second_logname );
+  logfile2.compact_sblock_vector();
+  domain2.crop( logfile2.extent() );
+  if( domain2.size() == 0 ) return empty_domain();
+  logfile2.split_domain_border_sblocks( domain2 );
 
   int retval = 0;
-  if( logbook.domain() != logbook2.domain() ) retval = 1;
-  else for( int i = 0; i < logbook.sblocks(); ++i )
+  if( domain != domain2 ) retval = 1;
+  else for( int i = 0; i < logfile.sblocks(); ++i )
     {
-    const Sblock & sb = logbook.sblock( i );
-    if( !logbook.domain().includes( sb ) )
-      { if( logbook.domain() < sb ) break; else continue; }
-    const int j = logbook2.find_index( sb.pos() );
-    if( j < 0 || logbook2.sblock( j ) != sb ) { retval = 1; break; }
+    const Sblock & sb = logfile.sblock( i );
+    if( !domain.includes( sb ) )
+      { if( domain < sb ) break; else continue; }
+    const int j = logfile2.find_index( sb.pos() );
+    if( j < 0 || logfile2.sblock( j ) != sb ) { retval = 1; break; }
     }
   if( retval )
     {
     char buf[80];
     snprintf( buf, sizeof buf, "Logfiles '%s' and '%s' differ.",
-              logbook.filename(), logbook2.filename() );
+              logfile.filename(), logfile2.filename() );
     show_error( buf );
     }
   return retval;
+  }
+
+
+int complete_logfile( const char * const logname,
+                      const Sblock::Status complete_type )
+  {
+  Logfile logfile( logname );
+  if( !logfile.read_logfile( complete_type ) ) return not_readable( logname );
+  logfile.compact_sblock_vector();
+  logfile.write_logfile( stdout );
+  if( std::fclose( stdout ) != 0 )
+    { show_error( "Can't close stdout", errno ); return 1; }
+  return 0;
   }
 
 
@@ -267,19 +300,20 @@ int create_logfile( Domain & domain, const char * const logname,
                     const Sblock::Status type2, const bool force )
   {
   char buf[80];
-  Logbook logbook( 0, 0, domain, logname, 1, hardbs, false, force );
-  if( logbook.logfile_exists() )
+  Logfile logfile( logname );
+  if( !force && logfile.read_logfile() )
     {
     snprintf( buf, sizeof buf,
               "Logfile '%s' exists. Use '--force' to overwrite it.", logname );
     show_error( buf );
     return 1;
     }
-  if( logbook.domain().size() == 0 )
-    { show_error( "Empty domain." ); return 0; }
+  if( domain.size() == 0 ) return empty_domain();
+  logfile.make_blank();
+  logfile.split_domain_border_sblocks( domain );
 
-  for( int i = 0; i < logbook.sblocks(); ++i )	// mark all logfile as type2
-    logbook.change_sblock_status( i, type2 );
+  for( int i = 0; i < logfile.sblocks(); ++i )	// mark all logfile as type2
+    logfile.change_sblock_status( i, type2 );
 
   // mark every block read from stdin and in domain as type1
   for( int linenum = 1; ; ++linenum )
@@ -287,20 +321,19 @@ int create_logfile( Domain & domain, const char * const logname,
     long long block;
     const int n = std::scanf( "%lli\n", &block );
     if( n < 0 ) break;				// EOF
-    if( n != 1 || block > LLONG_MAX / hardbs )
+    if( n != 1 || block < 0 || block > LLONG_MAX / hardbs )
       {
-      char buf[80];
       snprintf( buf, sizeof buf,
                 "error reading block number from stdin, line %d", linenum );
       show_error( buf );
       return 2;
       }
     const Block b( block * hardbs, hardbs );
-    if( logbook.domain().includes( b ) )
-      logbook.change_chunk_status( b, type1 );
+    if( domain.includes( b ) )
+      logfile.change_chunk_status( b, type1, domain );
     }
-  logbook.truncate_vector( logbook.domain().end(), true );
-  if( !logbook.update_logfile( -1, true, false ) ) return 1;
+  logfile.truncate_vector( domain.end(), true );
+  if( !logfile.write_logfile() ) return 1;
   return 0;
   }
 
@@ -308,14 +341,17 @@ int create_logfile( Domain & domain, const char * const logname,
 int test_if_done( Domain & domain, const char * const logname, const bool del )
   {
   char buf[80];
-  const Logbook logbook( 0, 0, domain, logname, 1, 1, true );
-  verify_logname_and_domain( logbook );
+  Logfile logfile( logname );
+  if( !logfile.read_logfile() ) return not_readable( logname );
+  domain.crop( logfile.extent() );
+  if( domain.size() == 0 ) return empty_domain();
+  logfile.split_domain_border_sblocks( domain );
 
-  for( int i = 0; i < logbook.sblocks(); ++i )
+  for( int i = 0; i < logfile.sblocks(); ++i )
     {
-    const Sblock & sb = logbook.sblock( i );
-    if( !logbook.domain().includes( sb ) )
-      { if( logbook.domain() < sb ) break; else continue; }
+    const Sblock & sb = logfile.sblock( i );
+    if( !domain.includes( sb ) )
+      { if( domain < sb ) break; else continue; }
     if( sb.status() != Sblock::finished )
       {
       if( verbosity >= 1 )
@@ -347,17 +383,20 @@ int to_badblocks( const long long offset, Domain & domain,
                   const std::string & blocktypes )
   {
   long long last_block = -1;
-  const Logbook logbook( offset, 0, domain, logname, 1, hardbs, true );
-  verify_logname_and_domain( logbook );
+  Logfile logfile( logname );
+  if( !logfile.read_logfile() ) return not_readable( logname );
+  domain.crop( logfile.extent() );
+  if( domain.size() == 0 ) return empty_domain();
+  logfile.split_domain_border_sblocks( domain );
 
-  for( int i = 0; i < logbook.sblocks(); ++i )
+  for( int i = 0; i < logfile.sblocks(); ++i )
     {
-    const Sblock & sb = logbook.sblock( i );
-    if( !logbook.domain().includes( sb ) )
-      { if( logbook.domain() < sb ) break; else continue; }
+    const Sblock & sb = logfile.sblock( i );
+    if( !domain.includes( sb ) )
+      { if( domain < sb ) break; else continue; }
     if( blocktypes.find( sb.status() ) >= blocktypes.size() ) continue;
-    for( long long block = ( sb.pos() + logbook.offset() ) / hardbs;
-         block * hardbs < sb.end() + logbook.offset(); ++block )
+    for( long long block = ( sb.pos() + offset ) / hardbs;
+         block * hardbs < sb.end() + offset; ++block )
       {
       if( block > last_block )
         {
@@ -423,15 +462,18 @@ int do_show_status( Domain & domain, const char * const logname )
   int errors = 0;
   Sblock::Status old_status = Sblock::non_tried;
   bool first_block = true, good = true;
-  const Logbook logbook( 0, 0, domain, logname, 1, 1, true );
-  verify_logname_and_domain( logbook );
+  Logfile logfile( logname );
+  if( !logfile.read_logfile() ) return not_readable( logname );
+  domain.crop( logfile.extent() );
+  if( domain.size() == 0 ) return empty_domain();
+  logfile.split_domain_border_sblocks( domain );
 
-  for( int i = 0; i < logbook.sblocks(); ++i )
+  for( int i = 0; i < logfile.sblocks(); ++i )
     {
-    const Sblock & sb = logbook.sblock( i );
-    if( !logbook.domain().includes( sb ) )
+    const Sblock & sb = logfile.sblock( i );
+    if( !domain.includes( sb ) )
       {
-      if( logbook.domain() < sb ) break;
+      if( domain < sb ) break;
       else { first_block = true; good = true; continue; }
       }
     const bool sc = ( first_block || sb.status() != old_status );
@@ -455,13 +497,13 @@ int do_show_status( Domain & domain, const char * const logname )
     old_status = sb.status();
     }
 
-  const long long domain_size = logbook.domain().in_size();
+  const long long domain_size = domain.in_size();
   const long long errsize = size_non_trimmed + size_non_split + size_bad_sector;
   std::printf( "\ncurrent pos: %10sB,  current status: %s\n",
-               format_num( logbook.current_pos() ),
-               logbook.status_name( logbook.current_status() ) );
+               format_num( logfile.current_pos() ),
+               logfile.status_name( logfile.current_status() ) );
   std::printf( "domain size: %10sB,  in %4d area(s)\n",
-               format_num( domain_size ), logbook.domain().blocks() );
+               format_num( domain_size ), domain.blocks() );
   std::printf( "    rescued: %10sB,  in %4d area(s)  (%s)\n",
                format_num( size_finished ), areas_finished,
                format_percentage( size_finished, domain_size ) );
@@ -500,8 +542,10 @@ int main( const int argc, const char * const argv[] )
   int hardbs = default_hardbs;
   Mode program_mode = m_none;
   bool force = false;
+  bool loose = false;
   std::string types1, types2;
   Sblock::Status type1 = Sblock::finished, type2 = Sblock::bad_sector;
+  Sblock::Status complete_type = Sblock::non_tried;
   invocation_name = argv[0];
   command_line = argv[0];
   for( int i = 1; i < argc; ++i )
@@ -509,30 +553,33 @@ int main( const int argc, const char * const argv[] )
 
   const Arg_parser::Option options[] =
     {
-    { 'a', "change-types",      Arg_parser::yes },
-    { 'b', "block-size",        Arg_parser::yes },
-    { 'b', "sector-size",       Arg_parser::yes },
-    { 'c', "create-logfile",    Arg_parser::maybe },
-    { 'd', "delete-if-done",    Arg_parser::no  },
-    { 'D', "done-status",       Arg_parser::no  },
-    { 'f', "force",             Arg_parser::no  },
-    { 'h', "help",              Arg_parser::no  },
-    { 'i', "input-position",    Arg_parser::yes },
-    { 'l', "list-blocks",       Arg_parser::yes },
-    { 'm', "domain-logfile",    Arg_parser::yes },
-    { 'n', "invert-logfile",    Arg_parser::no  },
-    { 'o', "output-position",   Arg_parser::yes },
-    { 'p', "compare-logfile",   Arg_parser::yes },
-    { 'q', "quiet",             Arg_parser::no  },
-    { 's', "size",              Arg_parser::yes },
-    { 's', "max-size",          Arg_parser::yes },
-    { 't', "show-status",       Arg_parser::no  },
-    { 'v', "verbose",           Arg_parser::no  },
-    { 'V', "version",           Arg_parser::no  },
-    { 'x', "xor-logfile",       Arg_parser::yes },
-    { 'y', "and-logfile",       Arg_parser::yes },
-    { 'z', "or-logfile",        Arg_parser::yes },
-    {  0 , 0,                   Arg_parser::no  } };
+    { 'a', "change-types",        Arg_parser::yes },
+    { 'b', "block-size",          Arg_parser::yes },
+    { 'b', "sector-size",         Arg_parser::yes },
+    { 'B', "binary-prefixes",     Arg_parser::no  },
+    { 'c', "create-logfile",      Arg_parser::maybe },
+    { 'C', "complete-logfile",    Arg_parser::maybe },
+    { 'd', "delete-if-done",      Arg_parser::no  },
+    { 'D', "done-status",         Arg_parser::no  },
+    { 'f', "force",               Arg_parser::no  },
+    { 'h', "help",                Arg_parser::no  },
+    { 'i', "input-position",      Arg_parser::yes },
+    { 'l', "list-blocks",         Arg_parser::yes },
+    { 'L', "loose-domain",        Arg_parser::no  },
+    { 'm', "domain-logfile",      Arg_parser::yes },
+    { 'n', "invert-logfile",      Arg_parser::no  },
+    { 'o', "output-position",     Arg_parser::yes },
+    { 'p', "compare-logfile",     Arg_parser::yes },
+    { 'q', "quiet",               Arg_parser::no  },
+    { 's', "size",                Arg_parser::yes },
+    { 's', "max-size",            Arg_parser::yes },
+    { 't', "show-status",         Arg_parser::no  },
+    { 'v', "verbose",             Arg_parser::no  },
+    { 'V', "version",             Arg_parser::no  },
+    { 'x', "xor-logfile",         Arg_parser::yes },
+    { 'y', "and-logfile",         Arg_parser::yes },
+    { 'z', "or-logfile",          Arg_parser::yes },
+    {  0 , 0,                     Arg_parser::no  } };
 
   const Arg_parser parser( argc, argv, options );
   if( parser.error().size() )				// bad option
@@ -547,10 +594,13 @@ int main( const int argc, const char * const argv[] )
     switch( code )
       {
       case 'a': set_mode( program_mode, m_change );
-                set_types( arg, types1, types2 ); break;
+                parse_types( arg, types1, types2 ); break;
       case 'b': hardbs = getnum( arg, 0, 1, INT_MAX ); break;
+      case 'B': format_num( 0, 0, -1 ); break;		// set binary prefixes
       case 'c': set_mode( program_mode, m_create );
-                set_types( arg, type1, type2 ); break;
+                parse_2types( arg, type1, type2 ); break;
+      case 'C': set_mode( program_mode, m_complete );
+                parse_type( arg, complete_type ); break;
       case 'd': set_mode( program_mode, m_delete ); break;
       case 'D': set_mode( program_mode, m_done_st ); break;
       case 'f': force = true; break;
@@ -558,6 +608,7 @@ int main( const int argc, const char * const argv[] )
       case 'i': ipos = getnum( arg, hardbs, 0 ); break;
       case 'l': set_mode( program_mode, m_list ); types1 = arg;
                 check_types( types1, "list-blocks" ); break;
+      case 'L': loose = true; break;
       case 'm': set_name( &domain_logfile_name, arg ); break;
       case 'n': set_mode( program_mode, m_invert ); break;
       case 'o': opos = getnum( arg, hardbs, 0 ); break;
@@ -599,7 +650,7 @@ int main( const int argc, const char * const argv[] )
 
   // end scan arguments
 
-  Domain domain( ipos, max_size, domain_logfile_name );
+  Domain domain( ipos, max_size, domain_logfile_name, loose );
 
   switch( program_mode )
     {
@@ -610,6 +661,7 @@ int main( const int argc, const char * const argv[] )
       return do_logic_ops( domain, logname, second_logname, program_mode );
     case m_change: return change_types( domain, logname, types1, types2 );
     case m_compare: return compare_logfiles( domain, logname, second_logname );
+    case m_complete: return complete_logfile( logname, complete_type );
     case m_create: return create_logfile( domain, logname, hardbs,
                                           type1, type2, force );
     case m_delete: return test_if_done( domain, logname, true );

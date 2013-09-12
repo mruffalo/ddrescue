@@ -12,7 +12,7 @@ File: ddrescue.info,  Node: Top,  Next: Introduction,  Up: (dir)
 GNU ddrescue Manual
 *******************
 
-This manual is for GNU ddrescue (version 1.18-pre4, 27 August 2013).
+This manual is for GNU ddrescue (version 1.18-pre5, 12 September 2013).
 
 * Menu:
 
@@ -175,9 +175,9 @@ File: ddrescue.info,  Node: Algorithm,  Next: Invoking ddrescue,  Prev: Importan
 
 GNU ddrescue is not a derivative of dd, nor is related to dd in any way
 except in that both can be used for copying data from one device to
-another. The difference is that ddrescue uses a sophisticated algorithm
-to copy data from failing drives causing them as little additional
-damage as possible.
+another. The key difference is that ddrescue uses a sophisticated
+algorithm to copy data from failing drives causing them as little
+additional damage as possible.
 
    Ddrescue manages efficiently the status of the rescue in progress and
 tries to rescue the good parts first, scheduling reads inside bad (or
@@ -292,9 +292,8 @@ The format for running ddrescue is:
      are no more non-tried blocks left.
 
      If BYTES is 0 (auto), the minimum read rate is recalculated for
-     each block as (average_rate / 10). If BYTES is -1, skipping over
-     slow areas is disabled. Values above device capabilities will be
-     ignored.
+     each block as (average_rate / 10). Values above device capabilities
+     are ignored.
 
 `-A'
 `--try-again'
@@ -373,7 +372,7 @@ The format for running ddrescue is:
 `--fill-mode=TYPES'
      Fill the blocks in OUTFILE specified as any of TYPES in LOGFILE,
      with data read from INFILE. TYPES contains one or more of the
-     status characters defined in the chapter Logfile Structure (*note
+     status characters defined in the chapter Logfile structure (*note
      Logfile structure::). See the chapter Fill mode (*note Fill
      mode::) for a complete description of the fill mode.
 
@@ -420,11 +419,21 @@ The format for running ddrescue is:
      if it became larger during the copying or trimming phases.
      Defaults to 1000.  (Each entry is about 26-30 bytes in size).
 
+`-L'
+`--loose-domain'
+     Accept a incomplete synthetic (user fabricated) domain logfile and
+     fill the gaps with non-tried blocks. The blocks in the logfile
+     must be strictly ascending and non-overlapping, but they do not
+     need to be contiguous. This option allows making quick edits to a
+     logfile without all the size calculations involved in making all
+     data blocks contiguous again.
+
 `-m FILE'
 `--domain-logfile=FILE'
      Restrict the rescue domain to the blocks marked as finished in the
-     logfile FILE. This is useful if the destination drive fails during
-     the rescue.
+     logfile FILE. This is useful for merging partially recovered
+     images of backups, or if the destination drive fails during the
+     rescue.
 
 `-M'
 `--retrim'
@@ -438,6 +447,11 @@ The format for running ddrescue is:
      Skip the splitting phase. Avoids spending a lot of time trying to
      rescue the most difficult parts of the file.
 
+`-N'
+`--no-trim'
+     Skip the trimming phase. Specially useful in the first parts of a
+     multi-part rescue.
+
 `-o BYTES'
 `--output-position=BYTES'
      Starting position in OUTFILE, in bytes. Defaults to
@@ -446,12 +460,14 @@ The format for running ddrescue is:
 
 `-O'
 `--reopen-on-error'
-     Close the input file and then reopen it after every read error or
-     slow read encountered during the copying phase (i.e., every time
-     it skips ahead). Use this option if you notice a permanent drop in
-     transfer rate after finding read errors. Most probably the
-     slowing-down is intentionally caused by the kernel trying to
-     increase the probability of reading data from the device.
+     Close the input file and then reopen it after every read error
+     and, if `--min-read-rate' is set, after every slow read
+     encountered during the copying phase (i.e., every time ddrescue
+     skips ahead). Use this option if you notice a permanent drop in
+     transfer rate after finding read errors or slow areas. Most
+     probably the slowing-down is intentionally caused by the kernel in
+     an attempt to increase the probability of reading data from the
+     device.
 
 `-p'
 `--preallocate'
@@ -547,7 +563,8 @@ The format for running ddrescue is:
      trimming, splitting and retrying). Finally, a line with a time
      mark is written every second (unless the read takes more time).
      Use this option with caution because FILE may become very large
-     very quickly.
+     very quickly. Use `lzip -7' to compress FILE if you need to store
+     or transmit it.
 
 
    Numbers given as arguments to options (positions, sizes, rates, etc)
@@ -622,7 +639,7 @@ Character   Meaning
 
 And here is an example logfile:
 
-# Rescue Logfile. Created by GNU ddrescue version 1.18-pre4
+# Rescue Logfile. Created by GNU ddrescue version 1.18-pre5
 # Command line: ddrescue /dev/fd0 fdimage logfile
 # current_pos  current_status
 0x00120000     ?
@@ -703,7 +720,8 @@ Example 3: Rescue a CD-ROM in /dev/cdrom.
 
      ddrescue -n -b2048 /dev/cdrom cdimage logfile
      ddrescue -d -b2048 /dev/cdrom cdimage logfile
-       (write cdimage to a blank CD-ROM)
+       (if errsize is zero, cdimage now contains a complete image of the
+        CD-ROM and you can write it to a blank CD-ROM)
 
 
 Example 4: Rescue a CD-ROM in /dev/cdrom from two copies.
@@ -712,10 +730,21 @@ Example 4: Rescue a CD-ROM in /dev/cdrom from two copies.
      ddrescue -d -b2048 /dev/cdrom cdimage logfile
        (insert second copy in the CD drive)
      ddrescue -d -r1 -b2048 /dev/cdrom cdimage logfile
-       (write cdimage to a blank CD-ROM)
+       (if errsize is zero, cdimage now contains a complete image of the
+        CD-ROM and you can write it to a blank CD-ROM)
 
 
-Example 5: Rescue a lzip compressed backup from two copies on CD-ROM
+Example 5: Merge the partially recovered images of 3 identical DVDs
+using their logfiles as domain logfiles.
+
+     ddrescue -m logfile1 dvdimage1 dvdimage logfile
+     ddrescue -m logfile2 dvdimage2 dvdimage logfile
+     ddrescue -m logfile3 dvdimage3 dvdimage logfile
+       (if errsize is zero, dvdimage now contains a complete image of the DVD
+        and you can write it to a blank DVD)
+
+
+Example 6: Rescue a lzip compressed backup from two copies on CD-ROM
 with error-checked merging of copies (*Note lziprecover manual:
 (lziprecover)Top, for details about lziprecover).
 
@@ -731,7 +760,7 @@ with error-checked merging of copies (*Note lziprecover manual:
      lziprecover -m -v -o backup.tar.lz rescued1.tar.lz rescued2.tar.lz
 
 
-Example 6: While rescuing the whole drive /dev/hda to /dev/hdb, /dev/hda
+Example 7: While rescuing the whole drive /dev/hda to /dev/hdb, /dev/hda
 freezes up at position 12345678.
 
      ddrescue -f /dev/hda /dev/hdb logfile       <-- /dev/hda freezes here
@@ -742,7 +771,7 @@ freezes up at position 12345678.
      ddrescue -f -R /dev/hda /dev/hdb logfile
 
 
-Example 7: While rescuing the whole drive /dev/hda to /dev/hdb, /dev/hdb
+Example 8: While rescuing the whole drive /dev/hda to /dev/hdb, /dev/hdb
 fails and you have to rescue data to a third drive, /dev/hdc.
 
      ddrescue -f -n /dev/hda /dev/hdb logfile1     <-- /dev/hdb fails here
@@ -751,7 +780,7 @@ fails and you have to rescue data to a third drive, /dev/hdc.
      ddrescue -d -f -r3 /dev/hda /dev/hdc logfile2
 
 
-Example 8: While rescuing the whole drive /dev/hda to /dev/hdb, /dev/hda
+Example 9: While rescuing the whole drive /dev/hda to /dev/hdb, /dev/hda
 stops responding and disappears from /dev.
 
      ddrescue -f -n /dev/hda /dev/hdb logfile      <-- /dev/hda fails here
@@ -1045,6 +1074,12 @@ The format for running ddrescuelog is:
      operation it may be the sector size of the input device, the block
      size of the rescued file system, etc. Defaults to 512.
 
+`-B'
+`--binary-prefixes'
+     Show units with binary prefixes (powers of 1024).
+     SI prefixes (powers of 1000) are used by default. (See table above,
+     *note Invoking ddrescue::).
+
 `-c[TYPE1TYPE2]'
 `--create-logfile[=TYPE1TYPE2]'
      Create a logfile from a list of block numbers read from standard
@@ -1056,6 +1091,16 @@ The format for running ddrescuelog is:
      the type for blocks included in the list, while TYPE2 sets the
      type for the rest of the logfile. If not specified, TYPE1 defaults
      to `+' and TYPE2 defaults to `-'.
+
+`-C[TYPE]'
+`--complete-logfile[=TYPE]'
+     Complete a synthetic (user fabricated) LOGFILE by filling the gaps
+     with blocks of type TYPE, and write the completed logfile to
+     standard output. TYPE is one of the block status characters
+     defined in the chapter Logfile structure (*note Logfile
+     structure::). If TYPE is not specified, the gaps are filled with
+     non-tried blocks.  All gaps in the logfile are filled. Domain
+     options are ignored.
 
 `-d'
 `--delete-if-done'
@@ -1088,6 +1133,15 @@ The format for running ddrescuelog is:
      The list format is one block number per line in decimal, like the
      output of the badblocks program, so that it can be used as input
      for e2fsck or other similar filesystem repairing tool.
+
+`-L'
+`--loose-domain'
+     Accept a incomplete synthetic (user fabricated) domain logfile and
+     fill the gaps with non-tried blocks. The blocks in the logfile
+     must be strictly ascending and non-overlapping, but they do not
+     need to be contiguous. This option allows making quick edits to a
+     logfile without all the size calculations involved in making all
+     data blocks contiguous again.
 
 `-m FILE'
 `--domain-logfile=FILE'
@@ -1208,21 +1262,21 @@ Concept index
 
 Tag Table:
 Node: Top203
-Node: Introduction1376
-Node: Basic concepts4065
-Node: Important advice5545
-Node: Algorithm6654
-Node: Invoking ddrescue11010
-Node: Logfile structure23548
-Node: Examples25803
-Ref: lziprecover-example28776
-Node: Direct disc access30616
-Node: Fill mode32693
-Node: Generate mode36833
-Node: Ddrescuelog38780
-Node: Invoking ddrescuelog40929
-Node: Problems46420
-Node: Concept index46977
+Node: Introduction1379
+Node: Basic concepts4068
+Node: Important advice5548
+Node: Algorithm6657
+Node: Invoking ddrescue11017
+Node: Logfile structure24225
+Node: Examples26480
+Ref: lziprecover-example30021
+Node: Direct disc access31861
+Node: Fill mode33938
+Node: Generate mode38078
+Node: Ddrescuelog40025
+Node: Invoking ddrescuelog42174
+Node: Problems48727
+Node: Concept index49284
 
 End Tag Table
 
