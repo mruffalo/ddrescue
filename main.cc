@@ -42,6 +42,10 @@
 #include "ddrescue.h"
 #include "loggers.h"
 
+#ifndef O_BINARY
+#define O_BINARY 0
+#endif
+
 #ifndef O_DIRECT
 #define O_DIRECT 0
 #endif
@@ -55,12 +59,6 @@ const char * invocation_name = 0;
 
 enum Mode { m_none, m_fill, m_generate };
 const mode_t outmode = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH;
-
-#ifdef O_BINARY
-const int o_binary = O_BINARY;
-#else
-const int o_binary = 0;
-#endif
 
 
 void show_help( const int cluster, const int hardbs, const int skipbs )
@@ -244,13 +242,13 @@ int do_fill( const long long offset, Domain & domain,
   if( fillbook.domain().size() == 0 ) return empty_domain();
   if( fillbook.read_only() ) return not_writable( logname );
 
-  const int ides = open( iname, O_RDONLY | o_binary );
+  const int ides = open( iname, O_RDONLY | O_BINARY );
   if( ides < 0 )
     { show_error( "Can't open input file", errno ); return 1; }
   if( !fillbook.read_buffer( ides ) )
     { show_error( "Error reading fill data from input file." ); return 1; }
 
-  const int odes = open( oname, O_CREAT | O_WRONLY | o_binary, outmode );
+  const int odes = open( oname, O_CREAT | O_WRONLY | O_BINARY, outmode );
   if( odes < 0 )
     { show_error( "Can't open output file", errno ); return 1; }
   if( lseek( odes, 0, SEEK_SET ) )
@@ -286,7 +284,7 @@ int do_generate( const long long offset, Domain & domain,
     return 1;
     }
 
-  const int ides = open( iname, O_RDONLY | o_binary );
+  const int ides = open( iname, O_RDONLY | O_BINARY );
   if( ides < 0 )
     { show_error( "Can't open input file", errno ); return 1; }
   const long long isize = lseek( ides, 0, SEEK_END );
@@ -302,7 +300,7 @@ int do_generate( const long long offset, Domain & domain,
     }
   if( genbook.read_only() ) return not_writable( logname );
 
-  const int odes = open( oname, O_RDONLY | o_binary );
+  const int odes = open( oname, O_RDONLY | O_BINARY );
   if( odes < 0 )
     { show_error( "Can't open output file", errno ); return 1; }
   if( lseek( odes, 0, SEEK_SET ) )
@@ -332,7 +330,7 @@ int do_rescue( const long long offset, Domain & domain,
                const bool preallocate, const bool synchronous,
                const bool verify_input_size )
   {
-  const int ides = open( iname, O_RDONLY | rb_opts.o_direct | o_binary );
+  const int ides = open( iname, O_RDONLY | rb_opts.o_direct | O_BINARY );
   if( ides < 0 )
     { show_error( "Can't open input file", errno ); return 1; }
   const long long isize = lseek( ides, 0, SEEK_END );
@@ -372,7 +370,7 @@ int do_rescue( const long long offset, Domain & domain,
     }
   if( rescuebook.read_only() ) return not_writable( logname );
 
-  const int odes = open( oname, O_CREAT | O_WRONLY | o_trunc | o_binary,
+  const int odes = open( oname, O_CREAT | O_WRONLY | o_trunc | O_BINARY,
                          outmode );
   if( odes < 0 )
     { show_error( "Can't open output file", errno ); return 1; }
@@ -457,14 +455,12 @@ int do_rescue( const long long offset, Domain & domain,
 bool Rescuebook::reopen_infile()
   {
   if( ides_ >= 0 ) close( ides_ );
-  ides_ = open( iname_, O_RDONLY | o_direct | o_binary );
+  ides_ = open( iname_, O_RDONLY | o_direct | O_BINARY );
   if( ides_ < 0 )
-    { final_msg( "Can't reopen input file" ); final_errno( errno );
-      return false; }
+    { final_msg( "Can't reopen input file", errno ); return false; }
   const long long isize = lseek( ides_, 0, SEEK_END );
   if( isize < 0 )
-    { final_msg( "Input file has become not seekable" ); final_errno( errno );
-      return false; }
+    { final_msg( "Input file has become not seekable", errno ); return false; }
   return true;
   }
 

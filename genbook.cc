@@ -58,10 +58,7 @@ int Genbook::check_all()
     check_block( b, copied_size, error_size );
     if( copied_size + error_size < b.size() &&			// EOF
         !truncate_vector( b.pos() + copied_size + error_size ) )
-      {
-      final_msg( "EOF found before end of logfile" );
-      return 1;
-      }
+      { final_msg( "EOF found before end of logfile" ); return 1; }
     if( !update_logfile() ) return -2;
     }
   return 0;

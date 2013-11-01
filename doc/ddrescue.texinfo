@@ -6,8 +6,8 @@
 @finalout
 @c %**end of header
 
-@set UPDATED 12 September 2013
-@set VERSION 1.18-pre5
+@set UPDATED 1 November 2013
+@set VERSION 1.18-pre6
 
 @dircategory GNU Packages
 @direntry
@@ -487,12 +487,12 @@ they exist and truncation is not requested. Else they are set to 0.
 @item -O
 @itemx --reopen-on-error
 Close the input file and then reopen it after every read error and, if
-@samp{--min-read-rate} is set, after every slow read encountered during
-the copying phase (i.e., every time ddrescue skips ahead). Use this
-option if you notice a permanent drop in transfer rate after finding
-read errors or slow areas. Most probably the slowing-down is
-intentionally caused by the kernel in an attempt to increase the
-probability of reading data from the device.
+@samp{--min-read-rate} is set, after every slow read encountered both
+during the copying phase (i.e., every time ddrescue skips ahead). Use
+this option if you notice a permanent drop in transfer rate after
+finding read errors or slow areas. But be warned that most probably the
+slowing-down is intentionally caused by the kernel in an attempt to
+increase the probability of reading data from the device.
 
 @item -p
 @itemx --preallocate

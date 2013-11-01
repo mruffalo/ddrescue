@@ -1,8 +1,8 @@
 
 DISTNAME = $(pkgname)-$(pkgversion)
 INSTALL = install
-INSTALL_PROGRAM = $(INSTALL) -p -m 755
-INSTALL_DATA = $(INSTALL) -p -m 644
+INSTALL_PROGRAM = $(INSTALL) -m 755
+INSTALL_DATA = $(INSTALL) -m 644
 INSTALL_DIR = $(INSTALL) -d -m 755
 SHELL = /bin/sh
 
@@ -60,12 +60,10 @@ $(VPATH)/doc/$(pkgname).info : $(VPATH)/doc/$(pkgname).texinfo
 man : $(VPATH)/doc/$(progname).1 $(VPATH)/doc/ddrescuelog.1
 
 $(VPATH)/doc/$(progname).1 : $(progname)
-	help2man -n 'data recovery tool' \
-	  -o $@ ./$(progname)
+	help2man -n 'data recovery tool' -o $@ ./$(progname)
 
 $(VPATH)/doc/ddrescuelog.1 : ddrescuelog
-	help2man -n 'tool for ddrescue logfiles' \
-	  -o $@ --no-info ./ddrescuelog
+	help2man -n 'tool for ddrescue logfiles' -o $@ --no-info ./ddrescuelog
 
 Makefile : $(VPATH)/configure $(VPATH)/Makefile.in
 	./config.status

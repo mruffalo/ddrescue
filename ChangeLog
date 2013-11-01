@@ -1,3 +1,8 @@
+2013-11-01  Antonio Diaz Diaz  <antonio@gnu.org>
+
+	* Version 1.18-pre6 released.
+	* rescuebook.cc: Restored behavior of skipping as in 1.18-pre1.
+
 2013-09-12  Antonio Diaz Diaz  <antonio@gnu.org>
 
 	* Version 1.18-pre5 released.

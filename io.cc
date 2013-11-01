@@ -101,8 +101,7 @@ int Fillbook::fill_block( const Block & b )
   if( writeblock( odes_, iobuf(), size, b.pos() + offset() ) != size ||
       ( synchronous_ && fsync( odes_ ) < 0 && errno != EINVAL ) )
     {
-    if( !ignore_write_errors_ )
-      { final_msg( "Write error" ); final_errno( errno ); }
+    if( !ignore_write_errors_ ) final_msg( "Write error", errno );
     return 1;
     }
   filled_size += size; remaining_size -= size;
@@ -186,7 +185,7 @@ int Rescuebook::copy_block( const Block & b, int & copied_size, int & error_size
              ( synchronous_ && fsync( odes_ ) < 0 && errno != EINVAL ) )
       {
       copied_size = 0; error_size = 0;
-      final_msg( "Write error" ); final_errno( errno );
+      final_msg( "Write error", errno );
       return 1;
       }
     }

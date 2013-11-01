@@ -91,10 +91,7 @@ int Rescuebook::copy_and_update( const Block & b, const Sblock::Status st,
       {
       if( complete_only ) truncate_domain( b.pos() + copied_size + error_size );
       else if( !truncate_vector( b.pos() + copied_size + error_size ) )
-        {
-        final_msg( "EOF found before end of logfile" );
-        retval = 1;
-        }
+        { final_msg( "EOF found before end of logfile" ); retval = 1; }
       }
     if( copied_size > 0 )
       {
@@ -107,10 +104,7 @@ int Rescuebook::copy_and_update( const Block & b, const Sblock::Status st,
       errors += change_chunk_status( Block( b.pos() + copied_size, error_size ),
                 ( error_size > hardbs() ) ? st : Sblock::bad_sector, domain() );
       if( access_works && access( iname_, F_OK ) != 0 )
-        {
-        final_msg( "Input file disappeared" ); final_errno( errno );
-        retval = 1;
-        }
+        { final_msg( "Input file disappeared", errno ); retval = 1; }
       }
     }
   return retval;
@@ -154,27 +148,29 @@ int Rescuebook::copy_non_tried()
       const int retval = copy_and_update( b, st, copied_size, error_size,
                                           "Copying non-tried blocks...",
                                           first_post, true );
-      if( error_size > 0 ) errsize += error_size;
+      if( error_size > 0 ) { errsize += error_size; error_rate += error_size; }
       if( retval ) return retval;
-      if( error_size > 0 ) error_rate += error_size;
       update_rates();
       if( ( error_size > 0 || slow_read() ) && pos >= 0 )
         {
-        if( reopen_on_error && !reopen_infile() ) return 1;
+        if( skip_size > 0 )		// do not skip until 2nd error
+          {
+          if( reopen_on_error && !reopen_infile() ) return 1;
+          b.assign( pos, skip_size ); b.fix_size();
+          find_chunk( b, Sblock::non_tried, domain(), hardbs() );
+          if( pos == b.pos() && b.size() > 0 )
+            {
+            if( error_size > 0 )
+              { errors += change_chunk_status( b, Sblock::non_trimmed, domain() );
+                errsize += b.size(); }
+            pos = b.end();
+            }
+          }
         if( skip_size < skipbs ) skip_size = skipbs;
         else if( skip_size <= max_skip_size / 2 ) skip_size *= 2;
         else skip_size = max_skip_size;
-        b.assign( pos, skip_size ); b.fix_size();
-        find_chunk( b, Sblock::non_tried, domain(), hardbs() );
-        if( pos == b.pos() && b.size() > 0 )
-          {
-          if( error_size > 0 )
-            { errors += change_chunk_status( b, Sblock::non_trimmed, domain() );
-              errsize += b.size(); }
-          pos = b.end();
-          }
         }
-      else if( copied_size > 0 && skip_size > 0 ) skip_size = 0;
+      else if( copied_size > 0 ) skip_size = 0;	// reset on first full read
       if( !update_logfile( odes_ ) ) return -2;
       }
     if( !block_found ) break;
@@ -224,27 +220,29 @@ int Rescuebook::rcopy_non_tried()
       const int retval = copy_and_update( b, st, copied_size, error_size,
                                           "Copying non-tried blocks...",
                                           first_post, false );
-      if( error_size > 0 ) errsize += error_size;
+      if( error_size > 0 ) { errsize += error_size; error_rate += error_size; }
       if( retval ) return retval;
-      if( error_size > 0 ) error_rate += error_size;
       update_rates();
       if( ( error_size > 0 || slow_read() ) && end > 0 )
         {
-        if( reopen_on_error && !reopen_infile() ) return 1;
+        if( skip_size > 0 )		// do not skip until 2nd error
+          {
+          if( reopen_on_error && !reopen_infile() ) return 1;
+          b.size( skip_size ); b.end( end ); pos = b.pos();
+          rfind_chunk( b, Sblock::non_tried, domain(), hardbs() );
+          if( pos == b.pos() && b.size() > 0 )
+            {
+            if( error_size > 0 )
+              { errors += change_chunk_status( b, Sblock::non_trimmed, domain() );
+                errsize += b.size(); }
+            end = b.pos();
+            }
+          }
         if( skip_size < skipbs ) skip_size = skipbs;
         else if( skip_size <= max_skip_size / 2 ) skip_size *= 2;
         else skip_size = max_skip_size;
-        b.size( skip_size ); b.end( end ); pos = b.pos();
-        rfind_chunk( b, Sblock::non_tried, domain(), hardbs() );
-        if( pos == b.pos() && b.size() > 0 )
-          {
-          if( error_size > 0 )
-            { errors += change_chunk_status( b, Sblock::non_trimmed, domain() );
-              errsize += b.size(); }
-          end = b.pos();
-          }
         }
-      else if( copied_size > 0 && skip_size > 0 ) skip_size = 0;
+      else if( copied_size > 0 ) skip_size = 0;	// reset on first full read
       if( !update_logfile( odes_ ) ) return -2;
       }
     if( !block_found ) break;

@@ -49,8 +49,8 @@ public:
   bool logfile_exists() const { return logfile_exists_; }
   long long logfile_isize() const { return logfile_isize_; }
 
-  void final_msg( const char * const msg ) { final_msg_ = msg; }
-  void final_errno( const int e ) { final_errno_ = e; }
+  void final_msg( const char * const msg, const int e = 0 )
+    { final_msg_ = msg; final_errno_ = e; }
 
   void truncate_domain( const long long end )
     { domain_.crop_by_file_size( end ); }
