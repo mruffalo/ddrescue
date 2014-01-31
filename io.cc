@@ -1,6 +1,6 @@
 /*  GNU ddrescue - Data recovery tool
     Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012,
-    2013 Antonio Diaz Diaz.
+    2013, 2014 Antonio Diaz Diaz.
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -63,7 +63,7 @@ int readblock( const int fd, uint8_t * const buf, const int size,
       const int n = read( fd, buf + size - rest, rest );
       if( n > 0 ) rest -= n;
       else if( n == 0 ) break;				// EOF
-      else if( errno != EINTR && errno != EAGAIN ) break;
+      else if( errno != EINTR ) break;
       }
   return size - rest;
   }
@@ -83,7 +83,7 @@ int writeblock( const int fd, const uint8_t * const buf, const int size,
       errno = 0;
       const int n = write( fd, buf + size - rest, rest );
       if( n > 0 ) rest -= n;
-      else if( n < 0 && errno != EINTR && errno != EAGAIN ) break;
+      else if( n < 0 && errno != EINTR ) break;
       }
   return size - rest;
   }

@@ -54,8 +54,8 @@ doc : info man
 
 info : $(VPATH)/doc/$(pkgname).info
 
-$(VPATH)/doc/$(pkgname).info : $(VPATH)/doc/$(pkgname).texinfo
-	cd $(VPATH)/doc && makeinfo $(pkgname).texinfo
+$(VPATH)/doc/$(pkgname).info : $(VPATH)/doc/$(pkgname).texi
+	cd $(VPATH)/doc && makeinfo $(pkgname).texi
 
 man : $(VPATH)/doc/$(progname).1 $(VPATH)/doc/ddrescuelog.1
 
@@ -107,7 +107,7 @@ uninstall-man :
 
 dist : doc
 	ln -sf $(VPATH) $(DISTNAME)
-	tar -cvf $(DISTNAME).tar \
+	tar -Hustar --owner=root --group=root -cvf $(DISTNAME).tar \
 	  $(DISTNAME)/AUTHORS \
 	  $(DISTNAME)/COPYING \
 	  $(DISTNAME)/ChangeLog \
@@ -119,7 +119,7 @@ dist : doc
 	  $(DISTNAME)/doc/$(progname).1 \
 	  $(DISTNAME)/doc/ddrescuelog.1 \
 	  $(DISTNAME)/doc/$(pkgname).info \
-	  $(DISTNAME)/doc/$(pkgname).texinfo \
+	  $(DISTNAME)/doc/$(pkgname).texi \
 	  $(DISTNAME)/testsuite/check.sh \
 	  $(DISTNAME)/testsuite/logfile1 \
 	  $(DISTNAME)/testsuite/logfile2 \

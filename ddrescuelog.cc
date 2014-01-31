@@ -1,5 +1,5 @@
 /*  GNU ddrescuelog - Tool for ddrescue logfiles
-    Copyright (C) 2011, 2012, 2013 Antonio Diaz Diaz.
+    Copyright (C) 2011, 2012, 2013, 2014 Antonio Diaz Diaz.
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by

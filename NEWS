@@ -27,3 +27,5 @@ The short name of option "--generate-mode" has been changed to "-G".
 The option "-B, --binary-prefixes" has been added to ddrescuelog.
 
 The new option "-C, --complete-logfile" has been added to ddrescuelog.
+
+"ddrescue.texinfo" has been renamed to "ddrescue.texi".

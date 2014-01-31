@@ -1,5 +1,5 @@
 This is ddrescue.info, produced by makeinfo version 4.13+ from
-ddrescue.texinfo.
+ddrescue.texi.
 
 INFO-DIR-SECTION GNU Packages
 START-INFO-DIR-ENTRY
@@ -12,7 +12,7 @@ File: ddrescue.info,  Node: Top,  Next: Introduction,  Up: (dir)
 GNU ddrescue Manual
 *******************
 
-This manual is for GNU ddrescue (version 1.18-pre6, 1 November 2013).
+This manual is for GNU ddrescue (version 1.18-pre7, 1 February 2014).
 
 * Menu:
 
@@ -33,7 +33,7 @@ This manual is for GNU ddrescue (version 1.18-pre6, 1 November 2013).
 
 
    Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012,
-2013 Antonio Diaz Diaz.
+2013, 2014 Antonio Diaz Diaz.
 
    This manual is free documentation: you have unlimited permission to
 copy, distribute and modify it.
@@ -639,7 +639,7 @@ Character   Meaning
 
 And here is an example logfile:
 
-# Rescue Logfile. Created by GNU ddrescue version 1.18-pre6
+# Rescue Logfile. Created by GNU ddrescue version 1.18-pre7
 # Command line: ddrescue /dev/fd0 fdimage logfile
 # current_pos  current_status
 0x00120000     ?
@@ -1261,22 +1261,22 @@ Concept index
 
 
 Tag Table:
-Node: Top204
-Node: Introduction1378
-Node: Basic concepts4067
-Node: Important advice5547
-Node: Algorithm6656
-Node: Invoking ddrescue11016
-Node: Logfile structure24248
-Node: Examples26503
-Ref: lziprecover-example30044
-Node: Direct disc access31884
-Node: Fill mode33961
-Node: Generate mode38101
-Node: Ddrescuelog40048
-Node: Invoking ddrescuelog42197
-Node: Problems48750
-Node: Concept index49307
+Node: Top201
+Node: Introduction1381
+Node: Basic concepts4070
+Node: Important advice5550
+Node: Algorithm6659
+Node: Invoking ddrescue11019
+Node: Logfile structure24251
+Node: Examples26506
+Ref: lziprecover-example30047
+Node: Direct disc access31887
+Node: Fill mode33964
+Node: Generate mode38104
+Node: Ddrescuelog40051
+Node: Invoking ddrescuelog42200
+Node: Problems48753
+Node: Concept index49310
 
 End Tag Table
 

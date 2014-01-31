@@ -1,6 +1,6 @@
 /*  GNU ddrescue - Data recovery tool
     Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012,
-    2013 Antonio Diaz Diaz.
+    2013, 2014 Antonio Diaz Diaz.
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -160,9 +160,9 @@ int Rescuebook::copy_non_tried()
           find_chunk( b, Sblock::non_tried, domain(), hardbs() );
           if( pos == b.pos() && b.size() > 0 )
             {
-            if( error_size > 0 )
+/*            if( error_size > 0 )
               { errors += change_chunk_status( b, Sblock::non_trimmed, domain() );
-                errsize += b.size(); }
+                errsize += b.size(); } */
             pos = b.end();
             }
           }
@@ -232,9 +232,9 @@ int Rescuebook::rcopy_non_tried()
           rfind_chunk( b, Sblock::non_tried, domain(), hardbs() );
           if( pos == b.pos() && b.size() > 0 )
             {
-            if( error_size > 0 )
+/*            if( error_size > 0 )
               { errors += change_chunk_status( b, Sblock::non_trimmed, domain() );
-                errsize += b.size(); }
+                errsize += b.size(); } */
             end = b.pos();
             }
           }

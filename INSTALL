@@ -39,12 +39,12 @@ the main archive.
 
 Another way
 -----------
-You can also compile ddrescue into a separate directory. To do this, you
-must use a version of 'make' that supports the 'VPATH' variable, such
-as GNU 'make'. 'cd' to the directory where you want the object files
-and executables to go and run the 'configure' script. 'configure'
-automatically checks for the source code in '.', in '..' and in the
-directory that 'configure' is in.
+You can also compile ddrescue into a separate directory.
+To do this, you must use a version of 'make' that supports the 'VPATH'
+variable, such as GNU 'make'. 'cd' to the directory where you want the
+object files and executables to go and run the 'configure' script.
+'configure' automatically checks for the source code in '.', in '..' and
+in the directory that 'configure' is in.
 
 'configure' recognizes the option '--srcdir=DIR' to control where to
 look for the sources. Usually 'configure' can determine that directory
@@ -54,8 +54,8 @@ After running 'configure', you can run 'make' and 'make install' as
 explained above.
 
 
-Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013
-Antonio Diaz Diaz.
+Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013,
+2014 Antonio Diaz Diaz.
 
 This file is free documentation: you have unlimited permission to copy,
 distribute and modify it.
