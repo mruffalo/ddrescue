@@ -24,6 +24,7 @@
 
 #define _FILE_OFFSET_BITS 64
 
+#include <algorithm>
 #include <cerrno>
 #include <climits>
 #include <cstdio>
@@ -65,7 +66,7 @@ void show_help( const int cluster, const int hardbs, const int skipbs )
   {
   std::printf( "%s - Data recovery tool.\n", Program_name );
   std::printf( "Copies data from one file or block device to another,\n"
-               "trying hard to rescue data in case of read errors.\n"
+               "trying to rescue the good parts first in case of read errors.\n"
                "\nUsage: %s [options] infile outfile [logfile]\n", invocation_name );
   std::printf( "You should use a logfile unless you know what you are doing.\n"
                "If you reboot, check the device names before restarting ddrescue.\n"
@@ -111,8 +112,8 @@ void show_help( const int cluster, const int hardbs, const int skipbs )
                "  -x, --extend-outfile=<bytes>   extend outfile size to be at least this long\n"
                "  -1, --log-rates=<file>         log rates and error sizes in file\n"
                "  -2, --log-reads=<file>         log all read operations in file\n"
-               "Numbers may be followed by a multiplier: s = sectors, k = kB = 10^3 = 1000,\n"
-               "Ki = KiB = 2^10 = 1024, M = 10^6, Mi = 2^20, G = 10^9, Gi = 2^30, etc...\n"
+               "Numbers may be in decimal, hexadecimal or octal, and may be followed by a\n"
+               "multiplier: s = sectors, k = 1000, Ki = 1024, M = 10^6, Mi = 2^20, etc...\n"
                "Time intervals have the format 1[.5][smhd] or 1/2[smhd].\n"
                "\nExit status: 0 for a normal exit, 1 for environmental problems (file\n"
                "not found, invalid flags, I/O errors, etc), 2 to indicate a corrupt or\n"
@@ -239,7 +240,7 @@ int do_fill( const long long offset, Domain & domain,
   Fillbook fillbook( offset, domain, logname, cluster, hardbs,
                      ignore_write_errors, synchronous );
   if( !fillbook.logfile_exists() ) return not_readable( logname );
-  if( fillbook.domain().size() == 0 ) return empty_domain();
+  if( fillbook.domain().empty() ) return empty_domain();
   if( fillbook.read_only() ) return not_writable( logname );
 
   const int ides = open( iname, O_RDONLY | O_BINARY );
@@ -292,7 +293,7 @@ int do_generate( const long long offset, Domain & domain,
     { show_error( "Input file is not seekable." ); return 1; }
 
   Genbook genbook( offset, isize, domain, logname, cluster, hardbs );
-  if( genbook.domain().size() == 0 ) return empty_domain();
+  if( genbook.domain().empty() ) return empty_domain();
   if( !genbook.blank() && genbook.current_status() != Logbook::generating )
     {
     show_error( "Logfile alredy exists and is non-empty.", 0, true );
@@ -356,7 +357,7 @@ int do_rescue( const long long offset, Domain & domain,
       return 1;
       }
     }
-  if( rescuebook.domain().size() == 0 )
+  if( rescuebook.domain().empty() )
     {
     if( rb_opts.complete_only && !rescuebook.logfile_exists() )
       { show_error( "Nothing to complete; logfile is missing or empty.", 0, true );
@@ -376,15 +377,14 @@ int do_rescue( const long long offset, Domain & domain,
     { show_error( "Can't open output file", errno ); return 1; }
   if( lseek( odes, 0, SEEK_SET ) )
     { show_error( "Output file is not seekable." ); return 1; }
-  while( preallocate )
+  if( preallocate )
     {
 #if defined _POSIX_ADVISORY_INFO && _POSIX_ADVISORY_INFO > 0
     if( posix_fallocate( odes, rescuebook.domain().pos() + rescuebook.offset(),
-                         rescuebook.domain().size() ) == 0 ) break;
-    if( errno != EINTR )
+                         rescuebook.domain().size() ) != 0 )
       { show_error( "Can't preallocate output file", errno ); return 1; }
 #else
-    show_error( "warning: Preallocation not available." ); break;
+    show_error( "warning: Preallocation not available." );
 #endif
     }
   if( !rate_logger.open_file() )
@@ -396,8 +396,12 @@ int do_rescue( const long long offset, Domain & domain,
     std::printf( "\n\n%s %s\n", Program_name, PROGVERSION );
   if( verbosity >= 1 )
     {
-    std::printf( "About to copy %sBytes from %s to %s\n",
-                 format_num( rescuebook.domain().in_size() ), iname, oname );
+    if( rescuebook.domain().full() )
+      std::printf( "About to copy an unknown number of bytes from %s to %s\n",
+                   iname, oname );
+    else
+      std::printf( "About to copy %sBytes from %s to %s\n",
+                   format_num( rescuebook.domain().in_size() ), iname, oname );
     std::printf( "    Starting positions: infile = %sB,  outfile = %sB\n",
                  format_num( rescuebook.domain().pos() ),
                  format_num( rescuebook.domain().pos() + rescuebook.offset() ) );

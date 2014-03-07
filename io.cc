@@ -33,12 +33,24 @@
 
 #include "block.h"
 #include "ddrescue.h"
+#include "loggers.h"
 
 
 namespace {
 
-bool volatile interrupted_ = false;		// user pressed Ctrl-C
-extern "C" void sighandler( int ) { interrupted_ = true; }
+int volatile signum_ = 0;		// user pressed Ctrl-C or similar
+extern "C" void sighandler( int signum )
+  { if( signum_ == 0 && signum > 0 ) signum_ = signum; }
+
+
+int set_signal( const int signum, void (*handler)( int ) )
+  {
+  struct sigaction new_action;
+  new_action.sa_handler = handler;
+  sigemptyset( &new_action.sa_mask );
+  new_action.sa_flags = SA_RESTART;
+  return sigaction( signum, &new_action, 0 );
+  }
 
 
 bool block_is_zero( const uint8_t * const buf, const int size )
@@ -171,7 +183,7 @@ int Rescuebook::copy_block( const Block & b, int & copied_size, int & error_size
   {
   if( b.size() <= 0 ) internal_error( "bad size copying a Block" );
   copied_size = readblock( ides_, iobuf(), b.size(), b.pos() );
-  if( errno ) error_size = b.size() - copied_size;
+  error_size = errno ? b.size() - copied_size : 0;
 
   if( copied_size > 0 )
     {
@@ -189,6 +201,7 @@ int Rescuebook::copy_block( const Block & b, int & copied_size, int & error_size
       return 1;
       }
     }
+  read_logger.print_line( b.pos(), b.size(), copied_size, error_size );
   return 0;
   }
 
@@ -213,15 +226,22 @@ const char * format_time( long t )
   }
 
 
-bool interrupted() { return interrupted_; }
+bool interrupted() { return ( signum_ > 0 ); }
 
 
 void set_signals()
   {
-  interrupted_ = false;
-  std::signal( SIGINT, sighandler );
-  std::signal( SIGHUP, sighandler );
-  std::signal( SIGTERM, sighandler );
-  std::signal( SIGUSR1, SIG_IGN );
-  std::signal( SIGUSR2, SIG_IGN );
+  signum_ = 0;
+  set_signal( SIGHUP, sighandler );
+  set_signal( SIGINT, sighandler );
+  set_signal( SIGTERM, sighandler );
+  set_signal( SIGUSR1, SIG_IGN );
+  set_signal( SIGUSR2, SIG_IGN );
+  }
+
+int signaled_exit()
+  {
+  set_signal( signum_, SIG_DFL );
+  std::raise( signum_ );
+  return 128 + signum_;			// in case std::raise fails to exit
   }

@@ -66,10 +66,19 @@ bool Block::join( const Block & b )
   {
   if( this->follows( b ) ) pos_ = b.pos_;
   else if( !b.follows( *this ) ) return false;
-  size_ += b.size_;
-  if( size_ < 0 || size_ > LLONG_MAX - pos_ )
+  if( b.size_ > LLONG_MAX - end() )
     internal_error( "size overflow joining two Blocks" );
+  size_ += b.size_;
   return true;
+  }
+
+
+// shift the border of two consecutive Blocks
+void Block::shift( Block & b, const long long pos )
+  {
+  if( end() != b.pos_ || pos <= pos_ || pos >= b.end() )
+    internal_error( "bad argument shifting the border of two Blocks" );
+  b.size_ = b.end() - pos; b.pos_ = pos; size_ = pos - pos_;
   }
 
 
@@ -89,7 +98,7 @@ Block Block::split( long long pos, const int hardbs )
 Domain::Domain( const long long p, const long long s,
                 const char * const logname, const bool loose )
   {
-  Block b( p, s ); b.fix_size();
+  const Block b( p, s );
   if( !logname || !logname[0] ) { block_vector.push_back( b ); return; }
   Logfile logfile( logname );
   if( !logfile.read_logfile( loose ? '?' : 0 ) )
@@ -106,7 +115,7 @@ Domain::Domain( const long long p, const long long s,
     const Sblock & sb = logfile.sblock( i );
     if( sb.status() == Sblock::finished ) block_vector.push_back( sb );
     }
-  if( block_vector.size() == 0 ) block_vector.push_back( Block( 0, 0 ) );
+  if( block_vector.empty() ) block_vector.push_back( Block( 0, 0 ) );
   else this->crop( b );
   }
 
@@ -119,7 +128,7 @@ void Domain::crop( const Block & b )
     if( block_vector[i].size() <= 0 )
       block_vector.erase( block_vector.begin() + i );
     }
-  if( block_vector.size() == 0 ) block_vector.push_back( Block( 0, 0 ) );
+  if( block_vector.empty() ) block_vector.push_back( Block( 0, 0 ) );
   }
 
 

@@ -18,6 +18,7 @@
 
 #define _FILE_OFFSET_BITS 64
 
+#include <algorithm>
 #include <cctype>
 #include <cstdio>
 #include <cstdlib>
@@ -93,10 +94,9 @@ void Logfile::compact_sblock_vector()
 
 void Logfile::extend_sblock_vector( const long long isize )
   {
-  if( sblock_vector.size() == 0 )
+  if( sblock_vector.empty() )
     {
-    Sblock sb( 0, ( isize > 0 ) ? isize : -1, Sblock::non_tried );
-    sb.fix_size();
+    const Sblock sb( 0, ( isize > 0 ) ? isize : -1, Sblock::non_tried );
     sblock_vector.push_back( sb );
     return;
     }
@@ -130,8 +130,7 @@ void Logfile::extend_sblock_vector( const long long isize )
     }
   else if( end >= 0 )
     {
-    Sblock sb( end, -1, Sblock::non_tried );
-    sb.fix_size();
+    const Sblock sb( end, -1, Sblock::non_tried );
     if( sb.size() > 0 ) sblock_vector.push_back( sb );
     }
   }
@@ -202,7 +201,7 @@ bool Logfile::read_logfile( const int default_sblock_status )
           ( size > 0 || ( size == 0 && pos == 0 ) ) )
         {
         const Sblock::Status st = Sblock::Status( ch );
-        Sblock sb( pos, size, st ); sb.fix_size();
+        const Sblock sb( pos, size, st );
         const long long end = sblock_vector.size() ?
                               sblock_vector.back().end() : 0;
         if( sb.pos() != end )
@@ -234,7 +233,7 @@ int Logfile::write_logfile( FILE * f ) const
 
   if( !f && !filename_ ) return false;
   if( !f ) { f = std::fopen( filename_, "w" ); if( !f ) return false; }
-  write_logfile_header( f );
+  write_logfile_header( f, "Rescue" );
   std::fprintf( f, "# current_pos  current_status\n" );
   std::fprintf( f, "0x%08llX     %c\n", current_pos_, current_status_ );
   std::fprintf( f, "#      pos        size  status\n" );
@@ -300,17 +299,16 @@ int Logfile::find_largest_sblock( const Sblock::Status st,
 
 
 int Logfile::find_smallest_sblock( const Sblock::Status st,
-                                   const Domain & domain, const int hardbs ) const
+                                   const Domain & domain, const int min_size ) const
   {
   long long size = LLONG_MAX;
   int index = -1;
   for( int i = 0; i < sblocks(); ++i )
     {
     const Sblock & sb = sblock_vector[i];
-    if( sb.status() == st &&
-        ( sb.size() < size || ( sb.size() == size && index < 0 ) ) &&
+    if( sb.status() == st && ( sb.size() < size || index < 0 ) &&
         domain.includes( sb ) )
-      { size = sb.size(); index = i; if( size <= hardbs ) break; }
+      { size = sb.size(); index = i; if( size <= min_size ) break; }
     }
   return index;
   }
@@ -328,13 +326,11 @@ void Logfile::find_chunk( Block & b, const Sblock::Status st,
   if( find_index( b.pos() ) < 0 ) { b.size( 0 ); return; }
   int i;
   for( i = index_; i < sblocks(); ++i )
-    if( sblock_vector[i].status() == st &&
-        domain.includes( sblock_vector[i] ) )
+    if( sblock_vector[i].status() == st && domain.includes( sblock_vector[i] ) )
       { index_ = i; break; }
   if( i >= sblocks() ) { b.size( 0 ); return; }
   if( b.pos() < sblock_vector[index_].pos() )
     b.pos( sblock_vector[index_].pos() );
-  b.fix_size();
   if( !sblock_vector[index_].includes( b ) )
     b.crop( sblock_vector[index_] );
   if( b.end() != sblock_vector[index_].end() )
@@ -349,15 +345,14 @@ void Logfile::rfind_chunk( Block & b, const Sblock::Status st,
                            const Domain & domain, const int alignment ) const
   {
   if( b.size() <= 0 ) return;
-  b.fix_size();
   if( sblock_vector.back().end() < b.end() )
     b.end( sblock_vector.back().end() );
-  find_index( b.end() - 1 );
-  for( ; index_ >= 0; --index_ )
-    if( sblock_vector[index_].status() == st &&
-        domain.includes( sblock_vector[index_] ) )
-      break;
-  if( index_ < 0 ) { b.size( 0 ); return; }
+  if( find_index( b.end() - 1 ) < 0 ) { b.size( 0 ); return; }
+  int i;
+  for( i = index_; i >= 0; --i )
+    if( sblock_vector[i].status() == st && domain.includes( sblock_vector[i] ) )
+      { index_ = i; break; }
+  if( i < 0 ) { b.size( 0 ); return; }
   if( b.end() > sblock_vector[index_].end() )
     b.end( sblock_vector[index_].end() );
   if( !sblock_vector[index_].includes( b ) )
@@ -403,9 +398,7 @@ int Logfile::change_chunk_status( const Block & b, const Sblock::Status st,
         index_ + 1 < sblocks() && sblock_vector[index_+1].status() == st &&
         domain.includes( sblock_vector[index_+1] ) )
       {
-      sblock_vector[index_].inc_size( -b.size() );
-      sblock_vector[index_+1].pos( b.pos() );
-      sblock_vector[index_+1].inc_size( b.size() );
+      sblock_vector[index_].shift( sblock_vector[index_+1], b.pos() );
       return 0;
       }
     insert_sblock( index_, sblock_vector[index_].split( b.pos() ) );
@@ -414,14 +407,13 @@ int Logfile::change_chunk_status( const Block & b, const Sblock::Status st,
     }
   if( sblock_vector[index_].size() > b.size() )
     {
-    sblock_vector[index_].pos( b.end() );
-    sblock_vector[index_].inc_size( -b.size() );
     br_st_good = Sblock::is_good_status( sblock_vector[index_].status() );
     if( index_ > 0 && sblock_vector[index_-1].status() == st &&
         domain.includes( sblock_vector[index_-1] ) )
-      sblock_vector[index_-1].inc_size( b.size() );
+      sblock_vector[index_-1].shift( sblock_vector[index_], b.end() );
     else
-      insert_sblock( index_, Sblock( b, st ) );
+      insert_sblock( index_,
+                     Sblock( sblock_vector[index_].split( b.end() ), st ) );
     }
   else
     {
@@ -429,13 +421,13 @@ int Logfile::change_chunk_status( const Block & b, const Sblock::Status st,
     if( index_ > 0 && sblock_vector[index_-1].status() == st &&
         domain.includes( sblock_vector[index_-1] ) )
       {
-      sblock_vector[index_-1].inc_size( sblock_vector[index_].size() );
+      sblock_vector[index_-1].join( sblock_vector[index_] );
       erase_sblock( index_ ); --index_;
       }
     if( index_ + 1 < sblocks() && sblock_vector[index_+1].status() == st &&
         domain.includes( sblock_vector[index_+1] ) )
       {
-      sblock_vector[index_].inc_size( sblock_vector[index_+1].size() );
+      sblock_vector[index_].join( sblock_vector[index_+1] );
       erase_sblock( index_ + 1 );
       }
     }

@@ -33,29 +33,29 @@ fail=0
 printf "testing ddrescue-%s..." "$2"
 
 "${DDRESCUE}" -q ${in}
-if [ $? != 0 ] ; then printf . ; else printf - ; fail=1 ; fi
+if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
 "${DDRESCUE}" -q ${in} out logfile extra
-if [ $? != 0 ] ; then printf . ; else printf - ; fail=1 ; fi
+if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
 "${DDRESCUE}" -q ${in} ${in} logfile
-if [ $? != 0 ] ; then printf . ; else printf - ; fail=1 ; fi
+if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
 "${DDRESCUE}" -q ${in} out ${in}
-if [ $? != 0 ] ; then printf . ; else printf - ; fail=1 ; fi
+if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
 "${DDRESCUE}" -q ${in} out out
-if [ $? != 0 ] ; then printf . ; else printf - ; fail=1 ; fi
+if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
 "${DDRESCUE}" -q -G ${in} out
-if [ $? != 0 ] ; then printf . ; else printf - ; fail=1 ; fi
+if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
 "${DDRESCUE}" -q -F- ${in} out
-if [ $? != 0 ] ; then printf . ; else printf - ; fail=1 ; fi
+if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
 "${DDRESCUE}" -q -F ${in} out logfile
-if [ $? != 0 ] ; then printf . ; else printf - ; fail=1 ; fi
+if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
 "${DDRESCUE}" -q -F- -G ${in} out logfile
-if [ $? != 0 ] ; then printf . ; else printf - ; fail=1 ; fi
+if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
 "${DDRESCUE}" -q -m ${logfile1} -m ${logfile1} ${in} out logfile
-if [ $? != 0 ] ; then printf . ; else printf - ; fail=1 ; fi
+if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
 "${DDRESCUE}" -q -m ${logfile2i} ${in} out logfile
-if [ $? != 0 ] ; then printf . ; else printf - ; fail=1 ; fi
+if [ $? = 2 ] ; then printf . ; else printf - ; fail=1 ; fi
 "${DDRESCUE}" -q -w ${in} out logfile
-if [ $? != 0 ] ; then printf . ; else printf - ; fail=1 ; fi
+if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
 
 rm -f logfile
 "${DDRESCUE}" -t -pq -i15000 ${in} out logfile || fail=1
@@ -113,6 +113,26 @@ cat ${logfile2} > logfile || framework_failure
 cmp ${in} out || fail=1
 printf .
 
+rm -f out
+fail2=0
+for i in 0 8000 16000 24000 32000 ; do
+	"${DDRESCUE}" -q -i${i} -s4000 -m ${logfile1} ${in} out || fail2=1
+done
+cmp -s ${in} out && fail2=1
+for i in 4000 12000 20000 28000 36000 ; do
+	"${DDRESCUE}" -q -i${i} -s4000 -m ${logfile1} ${in} out || fail2=1
+done
+cmp ${in1} out || fail2=1
+for i in 0 8000 16000 24000 32000 ; do
+	"${DDRESCUE}" -q -i${i} -s4000 -m ${logfile2} ${in2} out || fail2=1
+done
+cmp -s ${in} out && fail2=1
+for i in 4000 12000 20000 28000 36000 ; do
+	"${DDRESCUE}" -q -i${i} -s4000 -m ${logfile2} ${in2} out || fail2=1
+done
+cmp ${in} out || fail2=1
+if [ ${fail2} = 0 ] ; then printf . ; else printf - ; fail=1 ; fi
+
 rm -f logfile
 cat ${in1} > out || framework_failure
 "${DDRESCUE}" -q -G ${in} out logfile || fail=1
@@ -133,17 +153,17 @@ printf .
 printf "\ntesting ddrescuelog-%s..." "$2"
 
 "${DDRESCUELOG}" -q logfile
-if [ $? != 0 ] ; then printf . ; else printf - ; fail=1 ; fi
+if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
 "${DDRESCUELOG}" -q -d
-if [ $? != 0 ] ; then printf . ; else printf - ; fail=1 ; fi
+if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
 "${DDRESCUELOG}" -q -t -d logfile
-if [ $? != 0 ] ; then printf . ; else printf - ; fail=1 ; fi
+if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
 "${DDRESCUELOG}" -q -m ${logfile2i} -t logfile
-if [ $? != 0 ] ; then printf . ; else printf - ; fail=1 ; fi
+if [ $? = 2 ] ; then printf . ; else printf - ; fail=1 ; fi
 
 "${DDRESCUELOG}" -a '?,+' -i3072 ${logfile1} > logfile
 "${DDRESCUELOG}" -D logfile
-if [ $? != 0 ] ; then printf . ; else printf - ; fail=1 ; fi
+if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
 "${DDRESCUELOG}" -a '?,+' -i2048 -s1024 logfile > logfile2
 "${DDRESCUELOG}" -d logfile2
 if [ $? = 0 ] ; then printf . ; else printf - ; fail=1 ; fi
@@ -160,13 +180,13 @@ cat out | "${DDRESCUELOG}" -b2048 -fc?+ logfile || fail=1
 "${DDRESCUELOG}" -s35744 -p ${logfile2} logfile || fail=1
 printf .
 "${DDRESCUELOG}" -s35745 -q -p ${logfile2} logfile
-if [ $? != 0 ] ; then printf . ; else printf - ; fail=1 ; fi
+if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
 
 printf "10\n12\n14\n16\n" | "${DDRESCUELOG}" -b2048 -fc+? logfile || fail=1
 "${DDRESCUELOG}" -q -p logfile ${logfile1}
-if [ $? != 0 ] ; then printf . ; else printf - ; fail=1 ; fi
+if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
 "${DDRESCUELOG}" -i20KiB -q -p logfile ${logfile1}
-if [ $? != 0 ] ; then printf . ; else printf - ; fail=1 ; fi
+if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
 "${DDRESCUELOG}" -i20KiB -s14KiB -p logfile ${logfile1} || fail=1
 printf .
 
@@ -176,19 +196,19 @@ printf .
 
 cat ${logfile1} > logfile || framework_failure
 "${DDRESCUELOG}" -i1024 -s2048 -d logfile
-if [ $? != 0 ] ; then printf . ; else printf - ; fail=1 ; fi
+if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
 "${DDRESCUELOG}" -i1024 -s1024 -d logfile || fail=1
 printf .
 "${DDRESCUELOG}" -i1024 -s1024 -d -q logfile
-if [ $? != 0 ] ; then printf . ; else printf - ; fail=1 ; fi
+if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
 
 cat ${logfile2} > logfile || framework_failure
 "${DDRESCUELOG}" -m ${logfile1} -D logfile
-if [ $? != 0 ] ; then printf . ; else printf - ; fail=1 ; fi
+if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
 "${DDRESCUELOG}" -L -m ${logfile2i} -D logfile || fail=1
 printf .
 "${DDRESCUELOG}" -i1024 -s2048 -d logfile
-if [ $? != 0 ] ; then printf . ; else printf - ; fail=1 ; fi
+if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
 "${DDRESCUELOG}" -i2048 -s2048 -d logfile || fail=1
 printf .
 
@@ -243,11 +263,11 @@ cmp out copy || fail=1
 printf .
 "${DDRESCUELOG}" -i8KiB -s10KiB -z ${logfile2} ${logfile1} > logfile || fail=1
 "${DDRESCUELOG}" -D logfile
-if [ $? != 0 ] ; then printf . ; else printf - ; fail=1 ; fi
+if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
 "${DDRESCUELOG}" -i7KiB -s11KiB -D logfile
-if [ $? != 0 ] ; then printf . ; else printf - ; fail=1 ; fi
+if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
 "${DDRESCUELOG}" -i8KiB -s11KiB -D logfile
-if [ $? != 0 ] ; then printf . ; else printf - ; fail=1 ; fi
+if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
 "${DDRESCUELOG}" -i8KiB -s10KiB -d logfile
 if [ $? = 0 ] ; then printf . ; else printf - ; fail=1 ; fi
 

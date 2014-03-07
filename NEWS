@@ -13,16 +13,24 @@ They produce data files usable by plotting utilities like gnuplot.
 The long name of option "-r" has been changed to "--retry-passes" to
 make it clear that ddrescue tries each sector only once per retry pass.
 
-Skip size is now reset (instead of reduced) after good data is found.
-This should make ddrescue regain speed faster after leaving a bad or
-slow area. If ddrescue is having difficulties skipping away from a large
-area with scattered errors, or if the device has large error areas at
-regular intervals, you can increase the initial skip size with
-"--skip-size".
+The short name of option "--generate-mode" has been changed to "-G".
+
+If ddrescue is interrupted by a signal, it now terminates by raising the
+signal received.
+
+The algorithm of the copying phase has been changed. It now marks as
+non-trimmed just the failed blocks, skips beyond them, and tries the
+skipped areas later in additional passes (before trimming), reversing
+the direction after each pass. The new method is faster around large
+errors, keeps the logfile smaller, and produces better starting points
+for trimming, which now tries the smallest blocks first.
 
 Current total run time is now shown on the screen.
 
-The short name of option "--generate-mode" has been changed to "-G".
+The message "About to copy an unknown number of bytes" is now shown when
+the size of the input file can't be determined.
+
+Many improvements have been made to the documentation.
 
 The option "-B, --binary-prefixes" has been added to ddrescuelog.
 

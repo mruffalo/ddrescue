@@ -182,11 +182,11 @@ int not_writable( const char * const logname )
   }
 
 
-void write_logfile_header( FILE * const f )
+bool write_logfile_header( FILE * const f, const char * const logtype )
   {
-  std::fprintf( f, "# Rescue Logfile. Created by %s version %s\n",
-                Program_name, PROGVERSION );
-  std::fprintf( f, "# Command line: %s\n", command_line.c_str() );
+  return ( std::fprintf( f, "# %s Logfile. Created by %s version %s\n"
+                            "# Command line: %s\n",
+           logtype, Program_name, PROGVERSION, command_line.c_str() ) >= 0 );
   }
 
 

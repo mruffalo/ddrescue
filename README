@@ -1,8 +1,8 @@
 Description
 
 GNU ddrescue is a data recovery tool. It copies data from one file or
-block device (hard disc, cdrom, etc) to another, trying hard to rescue
-data in case of read errors.
+block device (hard disc, cdrom, etc) to another, trying to rescue the
+good parts first in case of read errors.
 
 Ddrescuelog is a tool that manipulates ddrescue logfiles, shows logfile
 contents, converts logfiles to/from other formats, compares logfiles,
@@ -68,6 +68,11 @@ Ddrescue also features a "fill mode" able to selectively overwrite parts
 of the output file, which has a number of interesting uses like wiping
 data, marking bad areas or even, in some cases, "repair" damaged
 sectors.
+
+One of the great strengths of ddrescue is that it is interface-agnostic,
+and so can be used for any kind of device supported by your kernel (ATA,
+SATA, SCSI, old MFM drives, floppy discs, or even flash media cards like
+SD).
 
 
 Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013,

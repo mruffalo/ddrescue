@@ -21,6 +21,7 @@
     (eg, bug) which caused ddrescuelog to panic.
 */
 
+#include <algorithm>
 #include <cerrno>
 #include <climits>
 #include <cstdio>
@@ -107,7 +108,7 @@ void parse_types( const std::string & arg,
     if( !Sblock::isstatus( ch ) ) { error = true; break; }
     *p += ch;
     }
-  if( types1.size() == 0 || types2.size() == 0 ) error = true;
+  if( types1.empty() || types2.empty() ) error = true;
   if( error )
     {
     show_error( "Invalid type for 'change-types' option.", 0, true );
@@ -121,7 +122,7 @@ void parse_types( const std::string & arg,
 void parse_2types( const std::string & arg,
                    Sblock::Status & type1, Sblock::Status & type2 )
   {
-  if( arg.size() == 0 ) return;
+  if( arg.empty() ) return;
   if( arg.size() != 2 || arg[0] == arg[1] ||
       !Sblock::isstatus( arg[0] ) || !Sblock::isstatus( arg[1] ) )
     {
@@ -135,7 +136,7 @@ void parse_2types( const std::string & arg,
 
 void parse_type( const std::string & arg, Sblock::Status & complete_type )
   {
-  if( arg.size() == 0 ) return;
+  if( arg.empty() ) return;
   if( arg.size() != 1 || !Sblock::isstatus( arg[0] ) )
     {
     show_error( "Invalid type for 'complete-logfile' option.", 0, true );
@@ -158,7 +159,7 @@ int do_logic_ops( Domain & domain, const char * const logname,
 
   domain.crop( logfile.extent() );
   domain.crop( logfile2.extent() );
-  if( domain.size() == 0 ) return empty_domain();
+  if( domain.empty() ) return empty_domain();
   logfile.split_domain_border_sblocks( domain );
   logfile2.split_domain_border_sblocks( domain );
 
@@ -223,7 +224,7 @@ int change_types( Domain & domain, const char * const logname,
   Logfile logfile( logname );
   if( !logfile.read_logfile() ) return not_readable( logname );
   domain.crop( logfile.extent() );
-  if( domain.size() == 0 ) return empty_domain();
+  if( domain.empty() ) return empty_domain();
   logfile.split_domain_border_sblocks( domain );
 
   for( int i = 0; i < logfile.sblocks(); ++i )
@@ -251,14 +252,14 @@ int compare_logfiles( Domain & domain, const char * const logname,
   if( !logfile.read_logfile() ) return not_readable( logname );
   logfile.compact_sblock_vector();
   domain.crop( logfile.extent() );
-  if( domain.size() == 0 ) return empty_domain();
+  if( domain.empty() ) return empty_domain();
   logfile.split_domain_border_sblocks( domain );
 
   Logfile logfile2( second_logname );
   if( !logfile2.read_logfile() ) return not_readable( second_logname );
   logfile2.compact_sblock_vector();
   domain2.crop( logfile2.extent() );
-  if( domain2.size() == 0 ) return empty_domain();
+  if( domain2.empty() ) return empty_domain();
   logfile2.split_domain_border_sblocks( domain2 );
 
   int retval = 0;
@@ -308,7 +309,7 @@ int create_logfile( Domain & domain, const char * const logname,
     show_error( buf );
     return 1;
     }
-  if( domain.size() == 0 ) return empty_domain();
+  if( domain.empty() ) return empty_domain();
   logfile.make_blank();
   logfile.split_domain_border_sblocks( domain );
 
@@ -344,7 +345,7 @@ int test_if_done( Domain & domain, const char * const logname, const bool del )
   Logfile logfile( logname );
   if( !logfile.read_logfile() ) return not_readable( logname );
   domain.crop( logfile.extent() );
-  if( domain.size() == 0 ) return empty_domain();
+  if( domain.empty() ) return empty_domain();
   logfile.split_domain_border_sblocks( domain );
 
   for( int i = 0; i < logfile.sblocks(); ++i )
@@ -386,7 +387,7 @@ int to_badblocks( const long long offset, Domain & domain,
   Logfile logfile( logname );
   if( !logfile.read_logfile() ) return not_readable( logname );
   domain.crop( logfile.extent() );
-  if( domain.size() == 0 ) return empty_domain();
+  if( domain.empty() ) return empty_domain();
   logfile.split_domain_border_sblocks( domain );
 
   for( int i = 0; i < logfile.sblocks(); ++i )
@@ -465,7 +466,7 @@ int do_show_status( Domain & domain, const char * const logname )
   Logfile logfile( logname );
   if( !logfile.read_logfile() ) return not_readable( logname );
   domain.crop( logfile.extent() );
-  if( domain.size() == 0 ) return empty_domain();
+  if( domain.empty() ) return empty_domain();
   logfile.split_domain_border_sblocks( domain );
 
   for( int i = 0; i < logfile.sblocks(); ++i )

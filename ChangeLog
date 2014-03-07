@@ -1,3 +1,14 @@
+2014-03-06  Antonio Diaz Diaz  <antonio@gnu.org>
+
+	* Version 1.18-pre8 released.
+	* If interrupted, ddrescue terminates by raising the signal received.
+	* rescuebook.cc: Alternate direction of passes during copying phase.
+	* rescuebook.cc: Smallest blocks are trimmed first.
+	* block.h: Class Block now forces the invariant by itself.
+	* main.cc: Show "an unknown number of bytes" for unknown isize.
+	* Write version and command line to rates and reads logfiles.
+	* Many improvements to documentation.
+
 2014-02-01  Antonio Diaz Diaz  <antonio@gnu.org>
 
 	* Version 1.18-pre7 released.

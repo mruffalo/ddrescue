@@ -20,6 +20,7 @@
 #include <cstdio>
 #include <vector>
 
+#include "block.h"
 #include "loggers.h"
 
 
@@ -62,7 +63,8 @@ bool Rate_logger::open_file()
     {
     last_time = -1;
     f = std::fopen( filename_, "w" );
-    error = !f || std::fprintf( f, "#Time  Ipos  Current_rate  Average_rate  Errors  Errsize\n" ) < 0;
+    error = !f || !write_logfile_header( f, "Rates" ) ||
+            std::fprintf( f, "#Time  Ipos  Current_rate  Average_rate  Errors  Errsize\n" ) < 0;
     }
   return !error;
   }
@@ -76,7 +78,7 @@ bool Rate_logger::print_line( const long time, const long long ipos,
     {
     last_time = time;
     if( std::fprintf( f, "%2lu  0x%08llX  %8llu  %8llu  %7u  %8llu\n",
-                    time, ipos, c_rate, a_rate, errors, errsize ) < 0 )
+                      time, ipos, c_rate, a_rate, errors, errsize ) < 0 )
       error = true;
     }
   return !error;
@@ -90,7 +92,8 @@ bool Read_logger::open_file()
     {
     prev_is_msg = true;
     f = std::fopen( filename_, "w" );
-    error = !f || std::fprintf( f, "#  Ipos       Size  Copied_size  Error_size\n" ) < 0;
+    error = !f || !write_logfile_header( f, "Reads" ) ||
+            std::fprintf( f, "#  Ipos       Size  Copied_size  Error_size\n" ) < 0;
     }
   return !error;
   }

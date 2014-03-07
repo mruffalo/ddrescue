@@ -29,28 +29,36 @@
 
 class Block
   {
-  long long pos_, size_;		// pos + size <= LLONG_MAX
+  long long pos_, size_;  // pos >= 0 && size >= 0 && pos + size <= LLONG_MAX
+
+  void fix_size()		// limit size_ to largest possible value
+    { if( size_ < 0 || size_ > LLONG_MAX - pos_ ) size_ = LLONG_MAX - pos_; }
 
 public:
-  Block( const long long p, const long long s )
-    : pos_( p ), size_( s ) {}
+  Block( const long long p, const long long s ) : pos_( p ), size_( s )
+    { if( p < 0 ) { pos_ = 0; if( s > 0 ) size_ -= std::min( s, -p ); }
+      fix_size(); }
 
   long long pos() const { return pos_; }
   long long size() const { return size_; }
   long long end() const { return pos_ + size_; }
 
-  void pos( const long long p ) { pos_ = p; }
-  void size( const long long s ) { size_ = s; }
-  void end( const long long e )
-    { pos_ = e - size_; if( pos_ < 0 ) { size_ += pos_; pos_ = 0; } }
+  void pos( const long long p )
+    { pos_ = std::max( p, 0LL );
+      if( size_ > LLONG_MAX - pos_ ) size_ = LLONG_MAX - pos_; }
+  void size( const long long s ) { size_ = s; fix_size(); }
+  void end( long long e )
+    { if( e < 0 ) e = LLONG_MAX;
+      if( size_ <= e ) pos_ = e - size_; else { pos_ = 0; size_ = e; } }
   Block & assign( const long long p, const long long s )
-    { pos_ = p; size_ = s; return *this; }
+    {
+    pos_ = p; size_ = s;
+    if( p < 0 ) { pos_ = 0; if( s > 0 ) size_ -= std::min( s, -p ); }
+    fix_size(); return *this;
+    }
 
-  void fix_size()		// limit size_ to largest possible value
-    { if( size_ < 0 || size_ > LLONG_MAX - pos_ ) size_ = LLONG_MAX - pos_; }
   void align_pos( const int alignment );
   void align_end( const int alignment );
-  void inc_size( const long long delta ) { size_ += delta; }
 
   bool operator==( const Block & b ) const
     { return pos_ == b.pos_ && size_ == b.size_; }
@@ -66,6 +74,7 @@ public:
 
   void crop( const Block & b );
   bool join( const Block & b );
+  void shift( Block & b, const long long pos );
   Block split( long long pos, const int hardbs = 1 );
   };
 
@@ -111,11 +120,15 @@ public:
   Domain( const long long p, const long long s,
           const char * const logname = 0, const bool loose = false );
 
-  long long pos() const { return block_vector[0].pos(); }
+  long long pos() const { return block_vector.front().pos(); }
   long long size() const
-    { return block_vector.back().end() - block_vector[0].pos(); }
+    { return block_vector.back().end() - block_vector.front().pos(); }
   long long end() const { return block_vector.back().end(); }
   int blocks() const { return (int)block_vector.size(); }
+  bool empty() const
+    { return ( block_vector.back().end() <= block_vector.front().pos() ); }
+  bool full() const
+    { return ( !empty() && block_vector.back().end() >= LLONG_MAX ); }
 
   long long in_size() const
     {
@@ -199,7 +212,7 @@ public:
   bool truncate_vector( const long long end, const bool force = false );
   void make_blank()
     { sblock_vector.clear();
-      sblock_vector.push_back( Sblock( 0, LLONG_MAX, Sblock::non_tried ) ); }
+      sblock_vector.push_back( Sblock( 0, -1, Sblock::non_tried ) ); }
   bool read_logfile( const int default_sblock_status = 0 );
   int write_logfile( FILE * f = 0 ) const;
 
@@ -213,7 +226,7 @@ public:
   void current_status( const Status st ) { current_status_ = st; }
 
   const Block extent() const
-    { if( sblock_vector.size() == 0 ) return Block( 0, 0 );
+    { if( sblock_vector.empty() ) return Block( 0, 0 );
       return Block( sblock_vector.front().pos(),
                     sblock_vector.back().end() - sblock_vector.front().pos() ); }
   const Sblock & sblock( const int i ) const
@@ -233,7 +246,7 @@ public:
   int find_largest_sblock( const Sblock::Status st,
                            const Domain & domain ) const;
   int find_smallest_sblock( const Sblock::Status st,
-                            const Domain & domain, const int hardbs ) const;
+                            const Domain & domain, const int min_size ) const;
   void find_chunk( Block & b, const Sblock::Status st,
                    const Domain & domain, const int alignment = 1 ) const;
   void rfind_chunk( Block & b, const Sblock::Status st,
@@ -258,6 +271,6 @@ void internal_error( const char * const msg );
 int empty_domain();
 int not_readable( const char * const logname );
 int not_writable( const char * const logname );
-void write_logfile_header( FILE * const f );
+bool write_logfile_header( FILE * const f, const char * const logtype );
 const char * format_num( long long num, long long limit = 999999,
                          const int set_prefix = 0 );

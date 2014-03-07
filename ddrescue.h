@@ -186,6 +186,7 @@ class Rescuebook : public Logbook, public Rb_options
   long t0, t1, ts;			// start, current, last successful
   int oldlen;
   bool rates_updated;
+  bool first_post;			// variable for show_status
 
   bool extend_outfile_size();
   int copy_block( const Block & b, int & copied_size, int & error_size );
@@ -200,13 +201,18 @@ class Rescuebook : public Logbook, public Rb_options
                ( ( min_read_rate > 0 && c_rate < min_read_rate &&
                    c_rate < a_rate / 2 ) ||
                  ( min_read_rate == 0 && c_rate < a_rate / 10 ) ) ); }
-  int copy_and_update( const Block & b, const Sblock::Status st,
-                       int & copied_size, int & error_size,
-                       const char * const msg, bool & first_post,
+  int update( const Block & b, const Sblock::Status st,
+              const int copied_size, const int error_size );
+  int copy_and_update( const Block & b, int & copied_size,
+                       int & error_size, const char * const msg,
                        const bool forward );
+  int copy_and_update2( const Block & b, int & copied_size,
+                        int & error_size, const bool forward,
+                        const bool small_try );
   bool reopen_infile();
   int copy_non_tried();
-  int rcopy_non_tried();
+  int fcopy_non_tried( const bool first_pass );
+  int rcopy_non_tried( const bool first_pass );
   int trim_errors();
   int split_errors();
   int copy_errors();
@@ -243,3 +249,4 @@ inline int round_up( int size, const int hardbs )
 const char * format_time( long t );
 bool interrupted();
 void set_signals();
+int signaled_exit();

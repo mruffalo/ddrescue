@@ -18,6 +18,7 @@
 
 #define _FILE_OFFSET_BITS 64
 
+#include <algorithm>
 #include <cerrno>
 #include <climits>
 #include <cstdio>
@@ -140,21 +141,24 @@ int Genbook::do_generate( const int odes )
       }
     }
   int retval = check_all();
+  const bool signaled = ( retval == -1 );
+  if( signaled ) retval = 0;
   if( verbosity >= 0 )
     {
-    show_status( -1, retval ? 0 : "Finished", true );
+    show_status( -1, ( retval || signaled ) ? 0 : "Finished", true );
     if( retval == -2 ) std::printf( "\nLogfile error" );
-    else if( retval < 0 ) std::printf( "\nInterrupted by user" );
+    else if( signaled ) std::printf( "\nInterrupted by user" );
     std::fputc( '\n', stdout );
     }
   if( retval == -2 ) retval = 1;		// logfile error
   else
     {
-    if( retval == 0 ) current_status( finished );
-    else if( retval < 0 ) retval = 0;		// interrupted by user
+    if( retval == 0 && !signaled ) current_status( finished );
     compact_sblock_vector();
     if( !update_logfile( -1, true ) && retval == 0 ) retval = 1;
     }
   if( final_msg() ) show_error( final_msg(), final_errno() );
-  return retval;
+  if( retval ) return retval;		// errors have priority over signals
+  if( signaled ) return signaled_exit();
+  return 0;
   }

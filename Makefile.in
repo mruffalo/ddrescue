@@ -42,8 +42,9 @@ $(objs)       : Makefile
 $(ddobjs)     : block.h ddrescue.h
 arg_parser.o  : arg_parser.h
 block.o       : block.h
+io.o          : loggers.h
 logfile.o     : block.h
-loggers.o     : loggers.h
+loggers.o     : block.h loggers.h
 rational.o    : rational.h
 rescuebook.o  : loggers.h
 main.o        : arg_parser.h rational.h loggers.h main_common.cc
