@@ -46,6 +46,7 @@ extern "C" void sighandler( int signum )
 int set_signal( const int signum, void (*handler)( int ) )
   {
   struct sigaction new_action;
+
   new_action.sa_handler = handler;
   sigemptyset( &new_action.sa_mask );
   new_action.sa_flags = SA_RESTART;
@@ -182,8 +183,12 @@ bool Rescuebook::extend_outfile_size()
 int Rescuebook::copy_block( const Block & b, int & copied_size, int & error_size )
   {
   if( b.size() <= 0 ) internal_error( "bad size copying a Block" );
-  copied_size = readblock( ides_, iobuf(), b.size(), b.pos() );
-  error_size = errno ? b.size() - copied_size : 0;
+  if( !test_domain || test_domain->includes( b ) )
+    {
+    copied_size = readblock( ides_, iobuf(), b.size(), b.pos() );
+    error_size = errno ? b.size() - copied_size : 0;
+    }
+  else { copied_size = 0; error_size = b.size(); }
 
   if( copied_size > 0 )
     {

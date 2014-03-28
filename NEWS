@@ -1,5 +1,7 @@
 Changes in version 1.18:
 
+The new option "-H, --test-mode" has been added.
+
 The new option "-L, --loose-domain" has been added to ddrescue and
 ddrescuelog.
 
@@ -15,17 +17,23 @@ make it clear that ddrescue tries each sector only once per retry pass.
 
 The short name of option "--generate-mode" has been changed to "-G".
 
+The default value of option "-l, --logfile-size" has been increased to
+10000 (from 1000).
+
 If ddrescue is interrupted by a signal, it now terminates by raising the
 signal received.
 
 The algorithm of the copying phase has been changed. It now marks as
 non-trimmed just the failed blocks, skips beyond them, and tries the
-skipped areas later in additional passes (before trimming), reversing
-the direction after each pass. The new method is faster around large
+skipped areas later in two additional passes (before trimming),
+reversing the direction after each pass. The third pass is a sweeping
+pass, with skipping disabled. The new method is faster around large
 errors, keeps the logfile smaller, and produces better starting points
 for trimming, which now tries the smallest blocks first.
 
 Current total run time is now shown on the screen.
+
+The pass number and direction are now shown during the copying phase.
 
 The message "About to copy an unknown number of bytes" is now shown when
 the size of the input file can't be determined.
@@ -35,5 +43,7 @@ Many improvements have been made to the documentation.
 The option "-B, --binary-prefixes" has been added to ddrescuelog.
 
 The new option "-C, --complete-logfile" has been added to ddrescuelog.
+
+The new option "-P, --compare-as-domain" has been added to ddrescuelog.
 
 "ddrescue.texinfo" has been renamed to "ddrescue.texi".

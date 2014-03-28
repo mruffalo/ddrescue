@@ -257,10 +257,17 @@ bool Logfile::blank() const
 
 void Logfile::split_domain_border_sblocks( const Domain & domain )
   {
+  int j = 0;
   for( unsigned i = 0; i < sblock_vector.size(); ++i )
     {
     Sblock & sb = sblock_vector[i];
-    const long long pos = domain.breaks_block_by( sb );
+    while( j < domain.blocks() && domain.block( j ) < sb ) ++j;
+    if( j >= domain.blocks() ) break;			// end of domain
+    const Block & db = domain.block( j );
+    if( sb < db ) continue;
+    long long pos = 0;
+    if( sb.includes( db.pos() ) && sb.pos() < db.pos() ) pos = db.pos();
+    else if( sb.includes( db.end() ) && sb.pos() < db.end() ) pos = db.end();
     if( pos > 0 )
       {
       const Sblock head( sb.split( pos ) );

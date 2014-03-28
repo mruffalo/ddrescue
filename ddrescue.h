@@ -143,7 +143,7 @@ struct Rb_options
 
   Rb_options()
     : max_error_rate( -1 ), min_outfile_size( -1 ), min_read_rate( -1 ),
-      timeout( -1 ), max_errors( -1 ), max_logfile_size( 1000 ),
+      timeout( -1 ), max_errors( -1 ), max_logfile_size( 10000 ),
       max_retries( 0 ), o_direct( 0 ), skipbs( default_skipbs ),
       complete_only( false ), new_errors_only( false ), nosplit( false ),
       notrim( false ), reopen_on_error( false ), retrim( false ),
@@ -173,6 +173,7 @@ class Rescuebook : public Logbook, public Rb_options
   long long error_rate;
   long long sparse_size;		// end position of pending writes
   long long recsize, errsize;		// total recovered and error sizes
+  const Domain * const test_domain;	// good/bad map for test mode
   const char * const iname_;
   const int max_skip_size;		// maximum size to skip on read error
   int e_code;				// error code for errors_or_timeout
@@ -207,12 +208,12 @@ class Rescuebook : public Logbook, public Rb_options
                        int & error_size, const char * const msg,
                        const bool forward );
   int copy_and_update2( const Block & b, int & copied_size,
-                        int & error_size, const bool forward,
-                        const bool small_try );
+                        int & error_size, const char * const msg,
+                        const bool forward, const bool small_try );
   bool reopen_infile();
   int copy_non_tried();
-  int fcopy_non_tried( const bool first_pass );
-  int rcopy_non_tried( const bool first_pass );
+  int fcopy_non_tried( const char * const msg, const int pass );
+  int rcopy_non_tried( const char * const msg, const int pass );
   int trim_errors();
   int split_errors();
   int copy_errors();
@@ -222,10 +223,10 @@ class Rescuebook : public Logbook, public Rb_options
                     const bool force = false );
 public:
   Rescuebook( const long long offset, const long long isize,
-              Domain & dom, const Rb_options & rb_opts,
-              const char * const iname, const char * const logname,
-              const int cluster, const int hardbs,
-              const bool synchronous );
+              Domain & dom, const Domain * const test_dom,
+              const Rb_options & rb_opts, const char * const iname,
+              const char * const logname, const int cluster,
+              const int hardbs, const bool synchronous );
 
   int do_rescue( const int ides, const int odes );
   };

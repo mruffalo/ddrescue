@@ -65,6 +65,8 @@ public:
   bool operator!=( const Block & b ) const
     { return pos_ != b.pos_ || size_ != b.size_; }
 
+  bool operator<( const Block & b ) const { return ( end() <= b.pos() ); }
+
   bool follows( const Block & b ) const
     { return ( pos_ == b.end() ); }
   bool includes( const Block & b ) const
@@ -121,14 +123,12 @@ public:
           const char * const logname = 0, const bool loose = false );
 
   long long pos() const { return block_vector.front().pos(); }
-  long long size() const
-    { return block_vector.back().end() - block_vector.front().pos(); }
   long long end() const { return block_vector.back().end(); }
+  long long size() const { return end() - pos(); }
+  const Block & block( const int i ) const { return block_vector[i]; }
   int blocks() const { return (int)block_vector.size(); }
-  bool empty() const
-    { return ( block_vector.back().end() <= block_vector.front().pos() ); }
-  bool full() const
-    { return ( !empty() && block_vector.back().end() >= LLONG_MAX ); }
+  bool empty() const { return ( end() <= pos() ); }
+  bool full() const { return ( !empty() && end() >= LLONG_MAX ); }
 
   long long in_size() const
     {
@@ -146,25 +146,18 @@ public:
     return false;
     }
 
-  bool operator<( const Block & b ) const
-    { return ( block_vector.back().end() <= b.pos() ); }
-
-  long long breaks_block_by( const Block & b ) const
-    {
-    for( unsigned i = 0; i < block_vector.size(); ++i )
-      {
-      const Block & db = block_vector[i];
-      if( b.includes( db.pos() ) && b.pos() < db.pos() ) return db.pos();
-      const long long end = db.end();
-      if( b.includes( end ) && b.pos() < end ) return end;
-      }
-    return 0;
-    }
+  bool operator<( const Block & b ) const { return ( end() <= b.pos() ); }
 
   bool includes( const Block & b ) const
     {
-    for( unsigned i = 0; i < block_vector.size(); ++i )
-      if( block_vector[i].includes( b ) ) return true;
+    unsigned l = 0, r = block_vector.size();
+    while( l < r )
+      {
+      const int m = ( l + r ) / 2;
+      const Block & db = block_vector[m];
+      if( db.includes( b ) ) return true;
+      if( db < b ) l = m + 1; else if( b < db ) r = m; else break;
+      }
     return false;
     }
 
@@ -229,8 +222,7 @@ public:
     { if( sblock_vector.empty() ) return Block( 0, 0 );
       return Block( sblock_vector.front().pos(),
                     sblock_vector.back().end() - sblock_vector.front().pos() ); }
-  const Sblock & sblock( const int i ) const
-    { return sblock_vector[i]; }
+  const Sblock & sblock( const int i ) const { return sblock_vector[i]; }
   int sblocks() const { return (int)sblock_vector.size(); }
   void change_sblock_status( const int i, const Sblock::Status st )
     { sblock_vector[i].status( st ); }

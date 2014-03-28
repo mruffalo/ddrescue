@@ -53,32 +53,33 @@ void show_help( const int hardbs )
                "other formats, compares them, and tests rescue status.\n"
                "\nUsage: %s [options] logfile\n", invocation_name );
   std::printf( "\nOptions:\n"
-               "  -h, --help                     display this help and exit\n"
-               "  -V, --version                  output version information and exit\n"
-               "  -a, --change-types=<ot>,<nt>   change the block types of a logfile\n"
-               "  -b, --block-size=<bytes>       block size in bytes [default %d]\n", hardbs );
-  std::printf( "  -B, --binary-prefixes          show binary multipliers in numbers [SI]\n"
-               "  -c, --create-logfile[=<tt>]    create logfile from list of blocks [+-]\n"
-               "  -C, --complete-logfile[=<t>]   complete a logfile adding blocks of type t [?]\n"
-               "  -d, --delete-if-done           delete the logfile if rescue is finished\n"
-               "  -D, --done-status              return 0 if rescue is finished\n"
-               "  -f, --force                    overwrite existing output files\n"
-               "  -i, --input-position=<bytes>   starting position of rescue domain [0]\n"
-               "  -l, --list-blocks=<types>      print block numbers of given types (?*/-+)\n"
-               "  -L, --loose-domain             accept a incomplete domain logfile\n"
-               "  -m, --domain-logfile=<file>    restrict domain to finished blocks in file\n"
-               "  -n, --invert-logfile           invert block types (finished <--> others)\n"
-               "  -o, --output-position=<bytes>  starting position in output file [ipos]\n"
-               "  -p, --compare-logfile=<file>   compare block types in domain of both files\n"
-               "  -q, --quiet                    suppress all messages\n"
-               "  -s, --size=<bytes>             maximum size of rescue domain to be processed\n"
-               "  -t, --show-status              show a summary of logfile contents\n"
-               "  -v, --verbose                  be verbose (a 2nd -v gives more)\n"
-               "  -x, --xor-logfile=<file>       XOR the finished blocks in file with logfile\n"
-               "  -y, --and-logfile=<file>       AND the finished blocks in file with logfile\n"
-               "  -z, --or-logfile=<file>        OR the finished blocks in file with logfile\n"
-               "Numbers may be followed by a multiplier: s = sectors, k = kB = 10^3 = 1000,\n"
-               "Ki = KiB = 2^10 = 1024, M = 10^6, Mi = 2^20, G = 10^9, Gi = 2^30, etc...\n"
+               "  -h, --help                      display this help and exit\n"
+               "  -V, --version                   output version information and exit\n"
+               "  -a, --change-types=<ot>,<nt>    change the block types of logfile\n"
+               "  -b, --block-size=<bytes>        block size in bytes [default %d]\n", hardbs );
+  std::printf( "  -B, --binary-prefixes           show binary multipliers in numbers [SI]\n"
+               "  -c, --create-logfile[=<tt>]     create logfile from list of blocks [+-]\n"
+               "  -C, --complete-logfile[=<t>]    complete logfile adding blocks of type t [?]\n"
+               "  -d, --delete-if-done            delete the logfile if rescue is finished\n"
+               "  -D, --done-status               return 0 if rescue is finished\n"
+               "  -f, --force                     overwrite existing output files\n"
+               "  -i, --input-position=<bytes>    starting position of rescue domain [0]\n"
+               "  -l, --list-blocks=<types>       print block numbers of given types (?*/-+)\n"
+               "  -L, --loose-domain              accept an incomplete domain logfile\n"
+               "  -m, --domain-logfile=<file>     restrict domain to finished blocks in file\n"
+               "  -n, --invert-logfile            invert block types (finished <--> others)\n"
+               "  -o, --output-position=<bytes>   starting position in output file [ipos]\n"
+               "  -p, --compare-logfile=<file>    compare block types in domain of both files\n"
+               "  -P, --compare-as-domain=<file>  like -p but compare finished blocks only\n"
+               "  -q, --quiet                     suppress all messages\n"
+               "  -s, --size=<bytes>              maximum size of rescue domain to be processed\n"
+               "  -t, --show-status               show a summary of logfile contents\n"
+               "  -v, --verbose                   be verbose (a 2nd -v gives more)\n"
+               "  -x, --xor-logfile=<file>        XOR the finished blocks in file with logfile\n"
+               "  -y, --and-logfile=<file>        AND the finished blocks in file with logfile\n"
+               "  -z, --or-logfile=<file>         OR the finished blocks in file with logfile\n"
+               "Numbers may be in decimal, hexadecimal or octal, and may be followed by a\n"
+               "multiplier: s = sectors, k = 1000, Ki = 1024, M = 10^6, Mi = 2^20, etc...\n"
                "\nExit status: 0 for a normal exit, 1 for environmental problems (file\n"
                "not found, invalid flags, I/O errors, etc), 2 to indicate a corrupt or\n"
                "invalid input file, 3 for an internal consistency error (eg, bug) which\n"
@@ -244,33 +245,52 @@ int change_types( Domain & domain, const char * const logname,
   }
 
 
-int compare_logfiles( Domain & domain, const char * const logname,
-                      const char * const second_logname )
+int set_for_compare( Domain & domain, Logfile & logfile,
+                     const bool as_domain, const bool loose )
   {
-  Domain domain2( domain );
-  Logfile logfile( logname );
-  if( !logfile.read_logfile() ) return not_readable( logname );
+  if( !logfile.read_logfile( ( as_domain && loose ) ? '?' : 0 ) )
+    return not_readable( logfile.filename() );
   logfile.compact_sblock_vector();
   domain.crop( logfile.extent() );
   if( domain.empty() ) return empty_domain();
   logfile.split_domain_border_sblocks( domain );
+  return -1;
+  }
+
+int compare_logfiles( Domain & domain, const char * const logname,
+                      const char * const second_logname,
+                      const bool as_domain, const bool loose )
+  {
+  Domain domain2( domain );
+  Logfile logfile( logname );
+  int retval = set_for_compare( domain, logfile, as_domain, loose );
+  if( retval >= 0 ) return retval;
 
   Logfile logfile2( second_logname );
-  if( !logfile2.read_logfile() ) return not_readable( second_logname );
-  logfile2.compact_sblock_vector();
-  domain2.crop( logfile2.extent() );
-  if( domain2.empty() ) return empty_domain();
-  logfile2.split_domain_border_sblocks( domain2 );
+  retval = set_for_compare( domain2, logfile2, as_domain, loose );
+  if( retval >= 0 ) return retval;
 
-  int retval = 0;
-  if( domain != domain2 ) retval = 1;
-  else for( int i = 0; i < logfile.sblocks(); ++i )
+  retval = 0;
+  if( !as_domain && domain != domain2 ) retval = 1;
+  else
     {
-    const Sblock & sb = logfile.sblock( i );
-    if( !domain.includes( sb ) )
-      { if( domain < sb ) break; else continue; }
-    const int j = logfile2.find_index( sb.pos() );
-    if( j < 0 || logfile2.sblock( j ) != sb ) { retval = 1; break; }
+    int i = 0, j = 0;
+    while( true )
+      {
+      while( i < logfile.sblocks() &&
+             ( !domain.includes( logfile.sblock( i ) ) ||
+             ( as_domain && logfile.sblock( i ).status() != Sblock::finished ) ) )
+        ++i;
+      while( j < logfile2.sblocks() &&
+             ( !domain2.includes( logfile2.sblock( j ) ) ||
+             ( as_domain && logfile2.sblock( j ).status() != Sblock::finished ) ) )
+        ++j;
+      if( ( i < logfile.sblocks() ) != ( j < logfile2.sblocks() ) )
+        { retval = 1; break; }			// one file has more blocks
+      if( i >= logfile.sblocks() ) break;	// successful compare
+      if( logfile.sblock( i++ ) != logfile2.sblock( j++ ) )
+        { retval = 1; break; }
+      }
     }
   if( retval )
     {
@@ -542,6 +562,7 @@ int main( const int argc, const char * const argv[] )
   const int default_hardbs = 512;
   int hardbs = default_hardbs;
   Mode program_mode = m_none;
+  bool as_domain = false;
   bool force = false;
   bool loose = false;
   std::string types1, types2;
@@ -571,6 +592,7 @@ int main( const int argc, const char * const argv[] )
     { 'n', "invert-logfile",      Arg_parser::no  },
     { 'o', "output-position",     Arg_parser::yes },
     { 'p', "compare-logfile",     Arg_parser::yes },
+    { 'P', "compare-as-domain",   Arg_parser::yes },
     { 'q', "quiet",               Arg_parser::no  },
     { 's', "size",                Arg_parser::yes },
     { 's', "max-size",            Arg_parser::yes },
@@ -610,11 +632,12 @@ int main( const int argc, const char * const argv[] )
       case 'l': set_mode( program_mode, m_list ); types1 = arg;
                 check_types( types1, "list-blocks" ); break;
       case 'L': loose = true; break;
-      case 'm': set_name( &domain_logfile_name, arg ); break;
+      case 'm': set_name( &domain_logfile_name, arg, code ); break;
       case 'n': set_mode( program_mode, m_invert ); break;
       case 'o': opos = getnum( arg, hardbs, 0 ); break;
-      case 'p': set_mode( program_mode, m_compare );
-                second_logname = arg; break;
+      case 'p':
+      case 'P': set_mode( program_mode, m_compare );
+                second_logname = arg; as_domain = ( code == 'P' ); break;
       case 'q': verbosity = -1; break;
       case 's': max_size = getnum( arg, hardbs, -1 ); break;
       case 't': set_mode( program_mode, m_status ); break;
@@ -661,7 +684,8 @@ int main( const int argc, const char * const argv[] )
     case m_xor:
       return do_logic_ops( domain, logname, second_logname, program_mode );
     case m_change: return change_types( domain, logname, types1, types2 );
-    case m_compare: return compare_logfiles( domain, logname, second_logname );
+    case m_compare:
+      return compare_logfiles( domain, logname, second_logname, as_domain, loose );
     case m_complete: return complete_logfile( logname, complete_type );
     case m_create: return create_logfile( domain, logname, hardbs,
                                           type1, type2, force );

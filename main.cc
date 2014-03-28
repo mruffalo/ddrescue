@@ -87,12 +87,13 @@ void show_help( const int cluster, const int hardbs, const int skipbs )
                "  -f, --force                    overwrite output device or partition\n"
                "  -F, --fill-mode=<types>        fill given type blocks with infile data (?*/-+)\n"
                "  -G, --generate-mode            generate approximate logfile from partial copy\n"
+               "  -H, --test-mode=<file>         set map of good/bad blocks from given logile\n"
                "  -i, --input-position=<bytes>   starting position in input file [0]\n"
                "  -I, --verify-input-size        verify input file size with size in logfile\n"
                "  -K, --skip-size=<bytes>        initial size to skip on read error [%sB]\n",
                format_num( skipbs, 9999, -1 ) );
-  std::printf( "  -l, --logfile-size=<entries>   do not grow logfile beyond this size [1000]\n"
-               "  -L, --loose-domain             accept a incomplete domain logfile\n"
+  std::printf( "  -l, --logfile-size=<entries>   do not grow logfile beyond this size [10000]\n"
+               "  -L, --loose-domain             accept an incomplete domain logfile\n"
                "  -m, --domain-logfile=<file>    restrict domain to finished blocks in file\n"
                "  -M, --retrim                   mark all failed blocks as non-trimmed\n"
                "  -n, --no-split                 skip the splitting phase\n"
@@ -324,7 +325,7 @@ int do_generate( const long long offset, Domain & domain,
 
 
 int do_rescue( const long long offset, Domain & domain,
-               const Rb_options & rb_opts,
+               const Domain * const test_domain, const Rb_options & rb_opts,
                const char * const iname, const char * const oname,
                const char * const logname, const int cluster,
                const int hardbs, const int o_trunc,
@@ -334,12 +335,15 @@ int do_rescue( const long long offset, Domain & domain,
   const int ides = open( iname, O_RDONLY | rb_opts.o_direct | O_BINARY );
   if( ides < 0 )
     { show_error( "Can't open input file", errno ); return 1; }
-  const long long isize = lseek( ides, 0, SEEK_END );
+  long long isize = lseek( ides, 0, SEEK_END );
   if( isize < 0 )
     { show_error( "Input file is not seekable." ); return 1; }
+  if( test_domain )
+    { const long long size = test_domain->end();
+      if( isize <= 0 || isize > size ) isize = size; }
 
-  Rescuebook rescuebook( offset, isize, domain, rb_opts, iname, logname,
-                         cluster, hardbs, synchronous );
+  Rescuebook rescuebook( offset, isize, domain, test_domain, rb_opts, iname,
+                         logname, cluster, hardbs, synchronous );
 
   if( verify_input_size )
     {
@@ -475,6 +479,7 @@ int main( const int argc, const char * const argv[] )
   long long opos = -1;
   long long max_size = -1;
   const char * domain_logfile_name = 0;
+  const char * test_mode_logfile_name = 0;
   const int cluster_bytes = 65536;
   const int default_hardbs = 512;
   const int max_hardbs = Rb_options::max_skipbs;
@@ -514,6 +519,7 @@ int main( const int argc, const char * const argv[] )
     { 'F', "fill-mode",           Arg_parser::yes },
     { 'G', "generate-mode",       Arg_parser::no  },
     { 'h', "help",                Arg_parser::no  },
+    { 'H', "test-mode",           Arg_parser::yes },
     { 'i', "input-position",      Arg_parser::yes },
     { 'I', "verify-input-size",   Arg_parser::no  },
     { 'K', "skip-size",           Arg_parser::yes },
@@ -575,13 +581,14 @@ int main( const int argc, const char * const argv[] )
       case 'h': show_help( cluster_bytes / default_hardbs, default_hardbs,
                            Rb_options::default_skipbs );
                 return 0;
+      case 'H': set_name( &test_mode_logfile_name, arg, code ); break;
       case 'i': ipos = getnum( arg, hardbs, 0 ); break;
       case 'I': verify_input_size = true; break;
       case 'K': rb_opts.skipbs = getnum( arg, hardbs, Rb_options::default_skipbs,
                                          Rb_options::max_skipbs ); break;
       case 'l': rb_opts.max_logfile_size = getnum( arg, 0, 1, INT_MAX ); break;
       case 'L': loose = true; break;
-      case 'm': set_name( &domain_logfile_name, arg ); break;
+      case 'm': set_name( &domain_logfile_name, arg, code ); break;
       case 'M': rb_opts.retrim = true; break;
       case 'n': rb_opts.nosplit = true; break;
       case 'N': rb_opts.notrim = true; break;
@@ -631,23 +638,29 @@ int main( const int argc, const char * const argv[] )
   switch( program_mode )
     {
     case m_fill:
-      if( rb_opts != Rb_options() ||
+      if( rb_opts != Rb_options() || test_mode_logfile_name ||
           verify_input_size || preallocate || o_trunc )
-        show_error( "warning: Options -aACdeEIKlMnOprRStTx are ignored in fill mode." );
+        show_error( "warning: Options -aACdeEHIKlMnOprRStTx are ignored in fill mode." );
       return do_fill( opos - ipos, domain, iname, oname, logname, cluster,
                       hardbs, filltypes, ignore_write_errors, synchronous );
     case m_generate:
-      if( rb_opts != Rb_options() || synchronous ||
+      if( rb_opts != Rb_options() || synchronous || test_mode_logfile_name ||
           verify_input_size || preallocate || o_trunc || ignore_write_errors )
-        show_error( "warning: Options -aACdDeEIKlMnOprRStTwx are ignored in generate mode." );
+        show_error( "warning: Options -aACdDeEHIKlMnOprRStTwx are ignored in generate mode." );
       return do_generate( opos - ipos, domain, iname, oname, logname,
                           cluster, hardbs );
     case m_none:
+      {
       if( ignore_write_errors )
         { show_error( "Option '-w' is incompatible with rescue mode.", 0, true );
           return 1; }
-      return do_rescue( opos - ipos, domain, rb_opts, iname, oname, logname,
-                        cluster, hardbs, o_trunc, preallocate,
-                        synchronous, verify_input_size );
+      const Domain * const test_domain = test_mode_logfile_name ?
+        new Domain( 0, -1, test_mode_logfile_name, loose ) : 0;
+      int tmp = do_rescue( opos - ipos, domain, test_domain, rb_opts, iname,
+                           oname, logname, cluster, hardbs, o_trunc,
+                           preallocate, synchronous, verify_input_size );
+      if( test_domain ) delete test_domain;
+      return tmp;
+      }
     }
   }

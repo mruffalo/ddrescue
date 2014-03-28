@@ -1,3 +1,15 @@
+2014-03-27  Antonio Diaz Diaz  <antonio@gnu.org>
+
+	* Version 1.18-pre9 released.
+	* rescuebook.cc (copy_and_update2): Fixed a bug introduced in
+	  1.18-pre8 which sometimes marks a bad sector as finished when
+	  reading backwards.
+	* Added new option '-H, --test-mode' to simulate read errors.
+	* rescuebook.cc: Limit the copying phase to 3 passes.
+	* rescuebook.cc: Show pass number and direction during copying.
+	* Default value of option '-l, --logfile-size' increased to 10000.
+	* Added new option '-P, --compare-as-domain' to ddrescuelog.
+
 2014-03-06  Antonio Diaz Diaz  <antonio@gnu.org>
 
 	* Version 1.18-pre8 released.
@@ -215,7 +227,7 @@
 	* Version 1.6 released.
 	* Code reorganization. New classes 'Fillbook' and 'Rescuebook'.
 	* logbook.cc (copy_non_tried): Added new variable 'skip_counter'.
-	* Added new pass that trims error areas backward before splitting.
+	* Added new pass that trims error areas backwards before splitting.
 	* Added support for sparse output files.
 	* Blocks longer than hardbs are now split at sector boundaries.
 	* Added new option '-F, --fill'.

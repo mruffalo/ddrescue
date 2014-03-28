@@ -6,8 +6,8 @@
 @finalout
 @c %**end of header
 
-@set UPDATED 6 March 2014
-@set VERSION 1.18-pre8
+@set UPDATED 27 March 2014
+@set VERSION 1.18-pre9
 
 @dircategory GNU Packages
 @direntry
@@ -234,24 +234,26 @@ does not exist, mark all the rescue domain as non-tried.
 
 2) (First phase; Copying) Read the non-tried parts of the input file,
 marking the failed blocks as non-trimmed and skipping beyond them. Skip
-also beyond slow areas. The skipped areas are tried later in additional
-passes (before trimming), reversing the direction after each pass until
-all the rescue domain is tried. (The purpose is to delimit large errors
+also beyond slow areas. The skipped areas are tried later in two
+additional passes (before trimming), reversing the direction after each
+pass until all the rescue domain is tried. The third pass is a sweeping
+pass, with skipping disabled. (The purpose is to delimit large errors
 fast, keep the logfile small, and produce good starting points for
 trimming). Only non-tried areas are read in large blocks. Trimming,
 splitting and retrying are done sector by sector. Each sector is tried
-at most two times; the first in this step as part of a large block read,
-the second in one of the steps below as a single sector read.
+at most two times; the first in this step (usually as part of a large
+block read, but sometimes as a single sector read), the second in one of
+the steps below as a single sector read.
 
 3) (Second phase; Trimming) Read forwards one sector at a time from the
 leading edge of the smallest non-trimmed block, until a bad sector is
 found. Then read backwards one sector at a time from the trailing edge
 of the same block, until a bad sector is found. For each non-trimmed
 block, mark the bad sectors found as bad-sector and mark the rest of
-that block as non-split. Repeat until there are no more non-trimmed
-blocks. (Large non-trimmed blocks are produced by concatenation of
-smaller ones, and its fraction of good data at the edges is therefore
-smaller).
+that block as non-split without trying to read it. Repeat until there
+are no more non-trimmed blocks. (Large non-trimmed blocks are produced
+by concatenation of smaller ones, and its fraction of good data at the
+edges is therefore smaller).
 
 4) (Third phase; Splitting) Read forwards one sector at a time from the
 center of the largest non-split block, until a bad sector is found.
@@ -430,6 +432,16 @@ original offset between @samp{--input-position} and
 Generate mode (@pxref{Generate mode}) for a complete description of the
 generate mode.
 
+@item -H @var{file}
+@itemx --test-mode=@var{file}
+Builds a map of good/bad blocks using the logfile @var{file} and uses it
+to simulate read errors in @var{infile}. The blocks marked as finished
+in @var{file} will be read normally. All other block types will be
+considered read errors without even trying to read them from
+@var{infile}. This mode is an aid in improving the algorithm of ddrescue
+and is also useful to verify that ddrescue produces accurate results in
+presence of read errors.
+
 @item -i @var{bytes}
 @itemx --input-position=@var{bytes}
 Starting position of the rescue domain in @var{infile}, in bytes.
@@ -467,17 +479,17 @@ to skip is calculated from the end of the block that just failed.
 @itemx --logfile-size=@var{entries}
 During the splitting phase, do not grow logfile beyond this number of
 entries. Logfile may be larger if it was larger at startup or if it
-became larger during the copying or trimming phases. Defaults to 1000.
+became larger during the copying or trimming phases. Defaults to 10000.
 (Each entry is about 26-30 bytes in size).
 
 @item -L
 @itemx --loose-domain
-Accept a incomplete synthetic (user fabricated) domain logfile and fill
-the gaps with non-tried blocks. The blocks in the logfile must be
-strictly ascending and non-overlapping, but they do not need to be
-contiguous. This option allows making quick edits to a logfile without
-all the size calculations involved in making all data blocks contiguous
-again.
+Accept an incomplete synthetic (user fabricated) domain logfile or
+test-mode logfile and fill the gaps with non-tried blocks. The blocks in
+the logfile must be strictly ascending and non-overlapping, but they do
+not need to be contiguous. This option allows making quick edits to a
+logfile without all the size calculations involved in making all data
+blocks contiguous again.
 
 @item -m @var{file}
 @itemx --domain-logfile=@var{file}
@@ -511,7 +523,7 @@ are set to 0.
 
 @item -O
 @itemx --reopen-on-error
-Close the input file and then reopen it after every read error and, if
+Close @var{infile} and then reopen it after every read error and, if
 @samp{--min-read-rate} is set, after every slow read encountered both
 during the copying phase (i.e., every time ddrescue skips ahead). Use
 this option if you notice a permanent drop in transfer rate after
@@ -543,7 +555,7 @@ of retry passes.
 @itemx --reverse
 Reverse the direction of the first pass of copying, all retrying passes,
 and the sequential part of splitting, running them backwards from the
-end of the rescue domain (or from the end of the input file if no domain
+end of the rescue domain (or from the end of @var{infile} if no domain
 options are specified). @samp{--reverse} does not modify the size of the
 blocks copied during each phase, just the order in which they are tried.
 
@@ -1273,12 +1285,12 @@ other similar filesystem repairing tool.
 
 @item -L
 @itemx --loose-domain
-Accept a incomplete synthetic (user fabricated) domain logfile and fill
-the gaps with non-tried blocks. The blocks in the logfile must be
-strictly ascending and non-overlapping, but they do not need to be
-contiguous. This option allows making quick edits to a logfile without
-all the size calculations involved in making all data blocks contiguous
-again.
+Accept an incomplete synthetic (user fabricated) domain logfile or
+compare-as-domain logfile and fill the gaps with non-tried blocks. The
+blocks in the logfile must be strictly ascending and non-overlapping,
+but they do not need to be contiguous. This option allows making quick
+edits to a logfile without all the size calculations involved in making
+all data blocks contiguous again.
 
 @item -m @var{file}
 @itemx --domain-logfile=@var{file}
@@ -1302,8 +1314,15 @@ in bytes. Is used by the @samp{--list-blocks} option. Defaults to
 @item -p @var{file}
 @itemx --compare-logfile=@var{file}
 Compare the types of the blocks included in the rescue domain. The exit
-status is 0 if all tested blocks are the same in both files, 1
-otherwise.
+status is 0 if all tested blocks are the same in both @var{file} and
+@var{logfile}, 1 otherwise.
+
+@item -P @var{file}
+@itemx --compare-as-domain=@var{file}
+Compare only the blocks marked as finished in the rescue domain. The
+exit status is 0 if all tested blocks are the same in both @var{file}
+and @var{logfile}, 1 otherwise. Two files comparing equal with this
+option are equivalent when used as domain logfiles.
 
 @item -q
 @itemx --quiet

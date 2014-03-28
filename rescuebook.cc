@@ -112,7 +112,8 @@ int Rescuebook::copy_and_update( const Block & b, int & copied_size,
   if( errors_or_timeout() ) return 1;
   if( interrupted() ) return -1;
   int retval = copy_block( b, copied_size, error_size );
-  if( retval == 0 ) retval = update( b, Sblock::bad_sector, copied_size, error_size );
+  if( retval == 0 )
+    retval = update( b, Sblock::bad_sector, copied_size, error_size );
   return retval;
   }
 
@@ -120,18 +121,19 @@ int Rescuebook::copy_and_update( const Block & b, int & copied_size,
 // Return values: 1 I/O error, 0 OK, -1 interrupted.
 //
 int Rescuebook::copy_and_update2( const Block & b, int & copied_size,
-                                  int & error_size, const bool forward,
-                                  const bool small_try )
+                                  int & error_size, const char * const msg,
+                                  const bool forward, const bool small_try )
   {
+  if( first_post ) read_logger.print_msg( t1 - t0, msg );
   current_pos( forward ? b.pos() : b.end() );
   current_status( copying );
-  show_status( current_pos(), "Copying non-tried blocks..." );
+  show_status( current_pos(), msg );
   if( errors_or_timeout() ) return 1;
   if( interrupted() ) return -1;
   if( small_try && b.size() > hardbs() )	// try one sector first
     {
-    const Block b1( forward ? b.pos() : b.end() - hardbs(), hardbs() );
-    const Block b2( forward ? b1.end() : b.pos(), b.size() - hardbs() );
+    const Block b1( b.pos(), hardbs() );
+    const Block b2( b1.end(), b.size() - b1.size() );
     int retval = copy_block( b1, copied_size, error_size );
     if( retval ) return retval;
     if( copied_size != b1.size() )		// mark full block on error
@@ -154,12 +156,17 @@ int Rescuebook::copy_and_update2( const Block & b, int & copied_size,
 //
 int Rescuebook::copy_non_tried()
   {
-  read_logger.print_msg( t1 - t0, "Copying non-tried blocks..." );
-  first_post = true;
-  for( bool first_pass = true, forward = !reverse; ; first_pass = false )
+  char msgbuf[80] = "Copying non-tried blocks... Pass ";
+  const int msglen = std::strlen( msgbuf );
+  bool forward = !reverse;
+
+  for( int pass = 1; ; ++pass )
     {
-    int retval = 
-      forward ? fcopy_non_tried( first_pass ) : rcopy_non_tried( first_pass );
+    first_post = true;
+    snprintf( msgbuf + msglen, ( sizeof msgbuf ) - msglen, "%d %s",
+              pass, forward ? "(forwards)" : "(backwards)" );
+    int retval = forward ? fcopy_non_tried( msgbuf, pass ) :
+                           rcopy_non_tried( msgbuf, pass );
     if( retval != -3 ) return retval;
     reduce_min_read_rate();
     forward = !forward;
@@ -168,16 +175,16 @@ int Rescuebook::copy_non_tried()
 
 
 // Return values: 1 I/O error, 0 OK, -1 interrupted, -2 logfile error.
-// Read forward the non-damaged part of the domain, skipping over the
+// Read forwards the non-damaged part of the domain, skipping over the
 // damaged areas.
 //
-int Rescuebook::fcopy_non_tried( const bool first_pass )
+int Rescuebook::fcopy_non_tried( const char * const msg, const int pass )
   {
   long long pos = 0;
   int skip_size = 0;				// size to skip on error
   bool block_found = false;
 
-  if( first_pass && current_status() == copying &&
+  if( pass == 1 && current_status() == copying &&
       domain().includes( current_pos() ) )
     {
     Block b( current_pos(), 1 );
@@ -195,7 +202,7 @@ int Rescuebook::fcopy_non_tried( const bool first_pass )
     block_found = true;
     int copied_size = 0, error_size = 0;
     const int retval = copy_and_update2( b, copied_size, error_size,
-                                         true, skip_size > 0 );
+                                         msg, true, skip_size > 0 );
     if( error_size > 0 ) { errsize += error_size; error_rate += error_size; }
     if( retval ) return retval;
     update_rates();
@@ -204,14 +211,17 @@ int Rescuebook::fcopy_non_tried( const bool first_pass )
       if( skip_size > 0 )		// do not skip until 2nd error
         {
         if( reopen_on_error && !reopen_infile() ) return 1;
-        b.assign( pos, skip_size );
-        find_chunk( b, Sblock::non_tried, domain(), hardbs() );
-        if( pos == b.pos() && b.size() > 0 )
+        if( pass <= 2 )
           {
-          if( error_size > 0 && b.size() <= softbs() && b.size() <= skip_size )
-            { errors += change_chunk_status( b, Sblock::non_trimmed, domain() );
-              errsize += b.size(); }
-          pos = b.end();
+          b.assign( pos, skip_size );
+          find_chunk( b, Sblock::non_tried, domain(), hardbs() );
+          if( pos == b.pos() && b.size() > 0 )
+            {
+            if( error_size > 0 && b.size() <= softbs() && b.size() <= skip_size )
+              { errors += change_chunk_status( b, Sblock::non_trimmed, domain() );
+                errsize += b.size(); }
+            pos = b.end();
+            }
           }
         }
       if( skip_size < skipbs ) skip_size = skipbs;
@@ -228,16 +238,16 @@ int Rescuebook::fcopy_non_tried( const bool first_pass )
 
 
 // Return values: 1 I/O error, 0 OK, -1 interrupted, -2 logfile error.
-// Read the non-damaged part of the domain in reverse mode, skipping
-// over the damaged areas.
+// Read backwards the non-damaged part of the domain, skipping over the
+// damaged areas.
 //
-int Rescuebook::rcopy_non_tried( const bool first_pass )
+int Rescuebook::rcopy_non_tried( const char * const msg, const int pass )
   {
   long long end = LLONG_MAX;
   int skip_size = 0;				// size to skip on error
   bool block_found = false;
 
-  if( first_pass && current_status() == copying &&
+  if( pass == 1 && current_status() == copying &&
       domain().includes( current_pos() - 1 ) )
     {
     Block b( current_pos() - 1, 1 );
@@ -255,7 +265,7 @@ int Rescuebook::rcopy_non_tried( const bool first_pass )
     block_found = true;
     int copied_size = 0, error_size = 0;
     const int retval = copy_and_update2( b, copied_size, error_size,
-                                         false, skip_size > 0 );
+                                         msg, false, skip_size > 0 );
     if( error_size > 0 ) { errsize += error_size; error_rate += error_size; }
     if( retval ) return retval;
     update_rates();
@@ -264,14 +274,17 @@ int Rescuebook::rcopy_non_tried( const bool first_pass )
       if( skip_size > 0 )		// do not skip until 2nd error
         {
         if( reopen_on_error && !reopen_infile() ) return 1;
-        b.assign( end - skip_size, skip_size );
-        rfind_chunk( b, Sblock::non_tried, domain(), hardbs() );
-        if( end == b.end() && b.size() > 0 )
+        if( pass <= 2 )
           {
-          if( error_size > 0 && b.size() <= softbs() && b.size() <= skip_size )
-            { errors += change_chunk_status( b, Sblock::non_trimmed, domain() );
-              errsize += b.size(); }
-          end = b.pos();
+          b.assign( end - skip_size, skip_size );
+          rfind_chunk( b, Sblock::non_tried, domain(), hardbs() );
+          if( end == b.end() && b.size() > 0 )
+            {
+            if( error_size > 0 && b.size() <= softbs() && b.size() <= skip_size )
+              { errors += change_chunk_status( b, Sblock::non_trimmed, domain() );
+                errsize += b.size(); }
+            end = b.pos();
+            }
           }
         }
       if( skip_size < skipbs ) skip_size = skipbs;
@@ -638,16 +651,17 @@ void Rescuebook::show_status( const long long ipos, const char * const msg,
 
 
 Rescuebook::Rescuebook( const long long offset, const long long isize,
-                        Domain & dom, const Rb_options & rb_opts,
-                        const char * const iname, const char * const logname,
-                        const int cluster, const int hardbs,
-                        const bool synchronous )
+                        Domain & dom, const Domain * const test_dom,
+                        const Rb_options & rb_opts, const char * const iname,
+                        const char * const logname, const int cluster,
+                        const int hardbs, const bool synchronous )
   : Logbook( offset, isize, dom, logname, cluster, hardbs, rb_opts.complete_only ),
     Rb_options( rb_opts ),
     error_rate( 0 ),
     sparse_size( sparse ? 0 : -1 ),
     recsize( 0 ),
     errsize( 0 ),
+    test_domain( test_dom ),
     iname_( iname ),
     max_skip_size( calculate_max_skip_size( isize, hardbs, skipbs ) ),
     e_code( 0 ),

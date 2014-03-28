@@ -24,7 +24,7 @@ std::string command_line;
 
 void show_version()
   {
-  std::printf( "%s %s\n", Program_name, PROGVERSION );
+  std::printf( "GNU %s %s\n", program_name, PROGVERSION );
   std::printf( "Copyright (C) %s Antonio Diaz Diaz.\n", program_year );
   std::printf( "License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>\n"
                "This is free software: you are free to change and redistribute it.\n"
@@ -118,14 +118,16 @@ void set_mode( Mode & program_mode, const Mode new_mode )
   }
 
 
-void set_name( const char ** domain_logfile_name, const char * new_name )
+void set_name( const char ** name, const char * new_name, const char opt )
   {
-  if( *domain_logfile_name )
+  if( *name )
     {
-    show_error( "Only one domain logfile can be specified.", 0, true );
+    std::string msg( "Option '- ' can be specified only once." );
+    msg[9] = opt;
+    show_error( msg.c_str(), 0, true );
     std::exit( 1 );
     }
-  *domain_logfile_name = new_name;
+  *name = new_name;
   }
 
 } // end namespace

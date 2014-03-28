@@ -7,7 +7,7 @@
 # to copy, distribute and modify it.
 
 pkgname=ddrescue
-pkgversion=1.18-pre8
+pkgversion=1.18-pre9
 progname=ddrescue
 srctrigger=doc/${pkgname}.texi
 
