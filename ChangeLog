@@ -1,3 +1,8 @@
+2014-03-30  Antonio Diaz Diaz  <antonio@gnu.org>
+
+	* Version 1.18-pre10 released.
+	* ddrescuelog.cc (do_logic_ops): Fixed 'or' and 'xor'.
+
 2014-03-27  Antonio Diaz Diaz  <antonio@gnu.org>
 
 	* Version 1.18-pre9 released.

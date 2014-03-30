@@ -38,12 +38,14 @@ The pass number and direction are now shown during the copying phase.
 The message "About to copy an unknown number of bytes" is now shown when
 the size of the input file can't be determined.
 
-Many improvements have been made to the documentation.
+A bug has been fixed in the "or" and "xor" operations of ddrescuelog.
 
 The option "-B, --binary-prefixes" has been added to ddrescuelog.
 
 The new option "-C, --complete-logfile" has been added to ddrescuelog.
 
 The new option "-P, --compare-as-domain" has been added to ddrescuelog.
+
+Many improvements have been made to the documentation.
 
 "ddrescue.texinfo" has been renamed to "ddrescue.texi".

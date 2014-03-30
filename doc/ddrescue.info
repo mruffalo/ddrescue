@@ -12,7 +12,7 @@ File: ddrescue.info,  Node: Top,  Next: Introduction,  Up: (dir)
 GNU ddrescue Manual
 *******************
 
-This manual is for GNU ddrescue (version 1.18-pre9, 27 March 2014).
+This manual is for GNU ddrescue (version 1.18-pre10, 30 March 2014).
 
 * Menu:
 
@@ -689,7 +689,7 @@ Character   Meaning
 
 And here is an example logfile:
 
-# Rescue Logfile. Created by GNU ddrescue version 1.18-pre9
+# Rescue Logfile. Created by GNU ddrescue version 1.18-pre10
 # Command line: ddrescue /dev/fd0 fdimage logfile
 # current_pos  current_status
 0x00120000     ?
@@ -1320,21 +1320,21 @@ Concept index
 
 Tag Table:
 Node: Top201
-Node: Introduction1379
-Node: Basic concepts4307
-Node: Important advice6184
-Node: Algorithm7293
-Node: Invoking ddrescue12246
-Node: Logfile structure26955
-Node: Examples29311
-Ref: lziprecover-example32852
-Node: Direct disc access34692
-Node: Fill mode36769
-Node: Generate mode40909
-Node: Ddrescuelog42856
-Node: Invoking ddrescuelog45005
-Node: Problems51947
-Node: Concept index52504
+Node: Introduction1380
+Node: Basic concepts4308
+Node: Important advice6185
+Node: Algorithm7294
+Node: Invoking ddrescue12247
+Node: Logfile structure26956
+Node: Examples29313
+Ref: lziprecover-example32854
+Node: Direct disc access34694
+Node: Fill mode36771
+Node: Generate mode40911
+Node: Ddrescuelog42858
+Node: Invoking ddrescuelog45007
+Node: Problems51949
+Node: Concept index52506
 
 End Tag Table
 

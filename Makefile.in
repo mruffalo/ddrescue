@@ -122,9 +122,9 @@ dist : doc
 	  $(DISTNAME)/doc/$(pkgname).info \
 	  $(DISTNAME)/doc/$(pkgname).texi \
 	  $(DISTNAME)/testsuite/check.sh \
-	  $(DISTNAME)/testsuite/logfile1 \
-	  $(DISTNAME)/testsuite/logfile2 \
+	  $(DISTNAME)/testsuite/logfile[1-5] \
 	  $(DISTNAME)/testsuite/logfile2i \
+	  $(DISTNAME)/testsuite/logfile_blank \
 	  $(DISTNAME)/testsuite/test.txt \
 	  $(DISTNAME)/testsuite/test1.txt \
 	  $(DISTNAME)/testsuite/test2.txt \

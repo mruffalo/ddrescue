@@ -25,9 +25,13 @@ cd "${objdir}"/tmp
 in="${testdir}"/test.txt
 in1="${testdir}"/test1.txt
 in2="${testdir}"/test2.txt
+blank="${testdir}"/logfile_blank
 logfile1="${testdir}"/logfile1
 logfile2="${testdir}"/logfile2
 logfile2i="${testdir}"/logfile2i
+logfile3="${testdir}"/logfile3
+logfile4="${testdir}"/logfile4
+logfile5="${testdir}"/logfile5
 fail=0
 
 printf "testing ddrescue-%s..." "$2"
@@ -199,9 +203,9 @@ if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
 printf "10\n12\n14\n16\n" | "${DDRESCUELOG}" -b2048 -f -c+? logfile || fail=1
 "${DDRESCUELOG}" -q -p logfile ${logfile1}
 if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
-"${DDRESCUELOG}" -q -i20KiB -p logfile ${logfile1}
+"${DDRESCUELOG}" -q -i0x5000 -p logfile ${logfile1}
 if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
-"${DDRESCUELOG}" -i20KiB -s14KiB -p logfile ${logfile1} || fail=1
+"${DDRESCUELOG}" -i0x5000 -s0x3800 -p logfile ${logfile1} || fail=1
 printf .
 
 "${DDRESCUELOG}" -C ${logfile2i} > logfile || fail=1
@@ -234,7 +238,7 @@ printf .
 printf "1\n3\n5\n7\n9\n11\n13\n15\n17\n" > copy || framework_failure
 cmp out copy || fail=1
 printf .
-"${DDRESCUELOG}" -b2048 -l+ -i6KiB -o0 -s16KiB ${logfile1} > out || fail=1
+"${DDRESCUELOG}" -b2048 -l+ -i0x1800 -o0 -s0x4000 ${logfile1} > out || fail=1
 printf "1\n3\n5\n7\n" > copy || framework_failure
 cmp out copy || fail=1
 printf .
@@ -248,7 +252,7 @@ printf .
 printf "1\n3\n5\n7\n9\n11\n13\n15\n17\n" > copy || framework_failure
 cmp out copy || fail=1
 printf .
-"${DDRESCUELOG}" -b2048 -l+ -i2048 -o0 -s16KiB logfile > out || fail=1
+"${DDRESCUELOG}" -b2048 -l+ -i2048 -o0 -s0x4000 logfile > out || fail=1
 printf "1\n3\n5\n7\n" > copy || framework_failure
 cmp out copy || fail=1
 printf .
@@ -258,37 +262,180 @@ if [ $? = 2 ] ; then printf . ; else printf - ; fail=1 ; fi
 "${DDRESCUELOG}" -L -P ${logfile2i} ${logfile2} || fail=1
 printf .
 
-"${DDRESCUELOG}" -b2048 -l+ ${logfile1} > out || fail=1
-"${DDRESCUELOG}" -x ${logfile1} ${logfile1} > logfile || fail=1
-"${DDRESCUELOG}" -b2048 -l- logfile > copy || fail=1
-cmp out copy || fail=1
-printf .
-"${DDRESCUELOG}" -y ${logfile2} ${logfile1} > logfile || fail=1
-"${DDRESCUELOG}" -b2048 -l- logfile > copy || fail=1
-cmp out copy || fail=1
-printf .
-"${DDRESCUELOG}" -z ${logfile1} ${logfile2} > logfile || fail=1
-"${DDRESCUELOG}" -d logfile || fail=1
-printf .
+fail2=0
+"${DDRESCUELOG}" -x ${logfile1} ${logfile2} > out || fail2=1
+"${DDRESCUELOG}" -x ${logfile2} ${logfile1} > copy || fail2=1
+"${DDRESCUELOG}" -p out copy || fail2=1
+"${DDRESCUELOG}" -d out || fail2=1
+"${DDRESCUELOG}" -d copy || fail2=1
+"${DDRESCUELOG}" -x ${logfile1} ${blank} > out || fail2=1
+"${DDRESCUELOG}" -x ${blank} ${logfile1} > copy || fail2=1
+"${DDRESCUELOG}" -p out copy || fail2=1
+"${DDRESCUELOG}" -p out ${logfile1} || fail2=1
+"${DDRESCUELOG}" -p ${logfile1} copy || fail2=1
+"${DDRESCUELOG}" -x ${logfile2} ${logfile2} > logfile || fail2=1
+"${DDRESCUELOG}" -P ${blank} logfile || fail2=1
+"${DDRESCUELOG}" -x ${logfile1} ${logfile1} > logfile || fail2=1
+"${DDRESCUELOG}" -P ${blank} logfile || fail2=1
+"${DDRESCUELOG}" -b2048 -l+ ${logfile1} > out || fail2=1
+"${DDRESCUELOG}" -b2048 -l- logfile > copy || fail2=1
+cmp out copy || fail2=1
+"${DDRESCUELOG}" -b2048 -i0x2000 -s0x2800 -l+ ${logfile1} > out || fail2=1
+"${DDRESCUELOG}" -i0x1800 -s0x3800 -x ${logfile1} ${logfile1} > logfile || fail2=1
+"${DDRESCUELOG}" -b2048 -l- logfile > copy || fail2=1
+cmp out copy || fail2=1
+if [ ${fail2} = 0 ] ; then printf . ; else printf - ; fail=1 ; fi
 
-"${DDRESCUELOG}" -b2048 -i8KiB -s10KiB -l+ ${logfile1} > out || fail=1
-"${DDRESCUELOG}" -i6KiB -s14KiB -x ${logfile1} ${logfile1} > logfile || fail=1
-"${DDRESCUELOG}" -b2048 -l- logfile > copy || fail=1
-cmp out copy || fail=1
-printf .
-"${DDRESCUELOG}" -i6KiB -s14KiB -y ${logfile2} ${logfile1} > logfile || fail=1
-"${DDRESCUELOG}" -b2048 -l- logfile > copy || fail=1
-cmp out copy || fail=1
-printf .
-"${DDRESCUELOG}" -i8KiB -s10KiB -z ${logfile2} ${logfile1} > logfile || fail=1
+fail2=0
+"${DDRESCUELOG}" -x ${logfile3} ${logfile4} > out || fail2=1
+"${DDRESCUELOG}" -x ${logfile4} ${logfile3} > copy || fail2=1
+"${DDRESCUELOG}" -p out copy || fail2=1
+"${DDRESCUELOG}" -x ${logfile3} ${logfile5} > out || fail2=1
+"${DDRESCUELOG}" -x ${logfile5} ${logfile3} > copy || fail2=1
+"${DDRESCUELOG}" -p out copy || fail2=1
+"${DDRESCUELOG}" -x ${logfile4} ${logfile5} > out || fail2=1
+"${DDRESCUELOG}" -x ${logfile5} ${logfile4} > copy || fail2=1
+"${DDRESCUELOG}" -p out copy || fail2=1
+if [ ${fail2} = 0 ] ; then printf . ; else printf - ; fail=1 ; fi
+
+fail2=0
+for i in ${logfile1} ${logfile2} ${logfile3} ${logfile4} ${logfile5} ; do
+	for j in ${logfile1} ${logfile2} ${logfile3} ${logfile4} ${logfile5} ; do
+		"${DDRESCUELOG}" -x ${j} ${i} > out || fail2=1
+		"${DDRESCUELOG}" -x ${j} out > copy || fail2=1
+		"${DDRESCUELOG}" -P ${i} copy || fail2=1
+	done
+done
+if [ ${fail2} = 0 ] ; then printf . ; else printf - ; fail=1 ; fi
+
+fail2=0
+"${DDRESCUELOG}" -x ${logfile3} ${logfile4} > out || fail2=1
+"${DDRESCUELOG}" -D out && fail2=1
+"${DDRESCUELOG}" -x out ${logfile5} > logfile || fail2=1
+"${DDRESCUELOG}" -d logfile || fail2=1
+
+"${DDRESCUELOG}" -x ${logfile3} ${logfile5} > out || fail2=1
+"${DDRESCUELOG}" -D out && fail2=1
+"${DDRESCUELOG}" -x out ${logfile4} > logfile || fail2=1
+"${DDRESCUELOG}" -d logfile || fail2=1
+
+"${DDRESCUELOG}" -x ${logfile4} ${logfile3} > out || fail2=1
+"${DDRESCUELOG}" -D out && fail2=1
+"${DDRESCUELOG}" -x out ${logfile5} > logfile || fail2=1
+"${DDRESCUELOG}" -d logfile || fail2=1
+
+"${DDRESCUELOG}" -x ${logfile4} ${logfile5} > out || fail2=1
+"${DDRESCUELOG}" -D out && fail2=1
+"${DDRESCUELOG}" -x out ${logfile3} > logfile || fail2=1
+"${DDRESCUELOG}" -d logfile || fail2=1
+
+"${DDRESCUELOG}" -x ${logfile5} ${logfile3} > out || fail2=1
+"${DDRESCUELOG}" -D out && fail2=1
+"${DDRESCUELOG}" -x out ${logfile4} > logfile || fail2=1
+"${DDRESCUELOG}" -d logfile || fail2=1
+
+"${DDRESCUELOG}" -x ${logfile5} ${logfile4} > out || fail2=1
+"${DDRESCUELOG}" -D out && fail2=1
+"${DDRESCUELOG}" -x out ${logfile3} > logfile || fail2=1
+"${DDRESCUELOG}" -d logfile || fail2=1
+if [ ${fail2} = 0 ] ; then printf . ; else printf - ; fail=1 ; fi
+
+fail2=0
+"${DDRESCUELOG}" -b2048 -l+ ${logfile1} > out || fail2=1
+"${DDRESCUELOG}" -y ${logfile1} ${logfile2} > logfile || fail2=1
+"${DDRESCUELOG}" -P ${blank} logfile || fail2=1
+"${DDRESCUELOG}" -b2048 -l? logfile > copy || fail2=1
+cmp out copy || fail2=1
+"${DDRESCUELOG}" -y ${logfile2} ${logfile1} > logfile || fail2=1
+"${DDRESCUELOG}" -P ${blank} logfile || fail2=1
+"${DDRESCUELOG}" -b2048 -l- logfile > copy || fail2=1
+cmp out copy || fail2=1
+"${DDRESCUELOG}" -b2048 -i0x2000 -s0x2800 -l+ ${logfile1} > out || fail2=1
+"${DDRESCUELOG}" -i0x1800 -s0x3800 -y ${logfile2} ${logfile1} > logfile || fail2=1
+"${DDRESCUELOG}" -b2048 -l- logfile > copy || fail2=1
+cmp out copy || fail2=1
+if [ ${fail2} = 0 ] ; then printf . ; else printf - ; fail=1 ; fi
+
+fail2=0
+"${DDRESCUELOG}" -y ${logfile3} ${logfile4} > out || fail2=1
+"${DDRESCUELOG}" -y ${logfile4} ${logfile3} > copy || fail2=1
+"${DDRESCUELOG}" -P out copy || fail2=1
+"${DDRESCUELOG}" -P ${blank} out || fail2=1
+"${DDRESCUELOG}" -y ${logfile3} ${logfile5} > out || fail2=1
+"${DDRESCUELOG}" -y ${logfile5} ${logfile3} > copy || fail2=1
+"${DDRESCUELOG}" -P out copy || fail2=1
+"${DDRESCUELOG}" -P ${blank} out || fail2=1
+"${DDRESCUELOG}" -y ${logfile4} ${logfile5} > out || fail2=1
+"${DDRESCUELOG}" -y ${logfile5} ${logfile4} > copy || fail2=1
+"${DDRESCUELOG}" -P out copy || fail2=1
+"${DDRESCUELOG}" -P ${blank} out || fail2=1
+if [ ${fail2} = 0 ] ; then printf . ; else printf - ; fail=1 ; fi
+
+fail2=0
+"${DDRESCUELOG}" -i0x2000 -s0x2800 -z ${logfile2} ${logfile1} > logfile || fail2=1
 "${DDRESCUELOG}" -D logfile
-if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
-"${DDRESCUELOG}" -i7KiB -s11KiB -D logfile
-if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
-"${DDRESCUELOG}" -i8KiB -s11KiB -D logfile
-if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
-"${DDRESCUELOG}" -i8KiB -s10KiB -d logfile
-if [ $? = 0 ] ; then printf . ; else printf - ; fail=1 ; fi
+if [ $? != 1 ] ; then fail2=1 ; fi
+"${DDRESCUELOG}" -i0x1C00 -s0x2C00 -D logfile
+if [ $? != 1 ] ; then fail2=1 ; fi
+"${DDRESCUELOG}" -i0x2000 -s0x2C00 -D logfile
+if [ $? != 1 ] ; then fail2=1 ; fi
+"${DDRESCUELOG}" -i0x2000 -s0x2800 -d logfile
+if [ $? != 0 ] ; then fail2=1 ; fi
+if [ ${fail2} = 0 ] ; then printf . ; else printf - ; fail=1 ; fi
+
+fail2=0
+"${DDRESCUELOG}" -z ${logfile1} ${logfile2} > out || fail2=1
+"${DDRESCUELOG}" -z ${logfile2} ${logfile1} > copy || fail2=1
+"${DDRESCUELOG}" -p out copy || fail2=1
+"${DDRESCUELOG}" -d out || fail2=1
+"${DDRESCUELOG}" -d copy || fail2=1
+"${DDRESCUELOG}" -z ${logfile1} ${blank} > out || fail2=1
+"${DDRESCUELOG}" -z ${blank} ${logfile1} > copy || fail2=1
+"${DDRESCUELOG}" -p out copy || fail2=1
+"${DDRESCUELOG}" -p out ${logfile1} || fail2=1
+"${DDRESCUELOG}" -p ${logfile1} copy || fail2=1
+"${DDRESCUELOG}" -z ${logfile3} ${logfile4} > out || fail2=1
+"${DDRESCUELOG}" -z ${logfile4} ${logfile3} > copy || fail2=1
+"${DDRESCUELOG}" -p out copy || fail2=1
+"${DDRESCUELOG}" -z ${logfile3} ${logfile5} > out || fail2=1
+"${DDRESCUELOG}" -z ${logfile5} ${logfile3} > copy || fail2=1
+"${DDRESCUELOG}" -p out copy || fail2=1
+"${DDRESCUELOG}" -z ${logfile4} ${logfile5} > out || fail2=1
+"${DDRESCUELOG}" -z ${logfile5} ${logfile4} > copy || fail2=1
+"${DDRESCUELOG}" -p out copy || fail2=1
+if [ ${fail2} = 0 ] ; then printf . ; else printf - ; fail=1 ; fi
+
+fail2=0
+"${DDRESCUELOG}" -z ${logfile3} ${logfile4} > out || fail2=1
+"${DDRESCUELOG}" -D out && fail2=1
+"${DDRESCUELOG}" -z out ${logfile5} > logfile || fail2=1
+"${DDRESCUELOG}" -d logfile || fail2=1
+
+"${DDRESCUELOG}" -z ${logfile3} ${logfile5} > out || fail2=1
+"${DDRESCUELOG}" -D out && fail2=1
+"${DDRESCUELOG}" -z out ${logfile4} > logfile || fail2=1
+"${DDRESCUELOG}" -d logfile || fail2=1
+
+"${DDRESCUELOG}" -z ${logfile4} ${logfile3} > out || fail2=1
+"${DDRESCUELOG}" -D out && fail2=1
+"${DDRESCUELOG}" -z out ${logfile5} > logfile || fail2=1
+"${DDRESCUELOG}" -d logfile || fail2=1
+
+"${DDRESCUELOG}" -z ${logfile4} ${logfile5} > out || fail2=1
+"${DDRESCUELOG}" -D out && fail2=1
+"${DDRESCUELOG}" -z out ${logfile3} > logfile || fail2=1
+"${DDRESCUELOG}" -d logfile || fail2=1
+
+"${DDRESCUELOG}" -z ${logfile5} ${logfile3} > out || fail2=1
+"${DDRESCUELOG}" -D out && fail2=1
+"${DDRESCUELOG}" -z out ${logfile4} > logfile || fail2=1
+"${DDRESCUELOG}" -d logfile || fail2=1
+
+"${DDRESCUELOG}" -z ${logfile5} ${logfile4} > out || fail2=1
+"${DDRESCUELOG}" -D out && fail2=1
+"${DDRESCUELOG}" -z out ${logfile3} > logfile || fail2=1
+"${DDRESCUELOG}" -d logfile || fail2=1
+if [ ${fail2} = 0 ] ; then printf . ; else printf - ; fail=1 ; fi
 
 echo
 if [ ${fail} = 0 ] ; then

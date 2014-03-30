@@ -164,49 +164,37 @@ int do_logic_ops( Domain & domain, const char * const logname,
   logfile.split_domain_border_sblocks( domain );
   logfile2.split_domain_border_sblocks( domain );
 
-  for( int i = 0; i < logfile.sblocks(); ++i )
+  for( int i = 0, j = 0; ; ++i, ++j )
     {
-    const Sblock & sb = logfile.sblock( i );
-    if( !domain.includes( sb ) )
-      { if( domain < sb ) break; else continue; }
+    while( i < logfile.sblocks() && !domain.includes( logfile.sblock( i ) ) )
+      ++i;
+    while( j < logfile2.sblocks() && !domain.includes( logfile2.sblock( j ) ) )
+      ++j;
+    if( i >= logfile.sblocks() || j >= logfile2.sblocks() ) break;
+    {
+    const Sblock & sb1 = logfile.sblock( i );
+    const Sblock & sb2 = logfile2.sblock( j );
+    if( sb1.pos() != sb2.pos() )
+      internal_error( "block positions got out of sync" );
+    if( sb1.size() < sb2.size() ) logfile2.split_sblock_by( sb1.end(), j );
+    else if( sb1.size() > sb2.size() ) logfile.split_sblock_by( sb2.end(), i );
+    }
+    const Sblock & sb1 = logfile.sblock( i );
+    const Sblock & sb2 = logfile2.sblock( j );
+    const bool f1 = ( sb1.status() == Sblock::finished );
+    const bool f2 = ( sb2.status() == Sblock::finished );
     switch( program_mode )
       {
       case m_and:
-        {
-        if( sb.status() != Sblock::finished ) continue;
-        Block b( sb );
-        logfile2.find_chunk( b, Sblock::finished, domain );
-        if( b.size() <= 0 || b.pos() >= sb.end() )
-          logfile.change_sblock_status( i, Sblock::bad_sector );
-        else if( b == sb ) continue;
-        else if( b.pos() == sb.pos() ) logfile.split_sblock_by( b.end(), i );
-        else
-          { logfile.change_chunk_status( Block( sb.pos(), b.pos() - sb.pos() ),
-                                         Sblock::bad_sector, domain ); --i; }
-        } break;
+        if( f1 && !f2 ) logfile.change_sblock_status( i, Sblock::bad_sector );
+        break;
       case m_or:
-        {
-        if( sb.status() == Sblock::finished ) continue;
-        Block b( sb );
-        logfile2.find_chunk( b, Sblock::finished, domain );
-        if( b.size() <= 0 || b.pos() >= sb.end() ) continue;
-        else if( b == sb )
-          logfile.change_sblock_status( i, Sblock::finished );
-        else if( b.pos() == sb.pos() )
-          { logfile.change_chunk_status( b, Sblock::finished, domain ); --i; }
-        else logfile.split_sblock_by( b.end(), i );
-        } break;
+        if( !f1 && f2 ) logfile.change_sblock_status( i, Sblock::finished );
+        break;
       case m_xor:
         {
-        const Sblock::Status st = ( sb.status() == Sblock::finished ) ?
-                                  Sblock::bad_sector : Sblock::finished;
-        Block b( sb );
-        logfile2.find_chunk( b, Sblock::finished, domain );
-        if( b.size() <= 0 || b.pos() >= sb.end() ) continue;
-        else if( b == sb ) logfile.change_sblock_status( i, st );
-        else if( b.pos() == sb.pos() )
-          { logfile.change_chunk_status( b, st, domain ); --i; }
-        else logfile.split_sblock_by( b.end(), i );
+        if( f1 != ( ( f1 || f2 ) && !( f1 && f2 ) ) )
+          logfile.change_sblock_status( i, f1 ? Sblock::bad_sector : Sblock::finished );
         } break;
       default: internal_error( "invalid program_mode" );
       }
