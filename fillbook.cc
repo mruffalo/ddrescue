@@ -21,6 +21,7 @@
 #include <algorithm>
 #include <climits>
 #include <cstdio>
+#include <cstring>
 #include <ctime>
 #include <string>
 #include <vector>
@@ -34,6 +35,7 @@
 //
 int Fillbook::fill_areas( const std::string & filltypes )
   {
+  const char * const msg = "Filling blocks...";
   bool first_post = true;
 
   for( int index = 0; index < sblocks(); ++index )
@@ -45,12 +47,12 @@ int Fillbook::fill_areas( const std::string & filltypes )
     Block b( sb.pos(), softbs() );	// fill the area a softbs at a time
     if( sb.includes( current_pos() ) ) b.pos( current_pos() );
     if( b.end() > sb.end() ) b.crop( sb );
-    current_status( filling );
+    current_status( filling, msg );
     while( b.size() > 0 )
       {
       current_pos( b.pos() );
       if( verbosity >= 0 )
-        { show_status( b.pos(), first_post ); first_post = false; }
+        { show_status( b.pos(), msg, first_post ); first_post = false; }
       if( interrupted() ) return -1;
       const int retval = fill_block( b );
       if( retval )					// write error
@@ -69,12 +71,13 @@ int Fillbook::fill_areas( const std::string & filltypes )
   }
 
 
-void Fillbook::show_status( const long long ipos, bool force )
+void Fillbook::show_status( const long long ipos, const char * const msg,
+                            bool force )
   {
   const char * const up = "\x1b[A";
   if( t0 == 0 )
     {
-    t0 = t1 = std::time( 0 );
+    t0 = t1 = initial_time();
     first_size = last_size = filled_size;
     force = true;
     std::printf( "\n\n\n" );
@@ -100,6 +103,12 @@ void Fillbook::show_status( const long long ipos, bool force )
                  format_num( a_rate, 99999 ) );
     std::printf( "current pos: %10sB,  run time:  %9s\n",
                  format_num( last_ipos + offset() ), format_time( t1 - t0 ) );
+    if( msg && msg[0] )
+      {
+      const int len = std::strlen( msg ); std::printf( "\r%s", msg );
+      for( int i = len; i < oldlen; ++i ) std::fputc( ' ', stdout );
+      oldlen = len;
+      }
     std::fflush( stdout );
     }
   else if( t2 < t1 )			// clock jumped back
@@ -152,9 +161,8 @@ int Fillbook::do_fill( const int odes, const std::string & filltypes )
   if( signaled ) retval = 0;
   if( verbosity >= 0 )
     {
-    show_status( -1, true );
-    if( retval == 0 && !signaled ) std::printf( "Finished" );
-    else if( retval == -2 ) std::printf( "\nLogfile error" );
+    show_status( -1, ( retval || signaled ) ? 0 : "Finished", true );
+    if( retval == -2 ) std::printf( "\nLogfile error" );
     else if( signaled ) std::printf( "\nInterrupted by user" );
     std::fputc( '\n', stdout );
     }

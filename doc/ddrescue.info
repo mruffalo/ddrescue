@@ -12,7 +12,7 @@ File: ddrescue.info,  Node: Top,  Next: Introduction,  Up: (dir)
 GNU ddrescue Manual
 *******************
 
-This manual is for GNU ddrescue (version 1.18-pre10, 30 March 2014).
+This manual is for GNU ddrescue (version 1.18-rc3, 24 May 2014).
 
 * Menu:
 
@@ -244,20 +244,25 @@ the center of the largest non-split block, until a bad sector is found.
 Then, if the bad sector found is not the first one tried, read backwards
 one sector at a time from the center of the same block, until a bad
 sector is found. If the logfile is larger than '--logfile-size', read
-the smallest non-split blocks until the number of entries in the
-logfile drops below '--logfile-size'. Repeat until all remaining
-non-split blocks have less than 5 sectors. Then read the remaining
+sequentially the largest non-split blocks until the number of entries
+in the logfile drops below '--logfile-size'. Repeat until all remaining
+non-split blocks have less than 7 sectors. Then read the remaining
 non-split blocks sequentially.
 
    5) (Fourth phase; Retrying) Optionally try to read again the bad
 sectors until the specified number of retry passes is reached. Every
-bad sector is tried only once in each pass.
+bad sector is tried only once in each pass. Ddrescue can't know if a
+bad sector is unrecoverable or if it will be eventually read after some
+retries.
 
    6) Optionally write a logfile for later use.
 
 
-   Note that as ddrescue splits the failed blocks, making them smaller,
-the total error size may diminish while the number of errors increases.
+   The total error size ('errsize') is sum of the sizes of all the
+non-trimmed, non-split and bad-sector blocks. It increases during the
+copying phase and may decrease during trimming, splitting and retrying.
+Note that as ddrescue splits the failed blocks, making them smaller, the
+total error size may decrease while the number of errors increases.
 
    The logfile is periodically saved to disc, as well as when ddrescue
 finishes or is interrupted. So in case of a crash you can resume the
@@ -433,18 +438,27 @@ The format for running ddrescue is:
      from the LOGFILE may be incomplete, for example after doing a
      partial rescue.
 
-'-K BYTES'
-'--skip-size=BYTES'
-     Set the initial size to skip on the first read error or slow read
-     during the copying phase. The value given will be rounded to the
-     next multiple of sector size. The skip size will be doubled for
-     each read error or slow read until it reaches 1% of the size of
-     INFILE or 1 GiB (whichever is smaller), and reset when good data
-     is found. If ddrescue is having difficulties skipping away from a
-     large area with scattered errors, or if the device has large error
-     areas at regular intervals, you can increase the initial skip size
-     with this option. Valid values range from 64 KiB to 1 GiB.
-     Defaults to 64 KiB.
+'-K INITIAL[,MAX]'
+'-K ,MAX'
+'--skip-size=INITIAL[,MAX]'
+'--skip-size=,MAX'
+     Set limits to skip size during the copying phase. INITIAL is the
+     size to skip on the first read error or slow read, in bytes. MAX
+     is the maximum size to skip. The values given will be rounded to
+     the next multiple of sector size. The skip size will be doubled
+     for each read error or slow read until it reaches MAX or, if MAX is
+     omitted, 1% of the size of INFILE or 1 GiB (whichever is smaller),
+     and will be reset to INITIAL when good data is found. Valid values
+     range from 64 KiB to 1 GiB. INITIAL defaults to 64 KiB. An INITIAL
+     value of 0 disables skipping entirely.
+
+     If ddrescue is having difficulties skipping away from a large area
+     with scattered errors, or if the device has large error areas at
+     regular intervals, you can increase the initial skip size with
+     this option.  Inversely, if ddrescue is skipping too much, leaving
+     large non-tried areas behind each error (which will be read later
+     in the usually slower backwards direction), you can reduce the
+     maximum skip size, or disable skipping.
 
      '--skip-size' is independent from '--cluster-size'. The size to
      skip is calculated from the end of the block that just failed.
@@ -500,12 +514,11 @@ The format for running ddrescue is:
 '--reopen-on-error'
      Close INFILE and then reopen it after every read error and, if
      '--min-read-rate' is set, after every slow read encountered both
-     during the copying phase (i.e., every time ddrescue skips ahead).
-     Use this option if you notice a permanent drop in transfer rate
-     after finding read errors or slow areas. But be warned that most
-     probably the slowing-down is intentionally caused by the kernel in
-     an attempt to increase the probability of reading data from the
-     device.
+     during the copying phase. Use this option if you notice a
+     permanent drop in transfer rate after finding read errors or slow
+     areas. But be warned that most probably the slowing-down is
+     intentionally caused by the kernel in an attempt to increase the
+     probability of reading data from the device.
 
 '-p'
 '--preallocate'
@@ -647,13 +660,12 @@ The logfile is a text file easy to read and edit. It is formed by three
 parts, the heading comments, the status line, and the list of data
 blocks. Any line beginning with '#' is a comment line.
 
-   NOTE: Logfiles generated by a version of ddrescue prior to 1.6 lack
-the status line. If you want to use an old logfile with ddrescue 1.6 or
-later, you will have to insert a line like '0 +' at the beginning of
-the logfile.
-
-   The heading comments contain the version of ddrescue and the command
-line used to create the logfile. They are intended as information for
+   The heading comments contain the version of ddrescue or ddrescuelog
+that created the logfile, the command line used, and the time when the
+program started. If the logfile was created by ddrescue it will also
+contain the current time when the logfile was saved and a copy of the
+status message from the screen describing the operation being performed
+(copying, trimming, finished, etc). They are intended as information for
 the user.
 
    The first non-comment line is the status line. It contains a
@@ -689,19 +701,27 @@ Character   Meaning
 
 And here is an example logfile:
 
-# Rescue Logfile. Created by GNU ddrescue version 1.18-pre10
-# Command line: ddrescue /dev/fd0 fdimage logfile
-# current_pos  current_status
-0x00120000     ?
-#      pos         size   status
-0x00000000   0x00117000   +
-0x00117000   0x00000200   -
-0x00117200   0x00001000   /
-0x00118200   0x00007E00   *
-0x00120000   0x00048000   ?
+     # Rescue Logfile. Created by GNU ddrescue version 1.18-rc3
+     # Command line: ddrescue -d -c18 /dev/fd0 fdimage logfile
+     # Start time:   2014-05-03 09:37:44
+     # Current time: 2014-05-03 09:38:19
+     # Copying non-tried blocks... Pass 1 (forwards)
+     # current_pos  current_status
+     0x00120000     ?
+     #      pos        size  status
+     0x00000000  0x00117000  +
+     0x00117000  0x00000200  -
+     0x00117200  0x00001000  /
+     0x00118200  0x00007E00  *
+     0x00120000  0x00048000  ?
 
    If you edit the file, you may use decimal, hexadecimal or octal
 values, using the same syntax as integer constants in C++.
+
+   NOTE: Logfiles generated by a version of ddrescue prior to 1.6 lack
+the status line. If you want to use an old logfile with ddrescue 1.6 or
+later, you will have to insert a line like '0 +' at the beginning of
+the logfile.
 
 
 File: ddrescue.info,  Node: Examples,  Next: Direct disc access,  Prev: Logfile structure,  Up: Top
@@ -725,7 +745,7 @@ copy as a master for a second copy, and try to repair the second copy.
 If something goes wrong, you have the master intact to try again.
 
    If you are trying to rescue a whole partition, first repair the copy
-with e2fsck or some other tool appropiate for the type of partition you
+with e2fsck or some other tool appropriate for the type of partition you
 are trying to rescue, then mount the repaired copy somewhere and try to
 recover the files in it.
 
@@ -757,7 +777,7 @@ somehow on /dev/hdb.
 
 Example 2: Rescue an ext2 partition in /dev/hda2 to /dev/hdb2.
 Note: you need to create the hdb2 partition with fdisk first. hdb2
-should be of appropiate type and size.
+should be of appropriate type and size.
 
      ddrescue -f -n /dev/hda2 /dev/hdb2 logfile
      ddrescue -d -f -r3 /dev/hda2 /dev/hdb2 logfile
@@ -971,7 +991,9 @@ a string not present in any file, for example "DEADBEEF".
    3) Mount the copied drive (or the image file, via loopback device).
 
    4) Grep for the fill string in all the files. Those files containing
-the string reside (at least partially) in damaged disc areas.
+the string reside (at least partially) in damaged disc areas. Note that
+if all the damaged areas are in unused space, grep will not find the
+string in any file, which means that no files are damaged.
 
    5) Unmount the copied drive or image file.
 
@@ -985,7 +1007,7 @@ Example 4: Figure out what files are in the bad areas of the disc.
      ddrescue --fill-mode=- tmpfile cdimage logfile
      rm tmpfile
      mount -t iso9660 -o loop,ro cdimage /mnt/cdimage
-     find /mnt/cdimage -type f -exec grep "DEADBEEF" '{}' ';'
+     find /mnt/cdimage -type f -exec grep -l "DEADBEEF" '{}' ';'
      umount /mnt/cdimage
      ddrescue --fill-mode=- /dev/zero cdimage logfile
 
@@ -1044,6 +1066,10 @@ contents, converts logfiles to/from other formats, compares logfiles,
 tests rescue status, and can delete a logfile if the rescue is done.
 Ddrescuelog operations can be restricted to one or several parts of the
 logfile if the domain setting options are used.
+
+   When performing logic operations (AND, OR, XOR) on logfiles of
+different extension, only the blocks present in both files are
+processed.
 
    Here are some examples of how to use ddrescuelog, alone or in
 combination with other tools.
@@ -1320,21 +1346,21 @@ Concept index
 
 Tag Table:
 Node: Top201
-Node: Introduction1380
-Node: Basic concepts4308
-Node: Important advice6185
-Node: Algorithm7294
-Node: Invoking ddrescue12247
-Node: Logfile structure26956
-Node: Examples29313
-Ref: lziprecover-example32854
-Node: Direct disc access34694
-Node: Fill mode36771
-Node: Generate mode40911
-Node: Ddrescuelog42858
-Node: Invoking ddrescuelog45007
-Node: Problems51949
-Node: Concept index52506
+Node: Introduction1376
+Node: Basic concepts4304
+Node: Important advice6181
+Node: Algorithm7290
+Node: Invoking ddrescue12567
+Node: Logfile structure27702
+Node: Examples30522
+Ref: lziprecover-example34065
+Node: Direct disc access35905
+Node: Fill mode37982
+Node: Generate mode42263
+Node: Ddrescuelog44210
+Node: Invoking ddrescuelog46500
+Node: Problems53442
+Node: Concept index53999
 
 End Tag Table
 

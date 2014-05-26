@@ -56,6 +56,14 @@ if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
 if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
 "${DDRESCUE}" -q -H ${logfile2i} ${in} out logfile
 if [ $? = 2 ] ; then printf . ; else printf - ; fail=1 ; fi
+"${DDRESCUE}" -q -K0, ${in} out
+if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
+"${DDRESCUE}" -q -K0,65535 ${in} out
+if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
+"${DDRESCUE}" -q -i 0, ${in} out
+if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
+"${DDRESCUE}" -q -i -1 ${in} out
+if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
 "${DDRESCUE}" -q -m ${logfile1} -m ${logfile1} ${in} out logfile
 if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
 "${DDRESCUE}" -q -m ${logfile2i} ${in} out logfile
@@ -91,7 +99,7 @@ rm -f out
 "${DDRESCUE}" -q -O -H ${logfile1} ${in} out || fail=1
 cmp ${in1} out || fail=1
 printf .
-"${DDRESCUE}" -q -O -L -H ${logfile2i} ${in} out || fail=1
+"${DDRESCUE}" -q -O -L -K0 -H ${logfile2i} ${in} out || fail=1
 cmp ${in} out || fail=1
 printf .
 
@@ -107,7 +115,7 @@ rm -f out
 "${DDRESCUE}" -q -R -m ${logfile2} ${in} out || fail=1
 cmp ${in2} out || fail=1
 printf .
-"${DDRESCUE}" -q -R -m ${logfile1} ${in} out || fail=1
+"${DDRESCUE}" -q -R -K,64KiB -m ${logfile1} ${in} out || fail=1
 cmp ${in} out || fail=1
 printf .
 
@@ -262,6 +270,18 @@ if [ $? = 2 ] ; then printf . ; else printf - ; fail=1 ; fi
 "${DDRESCUELOG}" -L -P ${logfile2i} ${logfile2} || fail=1
 printf .
 
+fail2=0			# test XOR
+for i in ${logfile1} ${logfile2} ${logfile3} ${logfile4} ${logfile5} ; do
+	for j in ${logfile1} ${logfile2} ${logfile3} ${logfile4} ${logfile5} ; do
+		"${DDRESCUELOG}" -x ${j} ${i} > out || fail2=1
+		"${DDRESCUELOG}" -x ${i} ${j} > copy || fail2=1
+		"${DDRESCUELOG}" -P out copy || fail2=1
+		"${DDRESCUELOG}" -x ${j} out > copy || fail2=1
+		"${DDRESCUELOG}" -P ${i} copy || fail2=1
+	done
+done
+if [ ${fail2} = 0 ] ; then printf . ; else printf - ; fail=1 ; fi
+
 fail2=0
 "${DDRESCUELOG}" -x ${logfile1} ${logfile2} > out || fail2=1
 "${DDRESCUELOG}" -x ${logfile2} ${logfile1} > copy || fail2=1
@@ -299,16 +319,6 @@ fail2=0
 if [ ${fail2} = 0 ] ; then printf . ; else printf - ; fail=1 ; fi
 
 fail2=0
-for i in ${logfile1} ${logfile2} ${logfile3} ${logfile4} ${logfile5} ; do
-	for j in ${logfile1} ${logfile2} ${logfile3} ${logfile4} ${logfile5} ; do
-		"${DDRESCUELOG}" -x ${j} ${i} > out || fail2=1
-		"${DDRESCUELOG}" -x ${j} out > copy || fail2=1
-		"${DDRESCUELOG}" -P ${i} copy || fail2=1
-	done
-done
-if [ ${fail2} = 0 ] ; then printf . ; else printf - ; fail=1 ; fi
-
-fail2=0
 "${DDRESCUELOG}" -x ${logfile3} ${logfile4} > out || fail2=1
 "${DDRESCUELOG}" -D out && fail2=1
 "${DDRESCUELOG}" -x out ${logfile5} > logfile || fail2=1
@@ -340,6 +350,16 @@ fail2=0
 "${DDRESCUELOG}" -d logfile || fail2=1
 if [ ${fail2} = 0 ] ; then printf . ; else printf - ; fail=1 ; fi
 
+fail2=0			# test AND
+for i in ${logfile1} ${logfile2} ${logfile3} ${logfile4} ${logfile5} ; do
+	for j in ${logfile1} ${logfile2} ${logfile3} ${logfile4} ${logfile5} ; do
+		"${DDRESCUELOG}" -y ${j} ${i} > out || fail2=1
+		"${DDRESCUELOG}" -y ${i} ${j} > copy || fail2=1
+		"${DDRESCUELOG}" -P out copy || fail2=1
+	done
+done
+if [ ${fail2} = 0 ] ; then printf . ; else printf - ; fail=1 ; fi
+
 fail2=0
 "${DDRESCUELOG}" -b2048 -l+ ${logfile1} > out || fail2=1
 "${DDRESCUELOG}" -y ${logfile1} ${logfile2} > logfile || fail2=1
@@ -358,16 +378,10 @@ if [ ${fail2} = 0 ] ; then printf . ; else printf - ; fail=1 ; fi
 
 fail2=0
 "${DDRESCUELOG}" -y ${logfile3} ${logfile4} > out || fail2=1
-"${DDRESCUELOG}" -y ${logfile4} ${logfile3} > copy || fail2=1
-"${DDRESCUELOG}" -P out copy || fail2=1
 "${DDRESCUELOG}" -P ${blank} out || fail2=1
 "${DDRESCUELOG}" -y ${logfile3} ${logfile5} > out || fail2=1
-"${DDRESCUELOG}" -y ${logfile5} ${logfile3} > copy || fail2=1
-"${DDRESCUELOG}" -P out copy || fail2=1
 "${DDRESCUELOG}" -P ${blank} out || fail2=1
 "${DDRESCUELOG}" -y ${logfile4} ${logfile5} > out || fail2=1
-"${DDRESCUELOG}" -y ${logfile5} ${logfile4} > copy || fail2=1
-"${DDRESCUELOG}" -P out copy || fail2=1
 "${DDRESCUELOG}" -P ${blank} out || fail2=1
 if [ ${fail2} = 0 ] ; then printf . ; else printf - ; fail=1 ; fi
 
@@ -381,6 +395,16 @@ if [ $? != 1 ] ; then fail2=1 ; fi
 if [ $? != 1 ] ; then fail2=1 ; fi
 "${DDRESCUELOG}" -i0x2000 -s0x2800 -d logfile
 if [ $? != 0 ] ; then fail2=1 ; fi
+if [ ${fail2} = 0 ] ; then printf . ; else printf - ; fail=1 ; fi
+
+fail2=0			# test OR
+for i in ${logfile1} ${logfile2} ${logfile3} ${logfile4} ${logfile5} ; do
+	for j in ${logfile1} ${logfile2} ${logfile3} ${logfile4} ${logfile5} ; do
+		"${DDRESCUELOG}" -z ${j} ${i} > out || fail2=1
+		"${DDRESCUELOG}" -z ${i} ${j} > copy || fail2=1
+		"${DDRESCUELOG}" -P out copy || fail2=1
+	done
+done
 if [ ${fail2} = 0 ] ; then printf . ; else printf - ; fail=1 ; fi
 
 fail2=0
@@ -435,6 +459,19 @@ fail2=0
 "${DDRESCUELOG}" -D out && fail2=1
 "${DDRESCUELOG}" -z out ${logfile3} > logfile || fail2=1
 "${DDRESCUELOG}" -d logfile || fail2=1
+if [ ${fail2} = 0 ] ; then printf . ; else printf - ; fail=1 ; fi
+
+fail2=0			# test ( a && b ) == !( !a || !b )
+for i in ${logfile1} ${logfile2} ${logfile3} ${logfile4} ${logfile5} ; do
+	for j in ${logfile1} ${logfile2} ${logfile3} ${logfile4} ${logfile5} ; do
+		"${DDRESCUELOG}" -n ${i} > na || fail2=1
+		"${DDRESCUELOG}" -n ${j} > nb || fail2=1
+		"${DDRESCUELOG}" -z nb na > out || fail2=1
+		"${DDRESCUELOG}" -n out > copy || fail2=1
+		"${DDRESCUELOG}" -y ${j} ${i} > out || fail2=1
+		"${DDRESCUELOG}" -P out copy || fail2=1
+	done
+done
 if [ ${fail2} = 0 ] ; then printf . ; else printf - ; fail=1 ; fi
 
 echo

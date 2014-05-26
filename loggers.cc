@@ -18,6 +18,7 @@
 #define _FILE_OFFSET_BITS 64
 
 #include <cstdio>
+#include <string>
 #include <vector>
 
 #include "block.h"
@@ -50,6 +51,7 @@ Read_logger read_logger;
 
 bool Logger::close_file()
   {
+  if( f && !error && !write_final_timestamp( f ) ) error = true;
   if( f && std::fclose( f ) != 0 ) error = true;
   f = 0;
   return !error;
@@ -103,7 +105,7 @@ bool Read_logger::print_line( const long long ipos, const long long size,
                               const int copied_size, const int error_size )
   {
   if( f && !error &&
-      std::fprintf( f, "0x%08llX  %6llu  %6u  %6u\n",
+      std::fprintf( f, "0x%08llX	%llu	%u	%u\n",
                     ipos, size, copied_size, error_size ) < 0 )
     error = true;
   prev_is_msg = false;

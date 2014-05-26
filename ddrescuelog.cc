@@ -27,6 +27,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <ctime>
 #include <string>
 #include <vector>
 #include <stdint.h>
@@ -161,8 +162,10 @@ int do_logic_ops( Domain & domain, const char * const logname,
   domain.crop( logfile.extent() );
   domain.crop( logfile2.extent() );
   if( domain.empty() ) return empty_domain();
-  logfile.split_domain_border_sblocks( domain );
-  logfile2.split_domain_border_sblocks( domain );
+  logfile.split_by_domain_borders( domain );
+  logfile2.split_by_domain_borders( domain );
+  logfile.split_by_logfile_borders( logfile2 );
+  logfile2.split_by_logfile_borders( logfile );
 
   for( int i = 0, j = 0; ; ++i, ++j )
     {
@@ -171,16 +174,10 @@ int do_logic_ops( Domain & domain, const char * const logname,
     while( j < logfile2.sblocks() && !domain.includes( logfile2.sblock( j ) ) )
       ++j;
     if( i >= logfile.sblocks() || j >= logfile2.sblocks() ) break;
-    {
     const Sblock & sb1 = logfile.sblock( i );
     const Sblock & sb2 = logfile2.sblock( j );
-    if( sb1.pos() != sb2.pos() )
-      internal_error( "block positions got out of sync" );
-    if( sb1.size() < sb2.size() ) logfile2.split_sblock_by( sb1.end(), j );
-    else if( sb1.size() > sb2.size() ) logfile.split_sblock_by( sb2.end(), i );
-    }
-    const Sblock & sb1 = logfile.sblock( i );
-    const Sblock & sb2 = logfile2.sblock( j );
+    if( sb1.pos() != sb2.pos() || sb1.size() != sb2.size() )
+      internal_error( "blocks got out of sync." );
     const bool f1 = ( sb1.status() == Sblock::finished );
     const bool f2 = ( sb2.status() == Sblock::finished );
     switch( program_mode )
@@ -192,11 +189,10 @@ int do_logic_ops( Domain & domain, const char * const logname,
         if( !f1 && f2 ) logfile.change_sblock_status( i, Sblock::finished );
         break;
       case m_xor:
-        {
         if( f1 != ( ( f1 || f2 ) && !( f1 && f2 ) ) )
           logfile.change_sblock_status( i, f1 ? Sblock::bad_sector : Sblock::finished );
-        } break;
-      default: internal_error( "invalid program_mode" );
+        break;
+      default: internal_error( "invalid program_mode." );
       }
     }
   logfile.compact_sblock_vector();
@@ -214,7 +210,7 @@ int change_types( Domain & domain, const char * const logname,
   if( !logfile.read_logfile() ) return not_readable( logname );
   domain.crop( logfile.extent() );
   if( domain.empty() ) return empty_domain();
-  logfile.split_domain_border_sblocks( domain );
+  logfile.split_by_domain_borders( domain );
 
   for( int i = 0; i < logfile.sblocks(); ++i )
     {
@@ -241,7 +237,7 @@ int set_for_compare( Domain & domain, Logfile & logfile,
   logfile.compact_sblock_vector();
   domain.crop( logfile.extent() );
   if( domain.empty() ) return empty_domain();
-  logfile.split_domain_border_sblocks( domain );
+  logfile.split_by_domain_borders( domain );
   return -1;
   }
 
@@ -319,7 +315,7 @@ int create_logfile( Domain & domain, const char * const logname,
     }
   if( domain.empty() ) return empty_domain();
   logfile.make_blank();
-  logfile.split_domain_border_sblocks( domain );
+  logfile.split_by_domain_borders( domain );
 
   for( int i = 0; i < logfile.sblocks(); ++i )	// mark all logfile as type2
     logfile.change_sblock_status( i, type2 );
@@ -354,7 +350,7 @@ int test_if_done( Domain & domain, const char * const logname, const bool del )
   if( !logfile.read_logfile() ) return not_readable( logname );
   domain.crop( logfile.extent() );
   if( domain.empty() ) return empty_domain();
-  logfile.split_domain_border_sblocks( domain );
+  logfile.split_by_domain_borders( domain );
 
   for( int i = 0; i < logfile.sblocks(); ++i )
     {
@@ -396,7 +392,7 @@ int to_badblocks( const long long offset, Domain & domain,
   if( !logfile.read_logfile() ) return not_readable( logname );
   domain.crop( logfile.extent() );
   if( domain.empty() ) return empty_domain();
-  logfile.split_domain_border_sblocks( domain );
+  logfile.split_by_domain_borders( domain );
 
   for( int i = 0; i < logfile.sblocks(); ++i )
     {
@@ -412,7 +408,7 @@ int to_badblocks( const long long offset, Domain & domain,
         last_block = block;
         std::printf( "%lld\n", block );
         }
-      else if( block < last_block ) internal_error( "block out of order" );
+      else if( block < last_block ) internal_error( "block out of order." );
       }
     }
   return 0;
@@ -473,9 +469,11 @@ int do_show_status( Domain & domain, const char * const logname )
   bool first_block = true, good = true;
   Logfile logfile( logname );
   if( !logfile.read_logfile() ) return not_readable( logname );
-  domain.crop( logfile.extent() );
+  const Block extent = logfile.extent();
+  domain.crop( extent );
   if( domain.empty() ) return empty_domain();
-  logfile.split_domain_border_sblocks( domain );
+  const int true_sblocks = logfile.sblocks();
+  logfile.split_by_domain_borders( domain );
 
   for( int i = 0; i < logfile.sblocks(); ++i )
     {
@@ -508,27 +506,34 @@ int do_show_status( Domain & domain, const char * const logname )
 
   const long long domain_size = domain.in_size();
   const long long errsize = size_non_trimmed + size_non_split + size_bad_sector;
-  std::printf( "\ncurrent pos: %10sB,  current status: %s\n",
+  std::printf( "\n   current pos: %10sB,  current status: %s\n",
                format_num( logfile.current_pos() ),
                logfile.status_name( logfile.current_status() ) );
-  std::printf( "domain size: %10sB,  in %4d area(s)\n",
-               format_num( domain_size ), domain.blocks() );
-  std::printf( "    rescued: %10sB,  in %4d area(s)  (%s)\n",
+  std::printf( "logfile extent: %10sB,  in %5d area(s)\n",
+               format_num( extent.size() ), true_sblocks );
+  if( domain.pos() > 0 || domain.end() < extent.end() )
+    {
+    std::printf( "  domain begin: %10sB,  domain end: %10sB\n",
+                 format_num( domain.pos() ), format_num( domain.end() ) );
+    std::printf( "   domain size: %10sB,  in %5d area(s)\n",
+                 format_num( domain_size ), domain.blocks() );
+    }
+  std::printf( "       rescued: %10sB,  in %5d area(s)  (%s)\n",
                format_num( size_finished ), areas_finished,
                format_percentage( size_finished, domain_size ) );
-  std::printf( "  non-tried: %10sB,  in %4d area(s)  (%s)\n",
+  std::printf( "     non-tried: %10sB,  in %5d area(s)  (%s)\n",
                format_num( size_non_tried ), areas_non_tried,
                format_percentage( size_non_tried, domain_size ) );
-  std::printf( "\n    errsize: %10sB,  errors: %7u  (%s)\n",
+  std::printf( "\n       errsize: %10sB,  errors: %8u  (%s)\n",
                format_num( errsize ), errors,
                format_percentage( errsize, domain_size ) );
-  std::printf( "non-trimmed: %10sB,  in %4d area(s)  (%s)\n",
+  std::printf( "   non-trimmed: %10sB,  in %5d area(s)  (%s)\n",
                format_num( size_non_trimmed ), areas_non_trimmed,
                format_percentage( size_non_trimmed, domain_size ) );
-  std::printf( "  non-split: %10sB,  in %4d area(s)  (%s)\n",
+  std::printf( "     non-split: %10sB,  in %5d area(s)  (%s)\n",
                format_num( size_non_split ), areas_non_split,
                format_percentage( size_non_split, domain_size ) );
-  std::printf( " bad-sector: %10sB,  in %4d area(s)  (%s)\n",
+  std::printf( "    bad-sector: %10sB,  in %5d area(s)  (%s)\n",
                format_num( size_bad_sector ), areas_bad_sector,
                format_percentage( size_bad_sector, domain_size ) );
   return 0;
@@ -560,6 +565,7 @@ int main( const int argc, const char * const argv[] )
   command_line = argv[0];
   for( int i = 1; i < argc; ++i )
     { command_line += ' '; command_line += argv[i]; }
+  initial_time_ = std::time( 0 );
 
   const Arg_parser::Option options[] =
     {
@@ -637,7 +643,7 @@ int main( const int argc, const char * const argv[] )
                 second_logname = arg; break;
       case 'z': set_mode( program_mode, m_or );
                 second_logname = arg; break;
-      default : internal_error( "uncaught option" );
+      default : internal_error( "uncaught option." );
       }
     } // end process options
 
@@ -666,7 +672,7 @@ int main( const int argc, const char * const argv[] )
 
   switch( program_mode )
     {
-    case m_none: internal_error( "invalid operation" ); break;
+    case m_none: internal_error( "invalid operation." ); break;
     case m_and:
     case m_or:
     case m_xor:

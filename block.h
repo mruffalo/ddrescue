@@ -73,6 +73,8 @@ public:
     { return ( pos_ <= b.pos_ && end() >= b.end() ); }
   bool includes( const long long pos ) const
     { return ( pos_ <= pos && end() > pos ); }
+  bool strictly_includes( const long long pos ) const
+    { return ( pos_ < pos && end() > pos ); }
 
   void crop( const Block & b );
   bool join( const Block & b );
@@ -171,7 +173,7 @@ public:
   void clear()
     { block_vector.clear(); block_vector.push_back( Block( 0, 0 ) ); }
   void crop( const Block & b );
-  void crop_by_file_size( const long long end );
+  void crop_by_file_size( const long long size ) { crop( Block( 0, size ) ); }
   };
 
 
@@ -185,6 +187,7 @@ public:
 private:
   long long current_pos_;
   const char * const filename_;
+  std::string current_msg;
   Status current_status_;
   mutable int index_;			// cached index of last find or change
   bool read_only_;
@@ -207,7 +210,7 @@ public:
     { sblock_vector.clear();
       sblock_vector.push_back( Sblock( 0, -1, Sblock::non_tried ) ); }
   bool read_logfile( const int default_sblock_status = 0 );
-  int write_logfile( FILE * f = 0 ) const;
+  int write_logfile( FILE * f = 0, const bool timestamp = false ) const;
 
   bool blank() const;
   long long current_pos() const { return current_pos_; }
@@ -216,9 +219,11 @@ public:
   bool read_only() const { return read_only_; }
 
   void current_pos( const long long pos ) { current_pos_ = pos; }
-  void current_status( const Status st ) { current_status_ = st; }
+  void current_status( const Status st, const char * const msg = "" )
+    { current_status_ = st;
+      current_msg = ( st == finished ) ? "Finished" : msg; }
 
-  const Block extent() const
+  Block extent() const
     { if( sblock_vector.empty() ) return Block( 0, 0 );
       return Block( sblock_vector.front().pos(),
                     sblock_vector.back().end() - sblock_vector.front().pos() ); }
@@ -227,11 +232,13 @@ public:
   void change_sblock_status( const int i, const Sblock::Status st )
     { sblock_vector[i].status( st ); }
 
-  void split_domain_border_sblocks( const Domain & domain );
-  void split_sblock_by( const long long pos, const int i )
+  void split_by_domain_borders( const Domain & domain );
+  void split_by_logfile_borders( const Logfile & logfile );
+  bool try_split_sblock_by( const long long pos, const int i )
     {
-    if( sblock_vector[i].includes( pos ) )
-      insert_sblock( i, sblock_vector[i].split( pos ) );
+    if( sblock_vector[i].strictly_includes( pos ) )
+      { insert_sblock( i, sblock_vector[i].split( pos ) ); return true; }
+    return false;
     }
 
   int find_index( const long long pos ) const;
@@ -263,6 +270,9 @@ void internal_error( const char * const msg );
 int empty_domain();
 int not_readable( const char * const logname );
 int not_writable( const char * const logname );
+long initial_time();
 bool write_logfile_header( FILE * const f, const char * const logtype );
+bool write_timestamp( FILE * const f );
+bool write_final_timestamp( FILE * const f );
 const char * format_num( long long num, long long limit = 999999,
                          const int set_prefix = 0 );

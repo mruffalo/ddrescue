@@ -18,25 +18,25 @@ logobjs = arg_parser.o block.o logbook.o logfile.o ddrescuelog.o
 all : $(progname) ddrescuelog
 
 $(progname) : $(objs)
-	$(CXX) $(LDFLAGS) -o $@ $(objs)
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $(objs)
 
 $(progname)_profiled : $(objs)
-	$(CXX) $(LDFLAGS) -pg -o $@ $(objs)
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -pg -o $@ $(objs)
 
 ddrescuelog : $(logobjs)
-	$(CXX) $(LDFLAGS) -o $@ $(logobjs)
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $(logobjs)
 
 static_$(progname) : $(objs)
-	$(CXX) $(LDFLAGS) -static -o $@ $(objs)
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -static -o $@ $(objs)
 
 main.o : main.cc
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -DPROGVERSION=\"$(pkgversion)\" -c -o $@ $<
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -DPROGVERSION=\"$(pkgversion)\" -c -o $@ $<
 
 ddrescuelog.o : ddrescuelog.cc
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -DPROGVERSION=\"$(pkgversion)\" -c -o $@ $<
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -DPROGVERSION=\"$(pkgversion)\" -c -o $@ $<
 
 %.o : %.cc
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c -o $@ $<
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c -o $@ $<
 
 $(objs)       : Makefile
 $(ddobjs)     : block.h ddrescue.h

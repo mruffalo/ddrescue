@@ -1,5 +1,7 @@
 Changes in version 1.18:
 
+A bug has been fixed in the "or" and "xor" operations of ddrescuelog.
+
 The new option "-H, --test-mode" has been added.
 
 The new option "-L, --loose-domain" has been added to ddrescue and
@@ -11,6 +13,9 @@ The new option "-O, --reopen-on-error" has been added.
 
 The new options "-1, --log-rates" and "-2, --log-reads" have been added.
 They produce data files usable by plotting utilities like gnuplot.
+
+The option "-K, --skip-size" has been extended to accept a maximum skip
+size and to disable skipping.
 
 The long name of option "-r" has been changed to "--retry-passes" to
 make it clear that ddrescue tries each sector only once per retry pass.
@@ -31,14 +36,15 @@ pass, with skipping disabled. The new method is faster around large
 errors, keeps the logfile smaller, and produces better starting points
 for trimming, which now tries the smallest blocks first.
 
+Speed has been improved when using complex domains with option '-m,
+--domain-logfile'.
+
 Current total run time is now shown on the screen.
 
 The pass number and direction are now shown during the copying phase.
 
 The message "About to copy an unknown number of bytes" is now shown when
 the size of the input file can't be determined.
-
-A bug has been fixed in the "or" and "xor" operations of ddrescuelog.
 
 The option "-B, --binary-prefixes" has been added to ddrescuelog.
 

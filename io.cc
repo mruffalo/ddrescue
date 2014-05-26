@@ -108,7 +108,7 @@ int writeblock( const int fd, const uint8_t * const buf, const int size,
 //
 int Fillbook::fill_block( const Block & b )
   {
-  if( b.size() <= 0 ) internal_error( "bad size filling a Block" );
+  if( b.size() <= 0 ) internal_error( "bad size filling a Block." );
   const int size = b.size();
 
   if( writeblock( odes_, iobuf(), size, b.pos() + offset() ) != size ||
@@ -139,7 +139,7 @@ bool Fillbook::read_buffer( const int ides )
 //
 void Genbook::check_block( const Block & b, int & copied_size, int & error_size )
   {
-  if( b.size() <= 0 ) internal_error( "bad size checking a Block" );
+  if( b.size() <= 0 ) internal_error( "bad size checking a Block." );
   copied_size = readblock( odes_, iobuf(), b.size(), b.pos() + offset() );
   if( errno ) error_size = b.size() - copied_size;
 
@@ -182,7 +182,7 @@ bool Rescuebook::extend_outfile_size()
 //
 int Rescuebook::copy_block( const Block & b, int & copied_size, int & error_size )
   {
-  if( b.size() <= 0 ) internal_error( "bad size copying a Block" );
+  if( b.size() <= 0 ) internal_error( "bad size copying a Block." );
   if( !test_domain || test_domain->includes( b ) )
     {
     copied_size = readblock( ides_, iobuf(), b.size(), b.pos() );

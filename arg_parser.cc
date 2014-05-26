@@ -120,7 +120,7 @@ bool Arg_parser::parse_short_option( const char * const opt, const char * const 
 
     if( index < 0 )
       {
-      error_ = "invalid option -- "; error_ += c;
+      error_ = "invalid option -- '"; error_ += c; error_ += '\'';
       return false;
       }
 
@@ -135,7 +135,8 @@ bool Arg_parser::parse_short_option( const char * const opt, const char * const 
       {
       if( !arg || !arg[0] )
         {
-        error_ = "option requires an argument -- "; error_ += c;
+        error_ = "option requires an argument -- '"; error_ += c;
+        error_ += '\'';
         return false;
         }
       data.back().argument = arg; ++argind; cind = 0;

@@ -37,6 +37,7 @@
 //
 int Genbook::check_all()
   {
+  const char * const msg = "Generating logfile...";
   long long pos = ( offset() >= 0 ) ? 0 : -offset();
   if( current_status() == generating && domain().includes( current_pos() ) &&
       ( offset() >= 0 || current_pos() >= -offset() ) )
@@ -49,11 +50,10 @@ int Genbook::check_all()
     find_chunk( b, Sblock::non_tried, domain(), hardbs() );
     if( b.size() <= 0 ) break;
     pos = b.end();
-    current_status( generating );
+    current_status( generating, msg );
     current_pos( b.pos() );
     if( verbosity >= 0 )
-      { show_status( b.pos(), "Generating logfile...", first_post );
-        first_post = false; }
+      { show_status( b.pos(), msg, first_post ); first_post = false; }
     if( interrupted() ) return -1;
     int copied_size = 0, error_size = 0;
     check_block( b, copied_size, error_size );
@@ -72,7 +72,7 @@ void Genbook::show_status( const long long ipos, const char * const msg,
   const char * const up = "\x1b[A";
   if( t0 == 0 )
     {
-    t0 = t1 = std::time( 0 );
+    t0 = t1 = initial_time();
     first_size = last_size = gensize;
     force = true;
     std::printf( "\n\n" );

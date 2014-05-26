@@ -22,6 +22,7 @@
 #include <cctype>
 #include <cstdio>
 #include <cstdlib>
+#include <string>
 #include <vector>
 
 #include "block.h"
@@ -31,15 +32,9 @@ namespace {
 
 int my_fgetc( FILE * const f )
   {
-  int ch;
-  bool comment = false;
-
-  do {
-    ch = std::fgetc( f );
-    if( ch == '#' ) comment = true;
-    else if( ch == '\n' || ch == EOF ) comment = false;
-    }
-  while( comment );
+  int ch = std::fgetc( f );
+  if( ch == '#' )			// comment
+    { do ch = std::fgetc( f ); while( ch != '\n' && ch != EOF ); }
   return ch;
   }
 
@@ -83,12 +78,19 @@ void show_logfile_error( const char * const logname, const int linenum )
 
 void Logfile::compact_sblock_vector()
   {
-  for( unsigned i = sblock_vector.size(); i >= 2; )
+  std::vector< Sblock > new_vector;
+  unsigned l = 0;
+  while( l < sblock_vector.size() )
     {
-    --i;
-    if( sblock_vector[i-1].join( sblock_vector[i] ) )
-      sblock_vector.erase( sblock_vector.begin() + i );
+    Sblock run = sblock_vector[l];
+    unsigned r = l + 1;
+    while( r < sblock_vector.size() &&
+           sblock_vector[r].status() == run.status() ) ++r;
+    if( r > l + 1 ) run.size( sblock_vector[r-1].end() - run.pos() );
+    new_vector.push_back( run );
+    l = r;
     }
+  sblock_vector.swap( new_vector );
   }
 
 
@@ -227,13 +229,15 @@ bool Logfile::read_logfile( const int default_sblock_status )
   }
 
 
-int Logfile::write_logfile( FILE * f ) const
+int Logfile::write_logfile( FILE * f, const bool timestamp ) const
   {
   const bool f_given = ( f != 0 );
 
   if( !f && !filename_ ) return false;
   if( !f ) { f = std::fopen( filename_, "w" ); if( !f ) return false; }
   write_logfile_header( f, "Rescue" );
+  if( timestamp ) write_timestamp( f );
+  if( current_msg.size() ) std::fprintf( f, "# %s\n", current_msg.c_str() );
   std::fprintf( f, "# current_pos  current_status\n" );
   std::fprintf( f, "0x%08llX     %c\n", current_pos_, current_status_ );
   std::fprintf( f, "#      pos        size  status\n" );
@@ -255,26 +259,62 @@ bool Logfile::blank() const
   }
 
 
-void Logfile::split_domain_border_sblocks( const Domain & domain )
+void Logfile::split_by_domain_borders( const Domain & domain )
   {
+  if( domain.blocks() == 1 )
+    {
+    const Block & db = domain.block( 0 );
+    unsigned i = 0;
+    while( i < sblock_vector.size() && sblock_vector[i] < db ) ++i;
+    if( i < sblock_vector.size() ) try_split_sblock_by( db.pos(), i );
+    i = sblock_vector.size();
+    while( i > 0 && db < sblock_vector[i-1] ) --i;
+    if( i > 0 ) try_split_sblock_by( db.end(), i - 1 );
+    }
+  else
+    {
+    std::vector< Sblock > new_vector;
+    int j = 0;
+    for( unsigned i = 0; i < sblock_vector.size(); )
+      {
+      Sblock & sb = sblock_vector[i];
+      while( j < domain.blocks() && domain.block( j ) < sb ) ++j;
+      if( j >= domain.blocks() )		// end of domain tail copy
+        { new_vector.insert( new_vector.end(),
+                             sblock_vector.begin() + i, sblock_vector.end() );
+          break; }
+      const Block & db = domain.block( j );
+      if( sb.strictly_includes( db.pos() ) )
+        new_vector.push_back( sb.split( db.pos() ) );
+      if( sb.strictly_includes( db.end() ) )
+        new_vector.push_back( sb.split( db.end() ) );
+      if( sb.pos() < db.end() ) { new_vector.push_back( sb ); ++i; }
+      }
+    sblock_vector.swap( new_vector );
+    }
+  }
+
+
+void Logfile::split_by_logfile_borders( const Logfile & logfile )
+  {
+  std::vector< Sblock > new_vector;
   int j = 0;
-  for( unsigned i = 0; i < sblock_vector.size(); ++i )
+  for( unsigned i = 0; i < sblock_vector.size(); )
     {
     Sblock & sb = sblock_vector[i];
-    while( j < domain.blocks() && domain.block( j ) < sb ) ++j;
-    if( j >= domain.blocks() ) break;			// end of domain
-    const Block & db = domain.block( j );
-    if( sb < db ) continue;
-    long long pos = 0;
-    if( sb.includes( db.pos() ) && sb.pos() < db.pos() ) pos = db.pos();
-    else if( sb.includes( db.end() ) && sb.pos() < db.end() ) pos = db.end();
-    if( pos > 0 )
-      {
-      const Sblock head( sb.split( pos ) );
-      if( head.size() > 0 ) insert_sblock( i, head );
-      else internal_error( "empty block created by split_domain_border_sblocks" );
-      }
+    while( j < logfile.sblocks() && logfile.sblock( j ) < sb ) ++j;
+    if( j >= logfile.sblocks() )		// end of logfile tail copy
+      { new_vector.insert( new_vector.end(),
+                           sblock_vector.begin() + i, sblock_vector.end() );
+        break; }
+    const Sblock & db = logfile.sblock( j );
+    if( sb.strictly_includes( db.pos() ) )
+      new_vector.push_back( sb.split( db.pos() ) );
+    if( sb.strictly_includes( db.end() ) )
+      new_vector.push_back( sb.split( db.end() ) );
+    if( sb.pos() < db.end() ) { new_vector.push_back( sb ); ++i; }
     }
+  sblock_vector.swap( new_vector );
   }
 
 
@@ -386,9 +426,9 @@ int Logfile::change_chunk_status( const Block & b, const Sblock::Status st,
   if( b.size() <= 0 ) return 0;
   if( !domain.includes( b ) || find_index( b.pos() ) < 0 ||
       !domain.includes( sblock_vector[index_] ) )
-    internal_error( "can't change status of chunk not in rescue domain" );
+    internal_error( "can't change status of chunk not in rescue domain." );
   if( !sblock_vector[index_].includes( b ) )
-    internal_error( "can't change status of chunk spread over more than 1 block" );
+    internal_error( "can't change status of chunk spread over more than 1 block." );
   if( sblock_vector[index_].status() == st ) return 0;
 
   const bool old_st_good = Sblock::is_good_status( sblock_vector[index_].status() );

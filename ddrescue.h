@@ -70,10 +70,12 @@ class Fillbook : public Logbook
   long long a_rate, c_rate, first_size, last_size;
   long long last_ipos;
   long t0, t1;				// start, current times
+  int oldlen;
 
   int fill_areas( const std::string & filltypes );
   int fill_block( const Block & b );
-  void show_status( const long long ipos, bool force = false );
+  void show_status( const long long ipos, const char * const msg = 0,
+                    bool force = false );
 
 public:
   Fillbook( const long long offset, Domain & dom,
@@ -83,7 +85,7 @@ public:
       ignore_write_errors_( ignore_write_errors ),
       synchronous_( synchronous ),
       a_rate( 0 ), c_rate( 0 ), first_size( 0 ), last_size( 0 ),
-      last_ipos( 0 ), t0( 0 ), t1( 0 )
+      last_ipos( 0 ), t0( 0 ), t1( 0 ), oldlen( 0 )
       {}
 
   int do_fill( const int odes, const std::string & filltypes );
@@ -120,7 +122,7 @@ public:
 
 struct Rb_options
   {
-  enum { default_skipbs = 65536, max_skipbs = 1 << 30 };
+  enum { default_skipbs = 65536, max_max_skipbs = 1 << 30 };
 
   long long max_error_rate;
   long long min_outfile_size;
@@ -131,6 +133,7 @@ struct Rb_options
   int max_retries;
   int o_direct;			// O_DIRECT or 0
   int skipbs;			// initial size to skip on read error
+  int max_skipbs;		// maximum size to skip on read error
   bool complete_only;
   bool new_errors_only;
   bool nosplit;
@@ -145,9 +148,10 @@ struct Rb_options
     : max_error_rate( -1 ), min_outfile_size( -1 ), min_read_rate( -1 ),
       timeout( -1 ), max_errors( -1 ), max_logfile_size( 10000 ),
       max_retries( 0 ), o_direct( 0 ), skipbs( default_skipbs ),
-      complete_only( false ), new_errors_only( false ), nosplit( false ),
-      notrim( false ), reopen_on_error( false ), retrim( false ),
-      reverse( false ), sparse( false ), try_again( false )
+      max_skipbs( max_max_skipbs ), complete_only( false ),
+      new_errors_only( false ), nosplit( false ), notrim( false ),
+      reopen_on_error( false ), retrim( false ), reverse( false ),
+      sparse( false ), try_again( false )
       {}
 
   bool operator==( const Rb_options & o ) const
@@ -157,7 +161,8 @@ struct Rb_options
                max_errors == o.max_errors &&
                max_logfile_size == o.max_logfile_size &&
                max_retries == o.max_retries && o_direct == o.o_direct &&
-               skipbs == o.skipbs && complete_only == o.complete_only &&
+               skipbs == o.skipbs && max_skipbs == o.max_skipbs &&
+               complete_only == o.complete_only &&
                new_errors_only == o.new_errors_only &&
                nosplit == o.nosplit && notrim == o.notrim &&
                reopen_on_error == o.reopen_on_error &&
@@ -175,7 +180,6 @@ class Rescuebook : public Logbook, public Rb_options
   long long recsize, errsize;		// total recovered and error sizes
   const Domain * const test_domain;	// good/bad map for test mode
   const char * const iname_;
-  const int max_skip_size;		// maximum size to skip on read error
   int e_code;				// error code for errors_or_timeout
 					// 1 rate, 2 errors, 4 timeout
   int errors;				// error areas found so far
@@ -198,15 +202,14 @@ class Rescuebook : public Logbook, public Rb_options
   void reduce_min_read_rate()
     { if( min_read_rate > 0 ) min_read_rate /= 10; }
   bool slow_read() const
-    { return ( t1 - t0 >= 10 &&		// no slow reads for first 10s
+    { return ( t1 - t0 >= 30 &&		// no slow reads for first 30s
                ( ( min_read_rate > 0 && c_rate < min_read_rate &&
                    c_rate < a_rate / 2 ) ||
                  ( min_read_rate == 0 && c_rate < a_rate / 10 ) ) ); }
   int update( const Block & b, const Sblock::Status st,
               const int copied_size, const int error_size );
-  int copy_and_update( const Block & b, int & copied_size,
-                       int & error_size, const char * const msg,
-                       const bool forward );
+  int copy_and_update( const Block & b, int & error_size,
+                       const char * const msg, const bool forward );
   int copy_and_update2( const Block & b, int & copied_size,
                         int & error_size, const char * const msg,
                         const bool forward, const bool small_try );

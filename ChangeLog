@@ -1,3 +1,23 @@
+2014-05-24  Antonio Diaz Diaz  <antonio@gnu.org>
+
+	* Version 1.18-rc3 released.
+	* rescuebook.cc (Rescuebook::do_rescue): Show warning when domain
+	  is smaller than logfile.
+	* ddrescuelog.cc (do_show_status): Show logfile and domain extents
+	  when domain is smaller than logfile.
+
+2014-05-04  Antonio Diaz Diaz  <antonio@gnu.org>
+
+	* Version 1.18-rc1 released.
+	* Extended '-K, --skip-size' with maximum and disable values.
+	* Improved speed when using option '-m, --domain-logfile'.
+	* Improved speed of logic operations in ddrescuelog.
+	* Added timestamps to rescue, rates and reads logfiles.
+	* Added status message to rescue logfile.
+	* Use tab as field separator in reads logfile to reduce its size.
+	* rescuebook.cc (split_errors): Read largest first if logfile full.
+	* rescuebook.cc (show_status): Show block pos instead of current_pos.
+
 2014-03-30  Antonio Diaz Diaz  <antonio@gnu.org>
 
 	* Version 1.18-pre10 released.

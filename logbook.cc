@@ -53,7 +53,7 @@ Logbook::Logbook( const long long offset, const long long isize, Domain & dom,
   : Logfile( logname ), offset_( offset ), logfile_isize_( 0 ),
     domain_( dom ), hardbs_( hardbs ), softbs_( cluster * hardbs ),
     final_msg_( 0 ), final_errno_( 0 ),
-    ul_t1( std::time( 0 ) ), logfile_exists_( false )
+    ul_t1( initial_time() ), logfile_exists_( false )
   {
   int alignment = sysconf( _SC_PAGESIZE );
   if( alignment < hardbs_ || alignment % hardbs_ ) alignment = hardbs_;
@@ -79,7 +79,7 @@ Logbook::Logbook( const long long offset, const long long isize, Domain & dom,
   if( !complete_only ) extend_sblock_vector( isize );
   else domain_.crop( extent() );  // limit domain to blocks read from logfile
   compact_sblock_vector();
-  split_domain_border_sblocks( domain_ );
+  split_by_domain_borders( domain_ );
   if( sblocks() == 0 ) domain_.clear();
   }
 
@@ -99,7 +99,7 @@ bool Logbook::update_logfile( const int odes, const bool force )
   while( true )
     {
     errno = 0;
-    if( write_logfile() ) return true;
+    if( write_logfile( 0, true ) ) return true;
     if( verbosity < 0 ) return false;
     const int saved_errno = errno;
     std::fprintf( stderr, "\n" );

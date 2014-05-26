@@ -67,7 +67,7 @@ bool Block::join( const Block & b )
   if( this->follows( b ) ) pos_ = b.pos_;
   else if( !b.follows( *this ) ) return false;
   if( b.size_ > LLONG_MAX - end() )
-    internal_error( "size overflow joining two Blocks" );
+    internal_error( "size overflow joining two Blocks." );
   size_ += b.size_;
   return true;
   }
@@ -77,7 +77,7 @@ bool Block::join( const Block & b )
 void Block::shift( Block & b, const long long pos )
   {
   if( end() != b.pos_ || pos <= pos_ || pos >= b.end() )
-    internal_error( "bad argument shifting the border of two Blocks" );
+    internal_error( "bad argument shifting the border of two Blocks." );
   b.size_ = b.end() - pos; b.pos_ = pos; size_ = pos - pos_;
   }
 
@@ -122,26 +122,18 @@ Domain::Domain( const long long p, const long long s,
 
 void Domain::crop( const Block & b )
   {
-  for( unsigned i = block_vector.size(); i > 0; )
-    {
-    block_vector[--i].crop( b );
-    if( block_vector[i].size() <= 0 )
-      block_vector.erase( block_vector.begin() + i );
-    }
-  if( block_vector.empty() ) block_vector.push_back( Block( 0, 0 ) );
-  }
-
-
-void Domain::crop_by_file_size( const long long end )
-  {
-  unsigned i = block_vector.size();
-  while( i > 0 && block_vector[i-1].pos() >= end ) --i;
-  if( i == 0 )
-    block_vector[0].assign( 0, 0 );
-  else
-    {
-    Block & b = block_vector[--i];
-    if( b.includes( end ) ) b.size( end - b.pos() );
-    }
-  block_vector.erase( block_vector.begin() + i + 1, block_vector.end() );
+  unsigned r = block_vector.size();
+  while( r > 0 && b < block_vector[r-1] ) --r;
+  if( r > 0 ) block_vector[r-1].crop( b );
+  if( r <= 0 || block_vector[r-1].size() <= 0 )	// no block overlaps b
+    { block_vector.clear(); block_vector.push_back( Block( 0, 0 ) ); return; }
+  if( r < block_vector.size() )			// remove blocks beyond b
+    block_vector.erase( block_vector.begin() + r, block_vector.end() );
+  if( b.pos() <= 0 ) return;
+  --r;		// block_vector[r] is now the last non-cropped-out block
+  unsigned l = 0;
+  while( l < r && block_vector[l] < b ) ++l;
+  if( l < r ) block_vector[l].crop( b );	// crop block overlapping b
+  if( l > 0 )					// remove blocks before b
+    block_vector.erase( block_vector.begin(), block_vector.begin() + l );
   }

@@ -20,6 +20,7 @@ namespace {
 
 const char * const program_year = "2014";
 std::string command_line;
+long initial_time_;
 
 
 void show_version()
@@ -34,10 +35,10 @@ void show_version()
 
 long long getnum( const char * const ptr, const int hardbs,
                   const long long min = LLONG_MIN + 1,
-                  const long long max = LLONG_MAX )
+                  const long long max = LLONG_MAX, const bool comma = false )
   {
   errno = 0;
-  char *tail;
+  char * tail;
   long long result = strtoll( ptr, &tail, 0 );
   if( tail == ptr )
     {
@@ -53,6 +54,7 @@ long long getnum( const char * const ptr, const int hardbs,
     switch( tail[0] )
       {
       case ' ': break;
+      case ',': if( !comma ) { bad_multiplier = true; } break;
       case 'b':
       case 's': if( hardbs > 0 ) { factor = hardbs; exponent = 1; }
                 else bad_multiplier = true;
@@ -130,6 +132,17 @@ void set_name( const char ** name, const char * new_name, const char opt )
   *name = new_name;
   }
 
+
+const char * get_timestamp( long t = 0 )
+  {
+  static char buf[80];
+  if( t == 0 ) t = std::time( 0 );
+  const struct tm * const tm = std::localtime( &t );
+  if( !tm || std::strftime( buf, sizeof buf, "%Y-%m-%d %H:%M:%S", tm ) == 0 )
+    buf[0] = 0;
+  return buf;
+  }
+
 } // end namespace
 
 
@@ -157,7 +170,7 @@ void show_error( const char * const msg, const int errcode, const bool help )
 void internal_error( const char * const msg )
   {
   if( verbosity >= 0 )
-    std::fprintf( stderr, "%s: internal error: %s.\n", program_name, msg );
+    std::fprintf( stderr, "%s: internal error: %s\n", program_name, msg );
   std::exit( 3 );
   }
 
@@ -184,11 +197,37 @@ int not_writable( const char * const logname )
   }
 
 
+long initial_time() { return initial_time_; }
+
+
 bool write_logfile_header( FILE * const f, const char * const logtype )
   {
+  static std::string timestamp;
+
+  if( timestamp.empty() ) timestamp = get_timestamp( initial_time_ );
   return ( std::fprintf( f, "# %s Logfile. Created by %s version %s\n"
-                            "# Command line: %s\n",
-           logtype, Program_name, PROGVERSION, command_line.c_str() ) >= 0 );
+                            "# Command line: %s\n"
+                            "# Start time:   %s\n",
+           logtype, Program_name, PROGVERSION, command_line.c_str(),
+           timestamp.c_str() ) >= 0 );
+  }
+
+
+bool write_timestamp( FILE * const f )
+  {
+  const char * const timestamp = get_timestamp();
+
+  return ( !timestamp || !timestamp[0] ||
+           std::fprintf( f, "# Current time: %s\n", timestamp ) >= 0 );
+  }
+
+
+bool write_final_timestamp( FILE * const f )
+  {
+  static std::string timestamp;
+
+  if( timestamp.empty() ) timestamp = get_timestamp();
+  return ( std::fprintf( f, "# End time: %s\n", timestamp.c_str() ) >= 0 );
   }
 
 
