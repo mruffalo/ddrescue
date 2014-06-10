@@ -133,11 +133,11 @@ void set_name( const char ** name, const char * new_name, const char opt )
   }
 
 
-const char * get_timestamp( long t = 0 )
+const char * get_timestamp( const long t = 0 )
   {
   static char buf[80];
-  if( t == 0 ) t = std::time( 0 );
-  const struct tm * const tm = std::localtime( &t );
+  const time_t tt = t ? t : std::time( 0 );
+  const struct tm * const tm = std::localtime( &tt );
   if( !tm || std::strftime( buf, sizeof buf, "%Y-%m-%d %H:%M:%S", tm ) == 0 )
     buf[0] = 0;
   return buf;

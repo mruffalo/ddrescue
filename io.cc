@@ -67,18 +67,18 @@ bool block_is_zero( const uint8_t * const buf, const int size )
 int readblock( const int fd, uint8_t * const buf, const int size,
                const long long pos )
   {
-  int rest = size;
+  int sz = 0;
   errno = 0;
   if( lseek( fd, pos, SEEK_SET ) >= 0 )
-    while( rest > 0 )
+    while( sz < size )
       {
       errno = 0;
-      const int n = read( fd, buf + size - rest, rest );
-      if( n > 0 ) rest -= n;
+      const int n = read( fd, buf + sz, size - sz );
+      if( n > 0 ) sz += n;
       else if( n == 0 ) break;				// EOF
       else if( errno != EINTR ) break;
       }
-  return size - rest;
+  return sz;
   }
 
 
@@ -88,17 +88,17 @@ int readblock( const int fd, uint8_t * const buf, const int size,
 int writeblock( const int fd, const uint8_t * const buf, const int size,
                 const long long pos )
   {
-  int rest = size;
+  int sz = 0;
   errno = 0;
   if( lseek( fd, pos, SEEK_SET ) >= 0 )
-    while( rest > 0 )
+    while( sz < size )
       {
       errno = 0;
-      const int n = write( fd, buf + size - rest, rest );
-      if( n > 0 ) rest -= n;
+      const int n = write( fd, buf + sz, size - sz );
+      if( n > 0 ) sz += n;
       else if( n < 0 && errno != EINTR ) break;
       }
-  return size - rest;
+  return sz;
   }
 
 } // end namespace

@@ -7,7 +7,7 @@
 # to copy, distribute and modify it.
 
 pkgname=ddrescue
-pkgversion=1.18-rc3
+pkgversion=1.18.1
 progname=ddrescue
 srctrigger=doc/${pkgname}.texi
 
@@ -65,7 +65,7 @@ while [ $# != 0 ] ; do
 		echo "  --datarootdir=DIR     base directory for doc and data [${datarootdir}]"
 		echo "  --infodir=DIR         info files directory [${infodir}]"
 		echo "  --mandir=DIR          man pages directory [${mandir}]"
-		echo "  CXX=COMPILER          C++ compiler to use [g++]"
+		echo "  CXX=COMPILER          C++ compiler to use [${CXX}]"
 		echo "  CPPFLAGS=OPTIONS      command line options for the preprocessor [${CPPFLAGS}]"
 		echo "  CXXFLAGS=OPTIONS      command line options for the C++ compiler [${CXXFLAGS}]"
 		echo "  LDFLAGS=OPTIONS       command line options for the linker [${LDFLAGS}]"

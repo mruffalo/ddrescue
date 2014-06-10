@@ -6,8 +6,8 @@
 @finalout
 @c %**end of header
 
-@set UPDATED 24 May 2014
-@set VERSION 1.18-rc3
+@set UPDATED 7 June 2014
+@set VERSION 1.18
 
 @dircategory GNU Packages
 @direntry
@@ -626,24 +626,25 @@ size for @var{outfile}. Only regular files can be extended.
 
 @item -1 @var{file}
 @itemx --log-rates=@var{file}
-Log rates and error sizes every second in @var{file}. Every time the
-screen is updated with new details, some of those details (time, input
-position, current and average rates, number of errors and error size)
-are written to @var{file} in a format usable by plotting utilities like
-gnuplot. This allows a posterior analysis of the drive to see if it has
-any weak zones (areas where the transfer rate drops well below the
-sustained average).
+Log rates and error sizes every second in @var{file}. If @var{file}
+already exists, it will be overwritten. Every time the screen is updated
+with new details, some of those details (time, input position, current
+and average rates, number of errors and error size) are written to
+@var{file} in a format usable by plotting utilities like gnuplot. This
+allows a posterior analysis of the drive to see if it has any weak zones
+(areas where the transfer rate drops well below the sustained average).
 
 @item -2 @var{file}
 @itemx --log-reads=@var{file}
-Log all read operations in @var{file}. Every read attempt and its result
-(position, size, copied size and error size) is written to @var{file}.
-(The position written is always the beginning of the block tried, even
-if reading backwards). A line is also written at the beginning of each
-phase (copying, trimming, splitting and retrying). Finally, a line with
-a time mark is written every second (unless the read takes more time).
-Use this option with caution because @var{file} may become very large
-very quickly. Use lzip to compress @var{file} if you need to store or
+Log all read operations in @var{file}. If @var{file} already exists, it
+will be overwritten. Every read attempt and its result (position, size,
+copied size and error size) is written to @var{file}. (The position
+written is always the beginning of the block tried, even if reading
+backwards). A line is also written at the beginning of each phase
+(copying, trimming, splitting and retrying). Finally, a line with a time
+mark is written every second (unless the read takes more time). Use this
+option with caution because @var{file} may become very large very
+quickly. Use lzip to compress @var{file} if you need to store or
 transmit it.
 
 @end table

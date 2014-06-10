@@ -12,7 +12,7 @@ File: ddrescue.info,  Node: Top,  Next: Introduction,  Up: (dir)
 GNU ddrescue Manual
 *******************
 
-This manual is for GNU ddrescue (version 1.18-rc3, 24 May 2014).
+This manual is for GNU ddrescue (version 1.18, 7 June 2014).
 
 * Menu:
 
@@ -602,25 +602,27 @@ The format for running ddrescue is:
 
 '-1 FILE'
 '--log-rates=FILE'
-     Log rates and error sizes every second in FILE. Every time the
-     screen is updated with new details, some of those details (time,
-     input position, current and average rates, number of errors and
-     error size) are written to FILE in a format usable by plotting
-     utilities like gnuplot. This allows a posterior analysis of the
-     drive to see if it has any weak zones (areas where the transfer
-     rate drops well below the sustained average).
+     Log rates and error sizes every second in FILE. If FILE already
+     exists, it will be overwritten. Every time the screen is updated
+     with new details, some of those details (time, input position,
+     current and average rates, number of errors and error size) are
+     written to FILE in a format usable by plotting utilities like
+     gnuplot. This allows a posterior analysis of the drive to see if
+     it has any weak zones (areas where the transfer rate drops well
+     below the sustained average).
 
 '-2 FILE'
 '--log-reads=FILE'
-     Log all read operations in FILE. Every read attempt and its result
-     (position, size, copied size and error size) is written to FILE.
-     (The position written is always the beginning of the block tried,
-     even if reading backwards). A line is also written at the
-     beginning of each phase (copying, trimming, splitting and
-     retrying). Finally, a line with a time mark is written every
-     second (unless the read takes more time).  Use this option with
-     caution because FILE may become very large very quickly. Use lzip
-     to compress FILE if you need to store or transmit it.
+     Log all read operations in FILE. If FILE already exists, it will
+     be overwritten. Every read attempt and its result (position, size,
+     copied size and error size) is written to FILE. (The position
+     written is always the beginning of the block tried, even if reading
+     backwards). A line is also written at the beginning of each phase
+     (copying, trimming, splitting and retrying). Finally, a line with
+     a time mark is written every second (unless the read takes more
+     time). Use this option with caution because FILE may become very
+     large very quickly. Use lzip to compress FILE if you need to store
+     or transmit it.
 
 
    Numbers given as arguments to options (positions, sizes, rates, etc)
@@ -701,7 +703,7 @@ Character   Meaning
 
 And here is an example logfile:
 
-     # Rescue Logfile. Created by GNU ddrescue version 1.18-rc3
+     # Rescue Logfile. Created by GNU ddrescue version 1.18
      # Command line: ddrescue -d -c18 /dev/fd0 fdimage logfile
      # Start time:   2014-05-03 09:37:44
      # Current time: 2014-05-03 09:38:19
@@ -1346,21 +1348,21 @@ Concept index
 
 Tag Table:
 Node: Top201
-Node: Introduction1376
-Node: Basic concepts4304
-Node: Important advice6181
-Node: Algorithm7290
-Node: Invoking ddrescue12567
-Node: Logfile structure27702
-Node: Examples30522
-Ref: lziprecover-example34065
-Node: Direct disc access35905
-Node: Fill mode37982
-Node: Generate mode42263
-Node: Ddrescuelog44210
-Node: Invoking ddrescuelog46500
-Node: Problems53442
-Node: Concept index53999
+Node: Introduction1372
+Node: Basic concepts4300
+Node: Important advice6177
+Node: Algorithm7286
+Node: Invoking ddrescue12563
+Node: Logfile structure27803
+Node: Examples30619
+Ref: lziprecover-example34162
+Node: Direct disc access36002
+Node: Fill mode38079
+Node: Generate mode42360
+Node: Ddrescuelog44307
+Node: Invoking ddrescuelog46597
+Node: Problems53539
+Node: Concept index54096
 
 End Tag Table
 

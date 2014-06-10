@@ -1,100 +1,42 @@
-2014-05-24  Antonio Diaz Diaz  <antonio@gnu.org>
+2014-06-07  Antonio Diaz Diaz  <antonio@gnu.org>
 
-	* Version 1.18-rc3 released.
+	* Version 1.18.1 released.
+	* ddrescuelog.cc (do_logic_ops): Fixed 'or' and 'xor'.
+	* Added new option '-H, --test-mode' to simulate read errors.
+	* Added new option '-L, --loose-domain' to ddrescue and ddrescuelog.
+	* Added new option '-N, --no-trim' to disable trimming of
+	  damaged areas.
+	* Added new option '-O, --reopen-on-error'.
+	* Added new options '-1, --log-rates', and '-2, --log-reads'.
+	* Extended '-K, --skip-size' with maximum and disable values.
+	* Changed long name of option '-r' to '--retry-passes'.
+	* Changed short name of option '--generate-mode' to '-G'.
+	* Default value of option '-l, --logfile-size' increased to 10000.
+	* If interrupted, ddrescue terminates by raising the signal received.
+	* rescuebook.cc (copy_non_tried): Do not mark skipped blocks as
+	  non-trimmed. Try them in additional passes (before trimming).
+	* rescuebook.cc: Limit the copying phase to 3 passes.
+	* rescuebook.cc: Alternate direction of passes during copying phase.
+	* rescuebook.cc: Smallest blocks are trimmed first.
+	* rescuebook.cc (split_errors): Read largest first if logfile full.
+	* Improved speed when using option '-m, --domain-logfile'.
+	* io.cc (show_status): Show the current total run time.
+	* rescuebook.cc: Show pass number and direction during copying.
+	* rescuebook.cc (show_status): Show block pos instead of current_pos.
+	* main.cc: Show "an unknown number of bytes" for unknown isize.
+	* Added option '-B, --binary-prefixes' to ddrescuelog.
+	* Added new option '-C, --complete-logfile' to ddrescuelog.
+	* Added new option '-P, --compare-as-domain' to ddrescuelog.
+	* Improved speed of logic operations in ddrescuelog.
 	* rescuebook.cc (Rescuebook::do_rescue): Show warning when domain
 	  is smaller than logfile.
 	* ddrescuelog.cc (do_show_status): Show logfile and domain extents
 	  when domain is smaller than logfile.
-
-2014-05-04  Antonio Diaz Diaz  <antonio@gnu.org>
-
-	* Version 1.18-rc1 released.
-	* Extended '-K, --skip-size' with maximum and disable values.
-	* Improved speed when using option '-m, --domain-logfile'.
-	* Improved speed of logic operations in ddrescuelog.
-	* Added timestamps to rescue, rates and reads logfiles.
-	* Added status message to rescue logfile.
-	* Use tab as field separator in reads logfile to reduce its size.
-	* rescuebook.cc (split_errors): Read largest first if logfile full.
-	* rescuebook.cc (show_status): Show block pos instead of current_pos.
-
-2014-03-30  Antonio Diaz Diaz  <antonio@gnu.org>
-
-	* Version 1.18-pre10 released.
-	* ddrescuelog.cc (do_logic_ops): Fixed 'or' and 'xor'.
-
-2014-03-27  Antonio Diaz Diaz  <antonio@gnu.org>
-
-	* Version 1.18-pre9 released.
-	* rescuebook.cc (copy_and_update2): Fixed a bug introduced in
-	  1.18-pre8 which sometimes marks a bad sector as finished when
-	  reading backwards.
-	* Added new option '-H, --test-mode' to simulate read errors.
-	* rescuebook.cc: Limit the copying phase to 3 passes.
-	* rescuebook.cc: Show pass number and direction during copying.
-	* Default value of option '-l, --logfile-size' increased to 10000.
-	* Added new option '-P, --compare-as-domain' to ddrescuelog.
-
-2014-03-06  Antonio Diaz Diaz  <antonio@gnu.org>
-
-	* Version 1.18-pre8 released.
-	* If interrupted, ddrescue terminates by raising the signal received.
-	* rescuebook.cc: Alternate direction of passes during copying phase.
-	* rescuebook.cc: Smallest blocks are trimmed first.
 	* block.h: Class Block now forces the invariant by itself.
-	* main.cc: Show "an unknown number of bytes" for unknown isize.
-	* Write version and command line to rates and reads logfiles.
-	* Many improvements to documentation.
-
-2014-02-01  Antonio Diaz Diaz  <antonio@gnu.org>
-
-	* Version 1.18-pre7 released.
-	* rescuebook.cc (copy_non_tried): Do not mark skipped blocks as
-	  non-trimmed. Try them in additional passes (before trimming).
-	* ddrescue.texinfo: Renamed to ddrescue.texi.
-
-2013-11-01  Antonio Diaz Diaz  <antonio@gnu.org>
-
-	* Version 1.18-pre6 released.
-	* rescuebook.cc: Restored behavior of skipping as in 1.18-pre1.
-
-2013-09-12  Antonio Diaz Diaz  <antonio@gnu.org>
-
-	* Version 1.18-pre5 released.
-	* Added new option '-L, --loose-domain' to ddrescue and ddrescuelog.
-	* Added new option '-N, --no-trim' to disable trimming of
-	  damaged areas.
-	* Restored default value of option '-a, --min-read-rate' to -1.
-	* Added option '-B, --binary-prefixes' to ddrescuelog.
-	* Added new option '-C, --complete-logfile' to ddrescuelog.
 	* Code reorganization. New class 'Logfile'.
-
-2013-08-27  Antonio Diaz Diaz  <antonio@gnu.org>
-
-	* Version 1.18-pre4 released.
-	* Changed long name of option '-r' to '--retry-passes'.
-	* Changed default value of option '-a, --min-read-rate' to 0 (auto).
-	* Limit the effect of option '-O, --reopen-on-error' to the
-	  copying phase, but reopen the file also on slow reads.
-
-2013-08-19  Antonio Diaz Diaz  <antonio@gnu.org>
-
-	* Version 1.18-pre3 released.
-	* Added new option '-O, --reopen-on-error'.
-
-2013-08-14  Antonio Diaz Diaz  <antonio@gnu.org>
-
-	* Version 1.18-pre2 released.
-	* rescuebook.cc: 'skip_size' is now reset after one good read.
-	* io.cc (show_status): Show the current total run time.
-	* Format of logging files has been made more machine-readable.
-
-2013-08-05  Antonio Diaz Diaz  <antonio@gnu.org>
-
-	* Version 1.18-pre1 released.
-	* Added new option '-1, --log-rates'.
-	* Added new option '-2, --log-reads'.
-	* Changed short name of option '--generate-mode' to '-G'.
+	* Added status message to rescue logfile.
+	* Many improvements to documentation.
+	* ddrescue.texinfo: Renamed to ddrescue.texi.
 
 2013-07-09  Antonio Diaz Diaz  <antonio@gnu.org>
 
