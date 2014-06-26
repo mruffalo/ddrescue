@@ -4,7 +4,7 @@
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
+    the Free Software Foundation, either version 2 of the License, or
     (at your option) any later version.
 
     This program is distributed in the hope that it will be useful,
@@ -89,7 +89,7 @@ void show_help( const int cluster, const int hardbs, const int skipbs )
                "  -F, --fill-mode=<types>        fill given type blocks with infile data (?*/-+)\n"
                "  -G, --generate-mode            generate approximate logfile from partial copy\n"
                "  -H, --test-mode=<file>         set map of good/bad blocks from given logile\n"
-               "  -i, --input-position=<bytes>   starting position in input file [0]\n"
+               "  -i, --input-position=<bytes>   starting position of domain in input file [0]\n"
                "  -I, --verify-input-size        verify input file size with size in logfile\n"
                "  -K, --skip-size=<min>[,<max>]  initial size to skip on read error [%sB]\n",
                format_num( skipbs, 9999, -1 ) );
@@ -258,7 +258,7 @@ int do_fill( const long long offset, Domain & domain,
     { show_error( "Output file is not seekable." ); return 1; }
 
   if( verbosity >= 0 )
-    std::printf( "\n\n%s %s\n", Program_name, PROGVERSION );
+    std::printf( "%s %s\n", Program_name, PROGVERSION );
   if( verbosity >= 1 )
     {
     std::printf( "About to fill with data from %s blocks of %s marked %s\n",
@@ -310,7 +310,7 @@ int do_generate( const long long offset, Domain & domain,
     { show_error( "Output file is not seekable." ); return 1; }
 
   if( verbosity >= 0 )
-    std::printf( "\n\n%s %s\n", Program_name, PROGVERSION );
+    std::printf( "%s %s\n", Program_name, PROGVERSION );
   if( verbosity >= 1 )
     {
     std::printf( "About to generate an approximate logfile for %s and %s\n",
@@ -398,7 +398,7 @@ int do_rescue( const long long offset, Domain & domain,
     { show_error( "Can't open file for logging reads", errno ); return 1; }
 
   if( verbosity >= 0 )
-    std::printf( "\n\n%s %s\n", Program_name, PROGVERSION );
+    std::printf( "%s %s\n", Program_name, PROGVERSION );
   if( verbosity >= 1 )
     {
     if( rescuebook.domain().full() )

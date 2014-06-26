@@ -12,7 +12,7 @@ File: ddrescue.info,  Node: Top,  Next: Introduction,  Up: (dir)
 GNU ddrescue Manual
 *******************
 
-This manual is for GNU ddrescue (version 1.18, 7 June 2014).
+This manual is for GNU ddrescue (version 1.19-pre1, 26 June 2014).
 
 * Menu:
 
@@ -229,25 +229,28 @@ at most two times; the first in this step (usually as part of a large
 block read, but sometimes as a single sector read), the second in one of
 the steps below as a single sector read.
 
-   3) (Second phase; Trimming) Read forwards one sector at a time from
-the leading edge of the smallest non-trimmed block, until a bad sector
-is found. Then read backwards one sector at a time from the trailing
-edge of the same block, until a bad sector is found. For each
-non-trimmed block, mark the bad sectors found as bad-sector and mark
-the rest of that block as non-split without trying to read it. Repeat
-until there are no more non-trimmed blocks. (Large non-trimmed blocks
-are produced by concatenation of smaller ones, and its fraction of good
-data at the edges is therefore smaller).
+   3) (Second phase; Trimming) Trimming is done in one pass. For each
+non-trimmed block, read forwards one sector at a time from the leading
+edge of the block until a bad sector is found. Then read backwards one
+sector at a time from the trailing edge of the block until a bad sector
+is found. Then mark the bad sectors found (if any) as bad-sector, and
+mark the rest of the block as non-split without trying to read it.
 
-   4) (Third phase; Splitting) Read forwards one sector at a time from
-the center of the largest non-split block, until a bad sector is found.
-Then, if the bad sector found is not the first one tried, read backwards
-one sector at a time from the center of the same block, until a bad
-sector is found. If the logfile is larger than '--logfile-size', read
-sequentially the largest non-split blocks until the number of entries
-in the logfile drops below '--logfile-size'. Repeat until all remaining
-non-split blocks have less than 7 sectors. Then read the remaining
-non-split blocks sequentially.
+   4) (Third phase; Splitting) Splitting is done in several passes,
+minimizing head movement. The largest blocks are split first. Then each
+pass splits all blocks larger than half the size of the blocks split in
+the previous pass. When the size of all remaining non-split blocks drops
+to less than 14 sectors, they are read sequentially. Seek direction is
+reversed between passes, so that the heads never need to cross the whole
+disc just to begin another pass. If the logfile is larger than
+'--logfile-size', the blocks are fully read, instead of split, until
+the number of entries in the logfile drops below '--logfile-size'.
+
+   Reading a block is done forwards one sector at a time. Splitting a
+block is done by reading forwards one sector at a time from the center
+of the block until a bad sector is found. Then, if the bad sector found
+is not the first one tried, sectors are read backwards, one at a time,
+from the center of the block until a bad sector is found.
 
    5) (Fourth phase; Retrying) Optionally try to read again the bad
 sectors until the specified number of retry passes is reached. Every
@@ -473,11 +476,12 @@ The format for running ddrescue is:
 '-L'
 '--loose-domain'
      Accept an incomplete synthetic (user fabricated) domain logfile or
-     test-mode logfile and fill the gaps with non-tried blocks. The
-     blocks in the logfile must be strictly ascending and
-     non-overlapping, but they do not need to be contiguous. This
-     option allows making quick edits to a logfile without all the size
-     calculations involved in making all data blocks contiguous again.
+     test-mode logfile and fill the gaps in the list of data blocks with
+     non-tried blocks. The blocks in the logfile must be strictly
+     ascending and non-overlapping, but they do not need to be
+     contiguous. This option allows making quick edits to a logfile
+     without all the size calculations involved in making all data
+     blocks contiguous again.
 
 '-m FILE'
 '--domain-logfile=FILE'
@@ -703,7 +707,7 @@ Character   Meaning
 
 And here is an example logfile:
 
-     # Rescue Logfile. Created by GNU ddrescue version 1.18
+     # Rescue Logfile. Created by GNU ddrescue version 1.19-pre1
      # Command line: ddrescue -d -c18 /dev/fd0 fdimage logfile
      # Start time:   2014-05-03 09:37:44
      # Current time: 2014-05-03 09:38:19
@@ -1215,11 +1219,12 @@ The format for running ddrescuelog is:
 '-L'
 '--loose-domain'
      Accept an incomplete synthetic (user fabricated) domain logfile or
-     compare-as-domain logfile and fill the gaps with non-tried blocks.
-     The blocks in the logfile must be strictly ascending and
-     non-overlapping, but they do not need to be contiguous. This
-     option allows making quick edits to a logfile without all the size
-     calculations involved in making all data blocks contiguous again.
+     compare-as-domain logfile and fill the gaps in the list of data
+     blocks with non-tried blocks. The blocks in the logfile must be
+     strictly ascending and non-overlapping, but they do not need to be
+     contiguous.  This option allows making quick edits to a logfile
+     without all the size calculations involved in making all data
+     blocks contiguous again.
 
 '-m FILE'
 '--domain-logfile=FILE'
@@ -1348,21 +1353,21 @@ Concept index
 
 Tag Table:
 Node: Top201
-Node: Introduction1372
-Node: Basic concepts4300
-Node: Important advice6177
-Node: Algorithm7286
-Node: Invoking ddrescue12563
-Node: Logfile structure27803
-Node: Examples30619
-Ref: lziprecover-example34162
-Node: Direct disc access36002
-Node: Fill mode38079
-Node: Generate mode42360
-Node: Ddrescuelog44307
-Node: Invoking ddrescuelog46597
-Node: Problems53539
-Node: Concept index54096
+Node: Introduction1378
+Node: Basic concepts4306
+Node: Important advice6183
+Node: Algorithm7292
+Node: Invoking ddrescue12772
+Node: Logfile structure28044
+Node: Examples30865
+Ref: lziprecover-example34408
+Node: Direct disc access36248
+Node: Fill mode38325
+Node: Generate mode42606
+Node: Ddrescuelog44553
+Node: Invoking ddrescuelog46843
+Node: Problems53818
+Node: Concept index54375
 
 End Tag Table
 

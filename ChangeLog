@@ -1,4 +1,12 @@
-2014-06-07  Antonio Diaz Diaz  <antonio@gnu.org>
+2014-06-26  Antonio Diaz Diaz  <antonio@gnu.org>
+
+	* Version 1.19-pre1 released.
+	* Fixed a race condition at start of run with '--timeout=0'.
+	* rescuebook.cc: Trimming is now done in one pass.
+	* rescuebook.cc: Splitting is now done in several passes.
+	* License changed to GPL version 2 or later.
+
+2014-06-10  Antonio Diaz Diaz  <antonio@gnu.org>
 
 	* Version 1.18.1 released.
 	* ddrescuelog.cc (do_logic_ops): Fixed 'or' and 'xor'.

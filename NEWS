@@ -1,57 +1,15 @@
-Changes in version 1.18:
+Changes in version 1.19:
 
-A bug has been fixed in the "or" and "xor" operations of ddrescuelog.
+A race condition at start of run with "--timeout=0" has been fixed.
 
-The new option "-H, --test-mode" has been added.
+Trimming is now done in one pass.
 
-The new option "-L, --loose-domain" has been added to ddrescue and
-ddrescuelog.
+Splitting is now done in several passes, minimizing head movement. The
+largest blocks are split first. Then each pass splits all blocks larger
+than half the size of the blocks split in the previous pass. When the
+size of all remaining non-split blocks drops to less than 14 sectors,
+they are read sequentially. Seek direction is reversed between passes,
+so that the heads never need to cross the whole disc just to begin
+another pass.
 
-The new option "-N, --no-trim" has been added.
-
-The new option "-O, --reopen-on-error" has been added.
-
-The new options "-1, --log-rates" and "-2, --log-reads" have been added.
-They produce data files usable by plotting utilities like gnuplot.
-
-The option "-K, --skip-size" has been extended to accept a maximum skip
-size and to disable skipping.
-
-The long name of option "-r" has been changed to "--retry-passes" to
-make it clear that ddrescue tries each sector only once per retry pass.
-
-The short name of option "--generate-mode" has been changed to "-G".
-
-The default value of option "-l, --logfile-size" has been increased to
-10000 (from 1000).
-
-If ddrescue is interrupted by a signal, it now terminates by raising the
-signal received.
-
-The algorithm of the copying phase has been changed. It now marks as
-non-trimmed just the failed blocks, skips beyond them, and tries the
-skipped areas later in two additional passes (before trimming),
-reversing the direction after each pass. The third pass is a sweeping
-pass, with skipping disabled. The new method is faster around large
-errors, keeps the logfile smaller, and produces better starting points
-for trimming, which now tries the smallest blocks first.
-
-Speed has been improved when using complex domains with option '-m,
---domain-logfile'.
-
-Current total run time is now shown on the screen.
-
-The pass number and direction are now shown during the copying phase.
-
-The message "About to copy an unknown number of bytes" is now shown when
-the size of the input file can't be determined.
-
-The option "-B, --binary-prefixes" has been added to ddrescuelog.
-
-The new option "-C, --complete-logfile" has been added to ddrescuelog.
-
-The new option "-P, --compare-as-domain" has been added to ddrescuelog.
-
-Many improvements have been made to the documentation.
-
-"ddrescue.texinfo" has been renamed to "ddrescue.texi".
+The license has been changed to GPL version 2 or later.

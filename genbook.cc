@@ -4,7 +4,7 @@
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
+    the Free Software Foundation, either version 2 of the License, or
     (at your option) any later version.
 
     This program is distributed in the hope that it will be useful,
@@ -80,6 +80,11 @@ void Genbook::show_status( const long long ipos, const char * const msg,
 
   if( ipos >= 0 ) last_ipos = ipos;
   const long t2 = std::time( 0 );
+  if( t2 < t1 )					// clock jumped back
+    {
+    t0 -= std::min( t0, t1 - t2 );
+    t1 = t2;
+    }
   if( t2 > t1 || force )
     {
     if( t2 > t1 )
@@ -103,11 +108,6 @@ void Genbook::show_status( const long long ipos, const char * const msg,
       oldlen = len;
       }
     std::fflush( stdout );
-    }
-  else if( t2 < t1 )			// clock jumped back
-    {
-    t0 -= std::min( t0, t1 - t2 );
-    t1 = t2;
     }
   }
 

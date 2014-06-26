@@ -4,7 +4,7 @@
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
+    the Free Software Foundation, either version 2 of the License, or
     (at your option) any later version.
 
     This program is distributed in the hope that it will be useful,
@@ -219,6 +219,8 @@ class Rescuebook : public Logbook, public Rb_options
   int rcopy_non_tried( const char * const msg, const int pass );
   int trim_errors();
   int split_errors();
+  int split_block( const Block & block, const char * const msg );
+  int copy_block_by_sectors( const Block & block, const char * const msg );
   int copy_errors();
   int rcopy_errors();
   void update_rates( const bool force = false );

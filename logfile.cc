@@ -4,7 +4,7 @@
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
+    the Free Software Foundation, either version 2 of the License, or
     (at your option) any later version.
 
     This program is distributed in the hope that it will be useful,
@@ -340,22 +340,6 @@ int Logfile::find_largest_sblock( const Sblock::Status st,
     const Sblock & sb = sblock_vector[i];
     if( sb.status() == st && sb.size() > size && domain.includes( sb ) )
       { size = sb.size(); index = i; }
-    }
-  return index;
-  }
-
-
-int Logfile::find_smallest_sblock( const Sblock::Status st,
-                                   const Domain & domain, const int min_size ) const
-  {
-  long long size = LLONG_MAX;
-  int index = -1;
-  for( int i = 0; i < sblocks(); ++i )
-    {
-    const Sblock & sb = sblock_vector[i];
-    if( sb.status() == st && ( sb.size() < size || index < 0 ) &&
-        domain.includes( sb ) )
-      { size = sb.size(); index = i; if( size <= min_size ) break; }
     }
   return index;
   }

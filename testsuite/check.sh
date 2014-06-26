@@ -166,7 +166,7 @@ rm -f logfile
 cat ${in} > copy || framework_failure
 printf "garbage" >> copy || framework_failure
 cat ${in2} > out || framework_failure
-"${DDRESCUE}" -q -t -x 35744 ${in1} copy || fail=1
+"${DDRESCUE}" -q -t -x 36388 ${in1} copy || fail=1
 "${DDRESCUE}" -q -G ${in} out logfile || fail=1
 "${DDRESCUE}" -q -R -T1.5d copy out logfile || fail=1
 cmp ${in} out || fail=1
@@ -199,13 +199,13 @@ printf .
 if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
 "${DDRESCUELOG}" -P ${logfile1} logfile || fail=1
 printf .
-"${DDRESCUELOG}" -b2048 -s35744 -f -c?+ logfile < out || fail=1
+"${DDRESCUELOG}" -b2048 -s36388 -f -c?+ logfile < out || fail=1
 "${DDRESCUELOG}" -p ${logfile2} logfile || fail=1
 printf .
 "${DDRESCUELOG}" -b2048 -f -c?+ logfile < out || fail=1
-"${DDRESCUELOG}" -s35744 -p ${logfile2} logfile || fail=1
+"${DDRESCUELOG}" -s36388 -p ${logfile2} logfile || fail=1
 printf .
-"${DDRESCUELOG}" -q -s35745 -p ${logfile2} logfile
+"${DDRESCUELOG}" -q -s36389 -p ${logfile2} logfile
 if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
 
 printf "10\n12\n14\n16\n" | "${DDRESCUELOG}" -b2048 -f -c+? logfile || fail=1

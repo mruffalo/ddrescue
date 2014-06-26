@@ -6,8 +6,8 @@
 @finalout
 @c %**end of header
 
-@set UPDATED 7 June 2014
-@set VERSION 1.18
+@set UPDATED 26 June 2014
+@set VERSION 1.19-pre1
 
 @dircategory GNU Packages
 @direntry
@@ -245,25 +245,29 @@ at most two times; the first in this step (usually as part of a large
 block read, but sometimes as a single sector read), the second in one of
 the steps below as a single sector read.
 
-3) (Second phase; Trimming) Read forwards one sector at a time from the
-leading edge of the smallest non-trimmed block, until a bad sector is
-found. Then read backwards one sector at a time from the trailing edge
-of the same block, until a bad sector is found. For each non-trimmed
-block, mark the bad sectors found as bad-sector and mark the rest of
-that block as non-split without trying to read it. Repeat until there
-are no more non-trimmed blocks. (Large non-trimmed blocks are produced
-by concatenation of smaller ones, and its fraction of good data at the
-edges is therefore smaller).
+3) (Second phase; Trimming) Trimming is done in one pass. For each
+non-trimmed block, read forwards one sector at a time from the leading
+edge of the block until a bad sector is found. Then read backwards one
+sector at a time from the trailing edge of the block until a bad sector
+is found. Then mark the bad sectors found (if any) as bad-sector, and
+mark the rest of the block as non-split without trying to read it.
 
-4) (Third phase; Splitting) Read forwards one sector at a time from the
-center of the largest non-split block, until a bad sector is found.
-Then, if the bad sector found is not the first one tried, read backwards
-one sector at a time from the center of the same block, until a bad
-sector is found. If the logfile is larger than @samp{--logfile-size},
-read sequentially the largest non-split blocks until the number of
-entries in the logfile drops below @samp{--logfile-size}. Repeat until
-all remaining non-split blocks have less than 7 sectors. Then read the
-remaining non-split blocks sequentially.
+4) (Third phase; Splitting) Splitting is done in several passes,
+minimizing head movement. The largest blocks are split first. Then each
+pass splits all blocks larger than half the size of the blocks split in
+the previous pass. When the size of all remaining non-split blocks drops
+to less than 14 sectors, they are read sequentially. Seek direction is
+reversed between passes, so that the heads never need to cross the whole
+disc just to begin another pass. If the logfile is larger than
+@samp{--logfile-size}, the blocks are fully read, instead of split,
+until the number of entries in the logfile drops below
+@samp{--logfile-size}.
+
+Reading a block is done forwards one sector at a time. Splitting a block
+is done by reading forwards one sector at a time from the center of the
+block until a bad sector is found. Then, if the bad sector found is not
+the first one tried, sectors are read backwards, one at a time, from the
+center of the block until a bad sector is found.
 
 5) (Fourth phase; Retrying) Optionally try to read again the bad sectors
 until the specified number of retry passes is reached. Every bad sector
@@ -499,11 +503,11 @@ became larger during the copying or trimming phases. Defaults to 10000.
 @item -L
 @itemx --loose-domain
 Accept an incomplete synthetic (user fabricated) domain logfile or
-test-mode logfile and fill the gaps with non-tried blocks. The blocks in
-the logfile must be strictly ascending and non-overlapping, but they do
-not need to be contiguous. This option allows making quick edits to a
-logfile without all the size calculations involved in making all data
-blocks contiguous again.
+test-mode logfile and fill the gaps in the list of data blocks with
+non-tried blocks. The blocks in the logfile must be strictly ascending
+and non-overlapping, but they do not need to be contiguous. This option
+allows making quick edits to a logfile without all the size calculations
+involved in making all data blocks contiguous again.
 
 @item -m @var{file}
 @itemx --domain-logfile=@var{file}
@@ -1312,11 +1316,11 @@ other similar filesystem repairing tool.
 @item -L
 @itemx --loose-domain
 Accept an incomplete synthetic (user fabricated) domain logfile or
-compare-as-domain logfile and fill the gaps with non-tried blocks. The
-blocks in the logfile must be strictly ascending and non-overlapping,
-but they do not need to be contiguous. This option allows making quick
-edits to a logfile without all the size calculations involved in making
-all data blocks contiguous again.
+compare-as-domain logfile and fill the gaps in the list of data blocks
+with non-tried blocks. The blocks in the logfile must be strictly
+ascending and non-overlapping, but they do not need to be contiguous.
+This option allows making quick edits to a logfile without all the size
+calculations involved in making all data blocks contiguous again.
 
 @item -m @var{file}
 @itemx --domain-logfile=@var{file}
