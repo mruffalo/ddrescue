@@ -87,7 +87,7 @@ class Sblock : public Block
   {
 public:
   enum Status
-    { non_tried = '?', non_trimmed = '*', non_split = '/',
+    { non_tried = '?', non_trimmed = '*', non_scraped = '/',
       bad_sector = '-', finished = '+' };
 private:
   Status status_;
@@ -109,7 +109,7 @@ public:
   Sblock split( const long long pos, const int hardbs = 1 )
     { return Sblock( Block::split( pos, hardbs ), status_ ); }
   static bool isstatus( const int st )
-    { return ( st == non_tried || st == non_trimmed || st == non_split ||
+    { return ( st == non_tried || st == non_trimmed || st == non_scraped ||
                st == bad_sector || st == finished ); }
   static bool is_good_status( const Status st )
     { return ( st == non_tried || st == finished ); }
@@ -182,7 +182,7 @@ class Logfile
   {
 public:
   enum Status
-    { copying = '?', trimming = '*', splitting = '/', retrying = '-',
+    { copying = '?', trimming = '*', scraping = '/', retrying = '-',
       filling = 'F', generating = 'G', finished = '+' };
 
 private:
@@ -243,8 +243,6 @@ public:
     }
 
   int find_index( const long long pos ) const;
-  int find_largest_sblock( const Sblock::Status st,
-                           const Domain & domain ) const;
   void find_chunk( Block & b, const Sblock::Status st,
                    const Domain & domain, const int alignment = 1 ) const;
   void rfind_chunk( Block & b, const Sblock::Status st,
@@ -253,7 +251,7 @@ public:
                            const Domain & domain );
 
   static bool isstatus( const int st )
-    { return ( st == copying || st == trimming || st == splitting ||
+    { return ( st == copying || st == trimming || st == scraping ||
                st == retrying || st == filling || st == generating ||
                st == finished ); }
   static const char * status_name( const Status st );

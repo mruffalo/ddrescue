@@ -76,7 +76,7 @@ void show_help( const int cluster, const int hardbs, const int skipbs )
                "  -h, --help                     display this help and exit\n"
                "  -V, --version                  output version information and exit\n"
                "  -a, --min-read-rate=<bytes>    minimum read rate of good areas in bytes/s\n"
-               "  -A, --try-again                mark non-split, non-trimmed blocks as non-tried\n"
+               "  -A, --try-again                mark non-trimmed, non-scraped as non-tried\n"
                "  -b, --sector-size=<bytes>      sector size of input device [default %d]\n", hardbs );
   std::printf( "  -B, --binary-prefixes          show binary multipliers in numbers [SI]\n"
                "  -c, --cluster-size=<sectors>   sectors to copy at a time [%d]\n", cluster );
@@ -93,11 +93,10 @@ void show_help( const int cluster, const int hardbs, const int skipbs )
                "  -I, --verify-input-size        verify input file size with size in logfile\n"
                "  -K, --skip-size=<min>[,<max>]  initial size to skip on read error [%sB]\n",
                format_num( skipbs, 9999, -1 ) );
-  std::printf( "  -l, --logfile-size=<entries>   do not grow logfile beyond this size [10000]\n"
-               "  -L, --loose-domain             accept an incomplete domain logfile\n"
+  std::printf( "  -L, --loose-domain             accept an incomplete domain logfile\n"
                "  -m, --domain-logfile=<file>    restrict domain to finished blocks in file\n"
                "  -M, --retrim                   mark all failed blocks as non-trimmed\n"
-               "  -n, --no-split                 skip the splitting phase\n"
+               "  -n, --no-scrape                skip the scraping phase\n"
                "  -N, --no-trim                  skip the trimming phase\n"
                "  -o, --output-position=<bytes>  starting position in output file [ipos]\n"
                "  -O, --reopen-on-error          reopen input file after every read error\n"
@@ -446,8 +445,8 @@ int do_rescue( const long long offset, Domain & domain,
 
       std::printf( "Direct: %s    ", rescuebook.o_direct ? "yes" : "no" );
       std::printf( "Sparse: %s    ", rescuebook.sparse ? "yes" : "no" );
-      std::printf( "Split: %s    ", !rescuebook.nosplit ? "yes" : "no" );
       std::printf( "Trim: %s    ", !rescuebook.notrim ? "yes" : "no" );
+      std::printf( "Scrape: %s    ", !rescuebook.noscrape ? "yes" : "no" );
       std::printf( "Truncate: %s    ", o_trunc ? "yes" : "no" );
       std::printf( "\n" );
       if( rescuebook.complete_only )
@@ -540,7 +539,6 @@ int main( const int argc, const char * const argv[] )
     { '2', "log-reads",           Arg_parser::yes },
     { 'a', "min-read-rate",       Arg_parser::yes },
     { 'A', "try-again",           Arg_parser::no  },
-    { 'b', "block-size",          Arg_parser::yes },
     { 'b', "sector-size",         Arg_parser::yes },
     { 'B', "binary-prefixes",     Arg_parser::no  },
     { 'c', "cluster-size",        Arg_parser::yes },
@@ -557,10 +555,10 @@ int main( const int argc, const char * const argv[] )
     { 'i', "input-position",      Arg_parser::yes },
     { 'I', "verify-input-size",   Arg_parser::no  },
     { 'K', "skip-size",           Arg_parser::yes },
-    { 'l', "logfile-size",        Arg_parser::yes },
     { 'L', "loose-domain",        Arg_parser::no  },
     { 'm', "domain-logfile",      Arg_parser::yes },
     { 'M', "retrim",              Arg_parser::no  },
+    { 'n', "no-scrape",           Arg_parser::no  },
     { 'n', "no-split",            Arg_parser::no  },
     { 'N', "no-trim",             Arg_parser::no  },
     { 'o', "output-position",     Arg_parser::yes },
@@ -570,7 +568,6 @@ int main( const int argc, const char * const argv[] )
     { 'r', "retry-passes",        Arg_parser::yes },
     { 'R', "reverse",             Arg_parser::no  },
     { 's', "size",                Arg_parser::yes },
-    { 's', "max-size",            Arg_parser::yes },
     { 'S', "sparse",              Arg_parser::no  },
     { 't', "truncate",            Arg_parser::no  },
     { 'T', "timeout",             Arg_parser::yes },
@@ -619,11 +616,10 @@ int main( const int argc, const char * const argv[] )
       case 'i': ipos = getnum( arg, hardbs, 0 ); break;
       case 'I': verify_input_size = true; break;
       case 'K': parse_skipbs( arg, rb_opts, hardbs ); break;
-      case 'l': rb_opts.max_logfile_size = getnum( arg, 0, 1, INT_MAX ); break;
       case 'L': loose = true; break;
       case 'm': set_name( &domain_logfile_name, arg, code ); break;
       case 'M': rb_opts.retrim = true; break;
-      case 'n': rb_opts.nosplit = true; break;
+      case 'n': rb_opts.noscrape = true; break;
       case 'N': rb_opts.notrim = true; break;
       case 'o': opos = getnum( arg, hardbs, 0 ); break;
       case 'O': rb_opts.reopen_on_error = true; break;

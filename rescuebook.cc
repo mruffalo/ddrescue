@@ -49,7 +49,7 @@ void Rescuebook::count_errors()
       case Sblock::non_tried:
       case Sblock::finished:   good = true; break;
       case Sblock::non_trimmed:
-      case Sblock::non_split:
+      case Sblock::non_scraped:
       case Sblock::bad_sector: if( good ) { good = false; ++errors; } break;
       }
     }
@@ -288,19 +288,22 @@ int Rescuebook::rcopy_non_tried( const char * const msg, const int pass )
 
 
 // Return values: 1 I/O error, 0 OK, -1 interrupted, -2 logfile error.
-// Trim the damaged areas (sequentially forwards) from both edges.
+// Trim both edges of each damaged area sequentially.
 //
 int Rescuebook::trim_errors()
   {
-  const char * const msg = "Trimming failed blocks...";
+  const char * const msg = reverse ? "Trimming failed blocks (backwards)..." :
+                                     "Trimming failed blocks (forwards)...";
   first_post = true;
   read_logger.print_msg( t1 - t0, msg );
 
   for( int i = 0; i < sblocks(); )
     {
-    const Sblock sb = sblock( i );
+    const Sblock sb = sblock( reverse ? sblocks() - i - 1 : i );
     if( !domain().includes( sb ) )
-      { if( domain() < sb ) break; else { ++i; continue; } }
+      { if( ( !reverse && domain() < sb ) || ( reverse && domain() > sb ) )
+          break;
+        ++i; continue; }
     if( sb.status() != Sblock::non_trimmed ) { ++i; continue; }
     current_status( trimming, msg );
     long long pos = sb.pos();
@@ -334,7 +337,7 @@ int Rescuebook::trim_errors()
         const int index = find_index( end - 1 );
         if( index >= 0 && domain().includes( sblock( index ) ) &&
             sblock( index ).status() == Sblock::non_trimmed )
-          errors += change_chunk_status( sblock( index ), Sblock::non_split,
+          errors += change_chunk_status( sblock( index ), Sblock::non_scraped,
                                          domain() );
         }
       update_rates();
@@ -346,109 +349,38 @@ int Rescuebook::trim_errors()
 
 
 // Return values: 1 I/O error, 0 OK, -1 interrupted, -2 logfile error.
-// Split the damaged areas (largest first), minimizing head movement.
-// Then read the remaining small areas (less than 14 sectors) sequentially.
+// Scrape the damaged areas sequentially.
 //
-int Rescuebook::split_errors()
+int Rescuebook::scrape_errors()
   {
-  char msgbuf[80] = "Splitting failed blocks... Pass ";
-  const int msglen = std::strlen( msgbuf );
-  const long long min_split_size = hardbs() * 7;
-  long long threshold_size;	// minimum block size to process in each pass
-  bool forward = true;
+  const char * const msg = reverse ? "Scraping failed blocks (backwards)..." :
+                                     "Scraping failed blocks (forwards)...";
+  first_post = true;
+  read_logger.print_msg( t1 - t0, msg );
 
-  {
-  int index = find_largest_sblock( Sblock::non_split, domain() );
-  if( index < 0 ) return 0;				// no blocks
-  threshold_size = sblock( index ).size();
-  }
-
-  for( int pass = 1; ; ++pass )
+  for( int i = 0; i < sblocks(); )
     {
-    threshold_size /= 2;
-    if( threshold_size < min_split_size ) threshold_size = 0;
-    first_post = true;
-    snprintf( msgbuf + msglen, ( sizeof msgbuf ) - msglen, "%d %s",
-              pass, forward ? "(forwards)" : "(backwards)" );
-    bool block_found = false;
-    for( int i = 0; i < sblocks(); )
+    const Sblock sb = sblock( reverse ? sblocks() - i - 1 : i );
+    if( !domain().includes( sb ) )
+      { if( ( !reverse && domain() < sb ) || ( reverse && domain() > sb ) )
+          break;
+        ++i; continue; }
+    if( sb.status() != Sblock::non_scraped ) { ++i; continue; }
+    current_status( scraping, msg );
+    long long pos = sb.pos();
+    const long long end = sb.end();
+    while( pos < end )
       {
-      const Sblock sb = sblock( forward ? i : sblocks() - i - 1 );
-      if( !domain().includes( sb ) )
-        { if( ( forward && domain() < sb ) || ( !forward && domain() > sb ) )
-            break;
-          ++i; continue; }
-      if( sb.status() != Sblock::non_split || sb.size() < threshold_size )
-        { ++i; continue; }
-      if( first_post ) read_logger.print_msg( t1 - t0, msgbuf );
-      current_status( splitting, msgbuf );
-      block_found = true;
-      int retval;
-      if( sblocks() < max_logfile_size && threshold_size >= min_split_size )
-        retval = split_block( sb, msgbuf );
-      else			// logfile is full or block is small
-        retval = copy_block_by_sectors( sb, msgbuf );
+      Block b( pos, std::min( (long long)hardbs(), end - pos ) );
+      if( b.end() != end ) b.align_end( hardbs() );
+      pos = b.end();
+      int error_size = 0;
+      const int retval = copy_and_update( b, error_size, msg, true );
       if( retval ) return retval;
+      if( error_size > 0 ) error_rate += error_size;
+      update_rates();
+      if( !update_logfile( odes_ ) ) return -2;
       }
-    if( !block_found && threshold_size <= 0 ) return 0;
-    forward = !forward;
-    }
-  }
-
-
-int Rescuebook::split_block( const Block & block, const char * const msg )
-  {
-  long long midpos =
-    block.pos() + ( ( block.size() / ( 2 * hardbs() ) ) * hardbs() );
-  long long pos = midpos;
-  while( pos >= 0 && pos < block.end() )
-    {
-    Block b( pos, std::min( (long long)hardbs(), block.end() - pos ) );
-    if( b.end() != block.end() ) b.align_end( hardbs() );
-    pos = b.end();
-    int error_size = 0;
-    const int retval = copy_and_update( b, error_size, msg, true );
-    if( retval ) return retval;
-    if( error_size > 0 )
-      { error_rate += error_size; pos = -1;
-        if( b.pos() == midpos ) midpos = -1; }	// skip backwards reads
-    update_rates();
-    if( !update_logfile( odes_ ) ) return -2;
-    }
-  long long end = midpos;
-  while( end > 0 && end > block.pos() )
-    {
-    const int size = std::min( (long long)hardbs(), end - block.pos() );
-    Block b( end - size, size );
-    if( b.pos() != block.pos() ) b.align_pos( hardbs() );
-    end = b.pos();
-    int error_size = 0;
-    const int retval = copy_and_update( b, error_size, msg, true );
-    if( retval ) return retval;
-    if( error_size > 0 ) { error_rate += error_size; end = -1; }
-    update_rates();
-    if( !update_logfile( odes_ ) ) return -2;
-    }
-  return 0;
-  }
-
-
-int Rescuebook::copy_block_by_sectors( const Block & block,
-                                       const char * const msg )
-  {
-  long long pos = block.pos();
-  const long long end = block.end();
-  while( pos < end )
-    {
-    Block b( pos, std::min( (long long)hardbs(), end - pos ) );
-    if( b.end() != end ) b.align_end( hardbs() );
-    pos = b.end();
-    int error_size = 0;
-    const int retval = copy_and_update( b, error_size, msg, true );
-    if( retval ) return retval;
-    if( error_size > 0 ) error_rate += error_size;
-    update_rates();
-    if( !update_logfile( odes_ ) ) return -2;
     }
   return 0;
   }
@@ -653,7 +585,7 @@ Rescuebook::Rescuebook( const long long offset, const long long isize,
       const Sblock & sb = sblock( index );
       if( !domain().includes( sb ) )
         { if( domain() < sb ) break; else continue; }
-      if( sb.status() == Sblock::non_split ||
+      if( sb.status() == Sblock::non_scraped ||
           sb.status() == Sblock::bad_sector )
         change_sblock_status( index, Sblock::non_trimmed );
       }
@@ -663,7 +595,7 @@ Rescuebook::Rescuebook( const long long offset, const long long isize,
       const Sblock & sb = sblock( index );
       if( !domain().includes( sb ) )
         { if( domain() < sb ) break; else continue; }
-      if( sb.status() == Sblock::non_split ||
+      if( sb.status() == Sblock::non_scraped ||
           sb.status() == Sblock::non_trimmed )
         change_sblock_status( index, Sblock::non_tried );
       }
@@ -676,7 +608,7 @@ Rescuebook::Rescuebook( const long long offset, const long long isize,
 //
 int Rescuebook::do_rescue( const int ides, const int odes )
   {
-  bool copy_pending = false, trim_pending = false, split_pending = false;
+  bool copy_pending = false, trim_pending = false, scrape_pending = false;
   ides_ = ides; odes_ = odes;
 
   for( int i = 0; i < sblocks(); ++i )
@@ -685,10 +617,10 @@ int Rescuebook::do_rescue( const int ides, const int odes )
     if( !domain().includes( sb ) ) { if( domain() < sb ) break; else continue; }
     switch( sb.status() )
       {
-      case Sblock::non_tried:   copy_pending = trim_pending = split_pending = true;
+      case Sblock::non_tried:   copy_pending = trim_pending = scrape_pending = true;
                                 break;
       case Sblock::non_trimmed: trim_pending = true;	// fall through
-      case Sblock::non_split:   split_pending = true;	// fall through
+      case Sblock::non_scraped: scrape_pending = true;	// fall through
       case Sblock::bad_sector:  errsize += sb.size(); break;
       case Sblock::finished:    recsize += sb.size(); break;
       }
@@ -722,8 +654,8 @@ int Rescuebook::do_rescue( const int ides, const int odes )
     retval = copy_non_tried();
   if( retval == 0 && trim_pending && !notrim && !errors_or_timeout() )
     retval = trim_errors();
-  if( retval == 0 && split_pending && !nosplit && !errors_or_timeout() )
-    retval = split_errors();
+  if( retval == 0 && scrape_pending && !noscrape && !errors_or_timeout() )
+    retval = scrape_errors();
   if( retval == 0 && max_retries != 0 && !errors_or_timeout() )
     retval = reverse ? rcopy_errors() : copy_errors();
   if( !rates_updated ) update_rates( true );	// force update of e_code

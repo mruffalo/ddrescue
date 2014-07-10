@@ -1,3 +1,10 @@
+2014-07-09  Antonio Diaz Diaz  <antonio@gnu.org>
+
+	* Version 1.19-pre2 released.
+	* The splitting phase has been replaced by a scraping phase.
+	* Removed option '-l, --logfile-size'.
+	* rescuebook.cc: Trimming may now be run in reverse.
+
 2014-06-26  Antonio Diaz Diaz  <antonio@gnu.org>
 
 	* Version 1.19-pre1 released.

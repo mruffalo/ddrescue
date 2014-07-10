@@ -2,14 +2,12 @@ Changes in version 1.19:
 
 A race condition at start of run with "--timeout=0" has been fixed.
 
-Trimming is now done in one pass.
+Trimming is now done in one pass and may be run in reverse.
 
-Splitting is now done in several passes, minimizing head movement. The
-largest blocks are split first. Then each pass splits all blocks larger
-than half the size of the blocks split in the previous pass. When the
-size of all remaining non-split blocks drops to less than 14 sectors,
-they are read sequentially. Seek direction is reversed between passes,
-so that the heads never need to cross the whole disc just to begin
-another pass.
+The splitting phase has been replaced by a "scraping" phase that scrapes
+together the data not recovered by the copying or trimming phases.
+Scraping reads each non-scraped block forwards, one sector at a time.
+
+The option '-l, --logfile-size' is no more needed and has been removed.
 
 The license has been changed to GPL version 2 or later.

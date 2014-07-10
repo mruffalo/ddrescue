@@ -460,9 +460,9 @@ const char * format_percentage( long long num, long long den,
 
 int do_show_status( Domain & domain, const char * const logname )
   {
-  long long size_non_tried = 0, size_non_trimmed = 0, size_non_split = 0;
+  long long size_non_tried = 0, size_non_trimmed = 0, size_non_scraped = 0;
   long long size_bad_sector = 0, size_finished = 0;
-  int areas_non_tried = 0, areas_non_trimmed = 0, areas_non_split = 0;
+  int areas_non_tried = 0, areas_non_trimmed = 0, areas_non_scraped = 0;
   int areas_bad_sector = 0, areas_finished = 0;
   int errors = 0;
   Sblock::Status old_status = Sblock::non_tried;
@@ -494,9 +494,9 @@ int do_show_status( Domain & domain, const char * const logname )
       case Sblock::non_trimmed: size_non_trimmed += sb.size();
                                 if( good ) { good = false; ++errors; }
                                 if( sc ) ++areas_non_trimmed; break;
-      case Sblock::non_split:   size_non_split += sb.size();
+      case Sblock::non_scraped: size_non_scraped += sb.size();
                                 if( good ) { good = false; ++errors; }
-                                if( sc ) ++areas_non_split; break;
+                                if( sc ) ++areas_non_scraped; break;
       case Sblock::bad_sector:  size_bad_sector += sb.size();
                                 if( good ) { good = false; ++errors; }
                                 if( sc ) ++areas_bad_sector; break;
@@ -505,7 +505,7 @@ int do_show_status( Domain & domain, const char * const logname )
     }
 
   const long long domain_size = domain.in_size();
-  const long long errsize = size_non_trimmed + size_non_split + size_bad_sector;
+  const long long errsize = size_non_trimmed + size_non_scraped + size_bad_sector;
   std::printf( "\n   current pos: %10sB,  current status: %s\n",
                format_num( logfile.current_pos() ),
                logfile.status_name( logfile.current_status() ) );
@@ -530,9 +530,9 @@ int do_show_status( Domain & domain, const char * const logname )
   std::printf( "   non-trimmed: %10sB,  in %5d area(s)  (%s)\n",
                format_num( size_non_trimmed ), areas_non_trimmed,
                format_percentage( size_non_trimmed, domain_size ) );
-  std::printf( "     non-split: %10sB,  in %5d area(s)  (%s)\n",
-               format_num( size_non_split ), areas_non_split,
-               format_percentage( size_non_split, domain_size ) );
+  std::printf( "   non-scraped: %10sB,  in %5d area(s)  (%s)\n",
+               format_num( size_non_scraped ), areas_non_scraped,
+               format_percentage( size_non_scraped, domain_size ) );
   std::printf( "    bad-sector: %10sB,  in %5d area(s)  (%s)\n",
                format_num( size_bad_sector ), areas_bad_sector,
                format_percentage( size_bad_sector, domain_size ) );

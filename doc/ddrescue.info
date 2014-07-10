@@ -12,7 +12,7 @@ File: ddrescue.info,  Node: Top,  Next: Introduction,  Up: (dir)
 GNU ddrescue Manual
 *******************
 
-This manual is for GNU ddrescue (version 1.19-pre1, 26 June 2014).
+This manual is for GNU ddrescue (version 1.19-pre2, 9 July 2014).
 
 * Menu:
 
@@ -224,33 +224,22 @@ pass until all the rescue domain is tried. The third pass is a sweeping
 pass, with skipping disabled. (The purpose is to delimit large errors
 fast, keep the logfile small, and produce good starting points for
 trimming). Only non-tried areas are read in large blocks. Trimming,
-splitting and retrying are done sector by sector. Each sector is tried
-at most two times; the first in this step (usually as part of a large
-block read, but sometimes as a single sector read), the second in one of
-the steps below as a single sector read.
+scraping and retrying are done sector by sector. Each sector is tried at
+most two times; the first in this step (usually as part of a large block
+read, but sometimes as a single sector read), the second in one of the
+steps below as a single sector read.
 
    3) (Second phase; Trimming) Trimming is done in one pass. For each
 non-trimmed block, read forwards one sector at a time from the leading
 edge of the block until a bad sector is found. Then read backwards one
 sector at a time from the trailing edge of the block until a bad sector
 is found. Then mark the bad sectors found (if any) as bad-sector, and
-mark the rest of the block as non-split without trying to read it.
+mark the rest of the block as non-scraped without trying to read it.
 
-   4) (Third phase; Splitting) Splitting is done in several passes,
-minimizing head movement. The largest blocks are split first. Then each
-pass splits all blocks larger than half the size of the blocks split in
-the previous pass. When the size of all remaining non-split blocks drops
-to less than 14 sectors, they are read sequentially. Seek direction is
-reversed between passes, so that the heads never need to cross the whole
-disc just to begin another pass. If the logfile is larger than
-'--logfile-size', the blocks are fully read, instead of split, until
-the number of entries in the logfile drops below '--logfile-size'.
-
-   Reading a block is done forwards one sector at a time. Splitting a
-block is done by reading forwards one sector at a time from the center
-of the block until a bad sector is found. Then, if the bad sector found
-is not the first one tried, sectors are read backwards, one at a time,
-from the center of the block until a bad sector is found.
+   4) (Third phase; Scraping) Scrape together the data not recovered by
+the copying or trimming phases. Scraping is done in one pass. Each
+non-scraped block is read forwards, one sector at a time. Any bad
+sectors found are marked as bad-sector.
 
    5) (Fourth phase; Retrying) Optionally try to read again the bad
 sectors until the specified number of retry passes is reached. Every
@@ -262,10 +251,11 @@ retries.
 
 
    The total error size ('errsize') is sum of the sizes of all the
-non-trimmed, non-split and bad-sector blocks. It increases during the
-copying phase and may decrease during trimming, splitting and retrying.
-Note that as ddrescue splits the failed blocks, making them smaller, the
-total error size may decrease while the number of errors increases.
+non-trimmed, non-scraped and bad-sector blocks. It increases during the
+copying phase and may decrease during trimming, scraping and retrying.
+Note that as ddrescue scrapes or retries the failed blocks, the good
+data found may divide them into smaller blocks, decreasing the total
+error size but increasing the number of errors.
 
    The logfile is periodically saved to disc, as well as when ddrescue
 finishes or is interrupted. So in case of a crash you can resume the
@@ -325,11 +315,11 @@ The format for running ddrescue is:
 
 '-A'
 '--try-again'
-     Mark all non-split and non-trimmed blocks inside the rescue domain
-     as non-tried before beginning the rescue. Try this if the drive
-     stops responding and ddrescue immediately starts splitting failed
-     blocks when restarted. If '--retrim' is also specified, mark all
-     failed blocks inside the rescue domain as non-tried.
+     Mark all non-trimmed and non-scraped blocks inside the rescue
+     domain as non-tried before beginning the rescue. Try this if the
+     drive stops responding and ddrescue immediately starts scraping
+     failed blocks when restarted. If '--retrim' is also specified,
+     mark all failed blocks inside the rescue domain as non-tried.
 
 '-b BYTES'
 '--sector-size=BYTES'
@@ -394,7 +384,9 @@ The format for running ddrescue is:
 '-f'
 '--force'
      Force overwrite of OUTFILE. Needed when OUTFILE is not a regular
-     file, but a device or partition.
+     file, but a device or partition. This option is just a safeguard
+     to prevent the inadvertent destruction of partitions, and is
+     ignored for regular files.
 
 '-F TYPES'
 '--fill-mode=TYPES'
@@ -427,7 +419,7 @@ The format for running ddrescue is:
      Starting position of the rescue domain in INFILE, in bytes.
      Defaults to 0. This is not the point from which ddrescue starts
      copying.  (For example, if you pass the '--reverse' option to
-     ddrescue, it starts reading from the end of the rescue domain). In
+     ddrescue, it starts copying from the end of the rescue domain). In
      fill mode it refers to a position in the INFILE of the original
      rescue run. See the chapter Fill mode (*note Fill mode::) for
      details.
@@ -466,13 +458,6 @@ The format for running ddrescue is:
      '--skip-size' is independent from '--cluster-size'. The size to
      skip is calculated from the end of the block that just failed.
 
-'-l ENTRIES'
-'--logfile-size=ENTRIES'
-     During the splitting phase, do not grow logfile beyond this number
-     of entries. Logfile may be larger if it was larger at startup or
-     if it became larger during the copying or trimming phases.
-     Defaults to 10000.  (Each entry is about 26-30 bytes in size).
-
 '-L'
 '--loose-domain'
      Accept an incomplete synthetic (user fabricated) domain logfile or
@@ -498,8 +483,8 @@ The format for running ddrescue is:
      order, making perhaps possible to rescue some of them.
 
 '-n'
-'--no-split'
-     Skip the splitting phase. Avoids spending a lot of time trying to
+'--no-scrape'
+     Skip the scraping phase. Avoids spending a lot of time trying to
      rescue the most difficult parts of the file.
 
 '-N'
@@ -546,12 +531,12 @@ The format for running ddrescue is:
 
 '-R'
 '--reverse'
-     Reverse the direction of the first pass of copying, all retrying
-     passes, and the sequential part of splitting, running them
-     backwards from the end of the rescue domain (or from the end of
-     INFILE if no domain options are specified). '--reverse' does not
-     modify the size of the blocks copied during each phase, just the
-     order in which they are tried.
+     Reverse the direction of all passes (copying, trimming, scraping
+     and retrying), running them backwards from the end of the rescue
+     domain, except the second pass of copying which is now run
+     forwards from the beginning of the rescue domain. '--reverse' does
+     not modify the size of the blocks copied during each phase, just
+     the order in which they are tried.
 
 '-s BYTES'
 '--size=BYTES'
@@ -622,8 +607,8 @@ The format for running ddrescue is:
      copied size and error size) is written to FILE. (The position
      written is always the beginning of the block tried, even if reading
      backwards). A line is also written at the beginning of each phase
-     (copying, trimming, splitting and retrying). Finally, a line with
-     a time mark is written every second (unless the read takes more
+     (copying, trimming, scraping and retrying). Finally, a line with a
+     time mark is written every second (unless the read takes more
      time). Use this option with caution because FILE may become very
      large very quickly. Use lzip to compress FILE if you need to store
      or transmit it.
@@ -683,7 +668,7 @@ status character is one of these:
 Character   Meaning
 '?'         copying non-tried blocks
 '*'         trimming non-trimmed blocks
-'/'         splitting non-split blocks
+'/'         scraping non-scraped blocks
 '-'         retrying bad sectors
 'F'         filling specified blocks
 'G'         generating approximate logfile
@@ -701,13 +686,13 @@ is one of these:
 Character   Meaning
 '?'         non-tried block
 '*'         failed block non-trimmed
-'/'         failed block non-split
+'/'         failed block non-scraped
 '-'         failed block bad-sector(s)
 '+'         finished block
 
 And here is an example logfile:
 
-     # Rescue Logfile. Created by GNU ddrescue version 1.19-pre1
+     # Rescue Logfile. Created by GNU ddrescue version 1.19-pre2
      # Command line: ddrescue -d -c18 /dev/fd0 fdimage logfile
      # Start time:   2014-05-03 09:37:44
      # Current time: 2014-05-03 09:38:19
@@ -1353,21 +1338,21 @@ Concept index
 
 Tag Table:
 Node: Top201
-Node: Introduction1378
-Node: Basic concepts4306
-Node: Important advice6183
-Node: Algorithm7292
-Node: Invoking ddrescue12772
-Node: Logfile structure28044
-Node: Examples30865
-Ref: lziprecover-example34408
-Node: Direct disc access36248
-Node: Fill mode38325
-Node: Generate mode42606
-Node: Ddrescuelog44553
-Node: Invoking ddrescuelog46843
-Node: Problems53818
-Node: Concept index54375
+Node: Introduction1377
+Node: Basic concepts4305
+Node: Important advice6182
+Node: Algorithm7291
+Node: Invoking ddrescue12092
+Node: Logfile structure27188
+Node: Examples30012
+Ref: lziprecover-example33555
+Node: Direct disc access35395
+Node: Fill mode37472
+Node: Generate mode41753
+Node: Ddrescuelog43700
+Node: Invoking ddrescuelog45990
+Node: Problems52965
+Node: Concept index53522
 
 End Tag Table
 

@@ -129,14 +129,13 @@ struct Rb_options
   long long min_read_rate;
   long timeout;
   int max_errors;
-  int max_logfile_size;
   int max_retries;
   int o_direct;			// O_DIRECT or 0
   int skipbs;			// initial size to skip on read error
   int max_skipbs;		// maximum size to skip on read error
   bool complete_only;
   bool new_errors_only;
-  bool nosplit;
+  bool noscrape;
   bool notrim;
   bool reopen_on_error;
   bool retrim;
@@ -146,25 +145,23 @@ struct Rb_options
 
   Rb_options()
     : max_error_rate( -1 ), min_outfile_size( -1 ), min_read_rate( -1 ),
-      timeout( -1 ), max_errors( -1 ), max_logfile_size( 10000 ),
-      max_retries( 0 ), o_direct( 0 ), skipbs( default_skipbs ),
-      max_skipbs( max_max_skipbs ), complete_only( false ),
-      new_errors_only( false ), nosplit( false ), notrim( false ),
-      reopen_on_error( false ), retrim( false ), reverse( false ),
-      sparse( false ), try_again( false )
+      timeout( -1 ), max_errors( -1 ), max_retries( 0 ), o_direct( 0 ),
+      skipbs( default_skipbs ), max_skipbs( max_max_skipbs ),
+      complete_only( false ), new_errors_only( false ), noscrape( false ),
+      notrim( false ), reopen_on_error( false ), retrim( false ),
+      reverse( false ), sparse( false ), try_again( false )
       {}
 
   bool operator==( const Rb_options & o ) const
     { return ( max_error_rate == o.max_error_rate &&
                min_outfile_size == o.min_outfile_size &&
                min_read_rate == o.min_read_rate && timeout == o.timeout &&
-               max_errors == o.max_errors &&
-               max_logfile_size == o.max_logfile_size &&
-               max_retries == o.max_retries && o_direct == o.o_direct &&
-               skipbs == o.skipbs && max_skipbs == o.max_skipbs &&
+               max_errors == o.max_errors && max_retries == o.max_retries &&
+               o_direct == o.o_direct && skipbs == o.skipbs &&
+               max_skipbs == o.max_skipbs &&
                complete_only == o.complete_only &&
                new_errors_only == o.new_errors_only &&
-               nosplit == o.nosplit && notrim == o.notrim &&
+               noscrape == o.noscrape && notrim == o.notrim &&
                reopen_on_error == o.reopen_on_error &&
                retrim == o.retrim && reverse == o.reverse &&
                sparse == o.sparse && try_again == o.try_again ); }
@@ -218,9 +215,7 @@ class Rescuebook : public Logbook, public Rb_options
   int fcopy_non_tried( const char * const msg, const int pass );
   int rcopy_non_tried( const char * const msg, const int pass );
   int trim_errors();
-  int split_errors();
-  int split_block( const Block & block, const char * const msg );
-  int copy_block_by_sectors( const Block & block, const char * const msg );
+  int scrape_errors();
   int copy_errors();
   int rcopy_errors();
   void update_rates( const bool force = false );

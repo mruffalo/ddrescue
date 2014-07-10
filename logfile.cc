@@ -330,21 +330,6 @@ int Logfile::find_index( const long long pos ) const
   }
 
 
-int Logfile::find_largest_sblock( const Sblock::Status st,
-                                  const Domain & domain ) const
-  {
-  long long size = 0;
-  int index = -1;
-  for( int i = 0; i < sblocks(); ++i )
-    {
-    const Sblock & sb = sblock_vector[i];
-    if( sb.status() == st && sb.size() > size && domain.includes( sb ) )
-      { size = sb.size(); index = i; }
-    }
-  return index;
-  }
-
-
 // Find chunk from b.pos of size <= b.size and status st.
 // If not found, put b.size to 0.
 //
@@ -475,7 +460,7 @@ const char * Logfile::status_name( const Logfile::Status st )
     {
     case copying:    return "copying";
     case trimming:   return "trimming";
-    case splitting:  return "splitting";
+    case scraping:   return "scraping";
     case retrying:   return "retrying";
     case filling:    return "filling";
     case generating: return "generating";

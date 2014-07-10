@@ -6,8 +6,8 @@
 @finalout
 @c %**end of header
 
-@set UPDATED 26 June 2014
-@set VERSION 1.19-pre1
+@set UPDATED 9 July 2014
+@set VERSION 1.19-pre2
 
 @dircategory GNU Packages
 @direntry
@@ -240,34 +240,22 @@ pass until all the rescue domain is tried. The third pass is a sweeping
 pass, with skipping disabled. (The purpose is to delimit large errors
 fast, keep the logfile small, and produce good starting points for
 trimming). Only non-tried areas are read in large blocks. Trimming,
-splitting and retrying are done sector by sector. Each sector is tried
-at most two times; the first in this step (usually as part of a large
-block read, but sometimes as a single sector read), the second in one of
-the steps below as a single sector read.
+scraping and retrying are done sector by sector. Each sector is tried at
+most two times; the first in this step (usually as part of a large block
+read, but sometimes as a single sector read), the second in one of the
+steps below as a single sector read.
 
 3) (Second phase; Trimming) Trimming is done in one pass. For each
 non-trimmed block, read forwards one sector at a time from the leading
 edge of the block until a bad sector is found. Then read backwards one
 sector at a time from the trailing edge of the block until a bad sector
 is found. Then mark the bad sectors found (if any) as bad-sector, and
-mark the rest of the block as non-split without trying to read it.
+mark the rest of the block as non-scraped without trying to read it.
 
-4) (Third phase; Splitting) Splitting is done in several passes,
-minimizing head movement. The largest blocks are split first. Then each
-pass splits all blocks larger than half the size of the blocks split in
-the previous pass. When the size of all remaining non-split blocks drops
-to less than 14 sectors, they are read sequentially. Seek direction is
-reversed between passes, so that the heads never need to cross the whole
-disc just to begin another pass. If the logfile is larger than
-@samp{--logfile-size}, the blocks are fully read, instead of split,
-until the number of entries in the logfile drops below
-@samp{--logfile-size}.
-
-Reading a block is done forwards one sector at a time. Splitting a block
-is done by reading forwards one sector at a time from the center of the
-block until a bad sector is found. Then, if the bad sector found is not
-the first one tried, sectors are read backwards, one at a time, from the
-center of the block until a bad sector is found.
+4) (Third phase; Scraping) Scrape together the data not recovered by the
+copying or trimming phases. Scraping is done in one pass. Each
+non-scraped block is read forwards, one sector at a time. Any bad
+sectors found are marked as bad-sector.
 
 5) (Fourth phase; Retrying) Optionally try to read again the bad sectors
 until the specified number of retry passes is reached. Every bad sector
@@ -278,10 +266,11 @@ unrecoverable or if it will be eventually read after some retries.
 
 @sp 1
 The total error size (@samp{errsize}) is sum of the sizes of all the
-non-trimmed, non-split and bad-sector blocks. It increases during the
-copying phase and may decrease during trimming, splitting and retrying.
-Note that as ddrescue splits the failed blocks, making them smaller, the
-total error size may decrease while the number of errors increases.
+non-trimmed, non-scraped and bad-sector blocks. It increases during the
+copying phase and may decrease during trimming, scraping and retrying.
+Note that as ddrescue scrapes or retries the failed blocks, the good
+data found may divide them into smaller blocks, decreasing the total
+error size but increasing the number of errors.
 
 The logfile is periodically saved to disc, as well as when ddrescue
 finishes or is interrupted. So in case of a crash you can resume the
@@ -354,9 +343,9 @@ are ignored.
 
 @item -A
 @itemx --try-again
-Mark all non-split and non-trimmed blocks inside the rescue domain as
+Mark all non-trimmed and non-scraped blocks inside the rescue domain as
 non-tried before beginning the rescue. Try this if the drive stops
-responding and ddrescue immediately starts splitting failed blocks when
+responding and ddrescue immediately starts scraping failed blocks when
 restarted. If @samp{--retrim} is also specified, mark all failed blocks
 inside the rescue domain as non-tried.
 
@@ -421,7 +410,9 @@ being tried are already marked as errors.
 @item -f
 @itemx --force
 Force overwrite of @var{outfile}. Needed when @var{outfile} is not a
-regular file, but a device or partition.
+regular file, but a device or partition. This option is just a safeguard
+to prevent the inadvertent destruction of partitions, and is ignored for
+regular files.
 
 @item -F @var{types}
 @itemx --fill-mode=@var{types}
@@ -455,7 +446,7 @@ presence of read errors.
 Starting position of the rescue domain in @var{infile}, in bytes.
 Defaults to 0. This is not the point from which ddrescue starts copying.
 (For example, if you pass the @samp{--reverse} option to ddrescue, it
-starts reading from the end of the rescue domain). In fill mode it
+starts copying from the end of the rescue domain). In fill mode it
 refers to a position in the @var{infile} of the original rescue run. See
 the chapter Fill mode (@pxref{Fill mode}) for details.
 
@@ -493,13 +484,6 @@ skipping.
 @samp{--skip-size} is independent from @samp{--cluster-size}. The size
 to skip is calculated from the end of the block that just failed.
 
-@item -l @var{entries}
-@itemx --logfile-size=@var{entries}
-During the splitting phase, do not grow logfile beyond this number of
-entries. Logfile may be larger if it was larger at startup or if it
-became larger during the copying or trimming phases. Defaults to 10000.
-(Each entry is about 26-30 bytes in size).
-
 @item -L
 @itemx --loose-domain
 Accept an incomplete synthetic (user fabricated) domain logfile or
@@ -523,8 +507,8 @@ but the bad sectors are tried in a different order, making perhaps
 possible to rescue some of them.
 
 @item -n
-@itemx --no-split
-Skip the splitting phase. Avoids spending a lot of time trying to rescue
+@itemx --no-scrape
+Skip the scraping phase. Avoids spending a lot of time trying to rescue
 the most difficult parts of the file.
 
 @item -N
@@ -571,11 +555,12 @@ of retry passes.
 
 @item -R
 @itemx --reverse
-Reverse the direction of the first pass of copying, all retrying passes,
-and the sequential part of splitting, running them backwards from the
-end of the rescue domain (or from the end of @var{infile} if no domain
-options are specified). @samp{--reverse} does not modify the size of the
-blocks copied during each phase, just the order in which they are tried.
+Reverse the direction of all passes (copying, trimming, scraping and
+retrying), running them backwards from the end of the rescue domain,
+except the second pass of copying which is now run forwards from the
+beginning of the rescue domain. @samp{--reverse} does not modify the
+size of the blocks copied during each phase, just the order in which
+they are tried.
 
 @item -s @var{bytes}
 @itemx --size=@var{bytes}
@@ -645,7 +630,7 @@ will be overwritten. Every read attempt and its result (position, size,
 copied size and error size) is written to @var{file}. (The position
 written is always the beginning of the block tried, even if reading
 backwards). A line is also written at the beginning of each phase
-(copying, trimming, splitting and retrying). Finally, a line with a time
+(copying, trimming, scraping and retrying). Finally, a line with a time
 mark is written every second (unless the read takes more time). Use this
 option with caution because @var{file} may become very large very
 quickly. Use lzip to compress @var{file} if you need to store or
@@ -709,7 +694,7 @@ status character is one of these:
 @item Character @tab Meaning
 @item '?'       @tab copying non-tried blocks
 @item '*'       @tab trimming non-trimmed blocks
-@item '/'       @tab splitting non-split blocks
+@item '/'       @tab scraping non-scraped blocks
 @item '-'       @tab retrying bad sectors
 @item 'F'       @tab filling specified blocks
 @item 'G'       @tab generating approximate logfile
@@ -729,7 +714,7 @@ is one of these:
 @item Character @tab Meaning
 @item '?'       @tab non-tried block
 @item '*'       @tab failed block non-trimmed
-@item '/'       @tab failed block non-split
+@item '/'       @tab failed block non-scraped
 @item '-'       @tab failed block bad-sector(s)
 @item '+'       @tab finished block
 @end multitable
