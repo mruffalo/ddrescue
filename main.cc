@@ -25,6 +25,7 @@
 #define _FILE_OFFSET_BITS 64
 
 #include <algorithm>
+#include <cctype>
 #include <cerrno>
 #include <climits>
 #include <cstdio>
@@ -42,6 +43,7 @@
 #include "rational.h"
 #include "block.h"
 #include "ddrescue.h"
+#include "linux.h"
 #include "loggers.h"
 
 #ifndef O_BINARY
@@ -113,6 +115,7 @@ void show_help( const int cluster, const int hardbs, const int skipbs )
                "  -x, --extend-outfile=<bytes>   extend outfile size to be at least this long\n"
                "  -1, --log-rates=<file>         log rates and error sizes in file\n"
                "  -2, --log-reads=<file>         log all read operations in file\n"
+               "      --ask                      ask for confirmation before starting the copy\n"
                "Numbers may be in decimal, hexadecimal or octal, and may be followed by a\n"
                "multiplier: s = sectors, k = 1000, Ki = 1024, M = 10^6, Mi = 2^20, etc...\n"
                "Time intervals have the format 1[.5][smhd] or 1/2[smhd].\n"
@@ -324,13 +327,66 @@ int do_generate( const long long offset, Domain & domain,
   }
 
 
+const char * device_id_or_size( const int fd )
+  {
+  static char buf[32];
+  const char * p = device_id( fd );
+  if( !p )
+    {
+    const long long size = lseek( fd, 0, SEEK_END );
+    snprintf( buf, sizeof buf, "%lld", size );
+    p = buf;
+    }
+  return p;
+  }
+
+const char * device_id_or_size( const char * const name )
+  {
+  const int fd = open( name, O_RDONLY );
+  const char * const p = ( fd >= 0 ) ? device_id_or_size( fd ) : "";
+  if( fd >= 0 ) close( fd );
+  return p;
+  }
+
+
+void about_to_copy( const Rescuebook & rescuebook, const char * const iname,
+                    const char * const oname, const int ides, const bool ask )
+  {
+  if( ask || verbosity >= 0 )
+    std::printf( "%s %s\n", Program_name, PROGVERSION );
+  if( ask || verbosity >= 1 )
+    {
+    std::string iid, oid;
+    if( ask || verbosity >= 2 )
+      {
+      iid = " ["; iid += device_id_or_size( ides ); iid += ']';
+      oid = " ["; oid += device_id_or_size( oname ); oid += ']';
+      }
+    std::printf( "About to copy %sBytes from %s%s to %s%s.\n",
+                 rescuebook.domain().full() ? "an unknown number of " :
+                   format_num( rescuebook.domain().in_size() ),
+                 iname, iid.c_str(), oname, oid.c_str() );
+    }
+  }
+
+
+bool user_agrees_ids( const Rescuebook & rescuebook, const char * const iname,
+                      const char * const oname, const int ides )
+  {
+  about_to_copy( rescuebook, iname, oname, ides, true );
+  std::printf( "Proceed (y/N)? " );
+  std::fflush( stdout );
+  return ( std::tolower( std::fgetc( stdin ) ) == 'y' );
+  }
+
+
 int do_rescue( const long long offset, Domain & domain,
                const Domain * const test_domain, const Rb_options & rb_opts,
                const char * const iname, const char * const oname,
                const char * const logname, const int cluster,
                const int hardbs, const int o_trunc,
-               const bool preallocate, const bool synchronous,
-               const bool verify_input_size )
+               const bool ask, const bool preallocate,
+               const bool synchronous, const bool verify_input_size )
   {
   const int ides = open( iname, O_RDONLY | rb_opts.o_direct | O_BINARY );
   if( ides < 0 )
@@ -375,6 +431,8 @@ int do_rescue( const long long offset, Domain & domain,
     }
   if( rescuebook.read_only() ) return not_writable( logname );
 
+  if( ask && !user_agrees_ids( rescuebook, iname, oname, ides ) ) return 1;
+
   const int odes = open( oname, O_CREAT | O_WRONLY | o_trunc | O_BINARY,
                          outmode );
   if( odes < 0 )
@@ -396,16 +454,9 @@ int do_rescue( const long long offset, Domain & domain,
   if( !read_logger.open_file() )
     { show_error( "Can't open file for logging reads", errno ); return 1; }
 
-  if( verbosity >= 0 )
-    std::printf( "%s %s\n", Program_name, PROGVERSION );
+  if( !ask ) about_to_copy( rescuebook, iname, oname, ides, false );
   if( verbosity >= 1 )
     {
-    if( rescuebook.domain().full() )
-      std::printf( "About to copy an unknown number of bytes from %s to %s\n",
-                   iname, oname );
-    else
-      std::printf( "About to copy %sBytes from %s to %s\n",
-                   format_num( rescuebook.domain().in_size() ), iname, oname );
     std::printf( "    Starting positions: infile = %sB,  outfile = %sB\n",
                  format_num( rescuebook.domain().pos() ),
                  format_num( rescuebook.domain().pos() + rescuebook.offset() ) );
@@ -507,6 +558,7 @@ bool Rescuebook::reopen_infile()
 
 int main( const int argc, const char * const argv[] )
   {
+  enum Optcode { opt_ask = 256 };
   long long ipos = 0;
   long long opos = -1;
   long long max_size = -1;
@@ -520,6 +572,7 @@ int main( const int argc, const char * const argv[] )
   int o_trunc = 0;
   Mode program_mode = m_none;
   Rb_options rb_opts;
+  bool ask = false;
   bool force = false;
   bool ignore_write_errors = false;
   bool loose = false;
@@ -575,6 +628,7 @@ int main( const int argc, const char * const argv[] )
     { 'V', "version",             Arg_parser::no  },
     { 'w', "ignore-write-errors", Arg_parser::no  },
     { 'x', "extend-outfile",      Arg_parser::yes },
+    { opt_ask, "ask",             Arg_parser::no  },
     {  0 , 0,                     Arg_parser::no  } };
 
   const Arg_parser parser( argc, argv, options );
@@ -635,6 +689,7 @@ int main( const int argc, const char * const argv[] )
       case 'V': show_version(); return 0;
       case 'w': ignore_write_errors = true; break;
       case 'x': rb_opts.min_outfile_size = getnum( arg, hardbs, 1 ); break;
+      case opt_ask: ask = true; break;
       default : internal_error( "uncaught option." );
       }
     } // end process options
@@ -663,12 +718,18 @@ int main( const int argc, const char * const argv[] )
   switch( program_mode )
     {
     case m_fill:
+      if( ask )
+        { show_error( "Option '--ask' is incompatible with fill mode.", 0, true );
+          return 1; }
       if( rb_opts != Rb_options() || test_mode_logfile_name ||
           verify_input_size || preallocate || o_trunc )
         show_error( "warning: Options -aACdeEHIKlMnOprRStTx are ignored in fill mode." );
       return do_fill( opos - ipos, domain, iname, oname, logname, cluster,
                       hardbs, filltypes, ignore_write_errors, synchronous );
     case m_generate:
+      if( ask )
+        { show_error( "Option '--ask' is incompatible with generate mode.", 0, true );
+          return 1; }
       if( rb_opts != Rb_options() || synchronous || test_mode_logfile_name ||
           verify_input_size || preallocate || o_trunc || ignore_write_errors )
         show_error( "warning: Options -aACdDeEHIKlMnOprRStTwx are ignored in generate mode." );
@@ -682,7 +743,7 @@ int main( const int argc, const char * const argv[] )
       const Domain * const test_domain = test_mode_logfile_name ?
         new Domain( 0, -1, test_mode_logfile_name, loose ) : 0;
       int tmp = do_rescue( opos - ipos, domain, test_domain, rb_opts, iname,
-                           oname, logname, cluster, hardbs, o_trunc,
+                           oname, logname, cluster, hardbs, o_trunc, ask,
                            preallocate, synchronous, verify_input_size );
       if( test_domain ) delete test_domain;
       return tmp;

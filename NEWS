@@ -2,12 +2,23 @@ Changes in version 1.19:
 
 A race condition at start of run with "--timeout=0" has been fixed.
 
+The new option "--ask", which asks for confirmation before starting the
+copy, has been added.
+
 Trimming is now done in one pass and may be run in reverse.
 
 The splitting phase has been replaced by a "scraping" phase that scrapes
 together the data not recovered by the copying or trimming phases.
 Scraping reads each non-scraped block forwards, one sector at a time.
 
-The option '-l, --logfile-size' is no more needed and has been removed.
+The long name of option "-n" has been changed to "--no-scrape".
+
+The option "-l, --logfile-size" is no more needed and has been removed.
+
+Model and serial number of ATA devices are shown with "--ask" or "-vv"
+on Linux.
+
+The configure script now accepts the option "--enable-linux" to enable
+the compilation of linux-specific code.
 
 The license has been changed to GPL version 2 or later.

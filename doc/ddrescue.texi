@@ -6,8 +6,8 @@
 @finalout
 @c %**end of header
 
-@set UPDATED 9 July 2014
-@set VERSION 1.19-pre2
+@set UPDATED 16 August 2014
+@set VERSION 1.19-pre3
 
 @dircategory GNU Packages
 @direntry
@@ -459,15 +459,14 @@ can't be known in advance and because the size derived from the
 @var{logfile} may be incomplete, for example after doing a partial
 rescue.
 
-@item -K @var{initial}[,@var{max}]
-@itemx -K ,@var{max}
-@itemx --skip-size=@var{initial}[,@var{max}]
-@itemx --skip-size=,@var{max}
-Set limits to skip size during the copying phase. @var{initial} is the
-size to skip on the first read error or slow read, in bytes. @var{max}
-is the maximum size to skip. The values given will be rounded to the
-next multiple of sector size. The skip size will be doubled for each
-read error or slow read until it reaches @var{max} or, if @var{max} is
+@item -K [@var{initial}][,@var{max}]
+@itemx --skip-size=[@var{initial}][,@var{max}]
+Set limits to skip size during the copying phase. At least one of
+@var{initial} or @var{max} must be specified. @var{initial} is the size
+to skip on the first read error or slow read, in bytes. @var{max} is the
+maximum size to skip. The values given will be rounded to the next
+multiple of sector size. The skip size will be doubled for each read
+error or slow read until it reaches @var{max} or, if @var{max} is
 omitted, 1% of the size of @var{infile} or 1 GiB (whichever is smaller),
 and will be reset to @var{initial} when good data is found. Valid values
 range from 64 KiB to 1 GiB. @var{initial} defaults to 64 KiB. An
@@ -635,6 +634,14 @@ mark is written every second (unless the read takes more time). Use this
 option with caution because @var{file} may become very large very
 quickly. Use lzip to compress @var{file} if you need to store or
 transmit it.
+
+@item --ask
+Ask for user confirmation before starting the copy. If the first letter
+of the answer is @samp{y}, ddrescue starts copying. Else it exits with
+status 1.@*
+If they can be obtained, ddrescue shows the model and serial number of
+the input and output devices. Else it shows the size in bytes of the
+corresponding file or device.
 
 @end table
 

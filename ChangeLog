@@ -1,7 +1,16 @@
+2014-08-16  Antonio Diaz Diaz  <antonio@gnu.org>
+
+	* Version 1.19-pre3 released.
+	* Added new option '--ask' to ask for user confirmation.
+	* Show ATA model and serial number with '--ask' or '-vv' on Linux.
+	* configure: Added new option '--enable-linux'.
+	* New files linux.h linux.cc.
+
 2014-07-09  Antonio Diaz Diaz  <antonio@gnu.org>
 
 	* Version 1.19-pre2 released.
 	* The splitting phase has been replaced by a scraping phase.
+	* Changed long name of option '-n' to '--no-scrape'.
 	* Removed option '-l, --logfile-size'.
 	* rescuebook.cc: Trimming may now be run in reverse.
 
@@ -255,7 +264,7 @@
 	* Version 1.1 released.
 	* 'iobuf' is aligned to the sector size for use with raw devices.
 	* Added a small tutorial to the info file.
-	* Added two missing headers.
+	* Added two missing #includes.
 
 2005-06-07  Antonio Diaz Diaz  <ant_diaz@teleline.es>
 

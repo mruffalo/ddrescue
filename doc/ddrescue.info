@@ -12,7 +12,7 @@ File: ddrescue.info,  Node: Top,  Next: Introduction,  Up: (dir)
 GNU ddrescue Manual
 *******************
 
-This manual is for GNU ddrescue (version 1.19-pre2, 9 July 2014).
+This manual is for GNU ddrescue (version 1.19-pre3, 16 August 2014).
 
 * Menu:
 
@@ -433,15 +433,14 @@ The format for running ddrescue is:
      from the LOGFILE may be incomplete, for example after doing a
      partial rescue.
 
-'-K INITIAL[,MAX]'
-'-K ,MAX'
-'--skip-size=INITIAL[,MAX]'
-'--skip-size=,MAX'
-     Set limits to skip size during the copying phase. INITIAL is the
-     size to skip on the first read error or slow read, in bytes. MAX
-     is the maximum size to skip. The values given will be rounded to
-     the next multiple of sector size. The skip size will be doubled
-     for each read error or slow read until it reaches MAX or, if MAX is
+'-K [INITIAL][,MAX]'
+'--skip-size=[INITIAL][,MAX]'
+     Set limits to skip size during the copying phase. At least one of
+     INITIAL or MAX must be specified. INITIAL is the size to skip on
+     the first read error or slow read, in bytes. MAX is the maximum
+     size to skip. The values given will be rounded to the next
+     multiple of sector size. The skip size will be doubled for each
+     read error or slow read until it reaches MAX or, if MAX is
      omitted, 1% of the size of INFILE or 1 GiB (whichever is smaller),
      and will be reset to INITIAL when good data is found. Valid values
      range from 64 KiB to 1 GiB. INITIAL defaults to 64 KiB. An INITIAL
@@ -613,6 +612,14 @@ The format for running ddrescue is:
      large very quickly. Use lzip to compress FILE if you need to store
      or transmit it.
 
+'--ask'
+     Ask for user confirmation before starting the copy. If the first
+     letter of the answer is 'y', ddrescue starts copying. Else it
+     exits with status 1.
+     If they can be obtained, ddrescue shows the model and serial
+     number of the input and output devices. Else it shows the size in
+     bytes of the corresponding file or device.
+
 
    Numbers given as arguments to options (positions, sizes, rates, etc)
 may be expressed as decimal, hexadecimal or octal values (using the same
@@ -692,7 +699,7 @@ Character   Meaning
 
 And here is an example logfile:
 
-     # Rescue Logfile. Created by GNU ddrescue version 1.19-pre2
+     # Rescue Logfile. Created by GNU ddrescue version 1.19-pre3
      # Command line: ddrescue -d -c18 /dev/fd0 fdimage logfile
      # Start time:   2014-05-03 09:37:44
      # Current time: 2014-05-03 09:38:19
@@ -1338,21 +1345,21 @@ Concept index
 
 Tag Table:
 Node: Top201
-Node: Introduction1377
-Node: Basic concepts4305
-Node: Important advice6182
-Node: Algorithm7291
-Node: Invoking ddrescue12092
-Node: Logfile structure27188
-Node: Examples30012
-Ref: lziprecover-example33555
-Node: Direct disc access35395
-Node: Fill mode37472
-Node: Generate mode41753
-Node: Ddrescuelog43700
-Node: Invoking ddrescuelog45990
-Node: Problems52965
-Node: Concept index53522
+Node: Introduction1380
+Node: Basic concepts4308
+Node: Important advice6185
+Node: Algorithm7294
+Node: Invoking ddrescue12095
+Node: Logfile structure27578
+Node: Examples30402
+Ref: lziprecover-example33945
+Node: Direct disc access35785
+Node: Fill mode37862
+Node: Generate mode42143
+Node: Ddrescuelog44090
+Node: Invoking ddrescuelog46380
+Node: Problems53355
+Node: Concept index53912
 
 End Tag Table
 

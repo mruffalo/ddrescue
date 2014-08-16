@@ -632,7 +632,7 @@ int Rescuebook::do_rescue( const int ides, const int odes )
     if( logfile_exists() )
       {
       std::printf( "Initial status (read from logfile)\n" );
-      if( verbosity >= 2 )
+      if( verbosity >= 3 )
         {
         std::printf( "current position: %10sB,     current sector: %7lld\n",
                      format_num( current_pos() ), current_pos() / hardbs() );

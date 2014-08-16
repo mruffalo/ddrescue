@@ -7,7 +7,7 @@ INSTALL_DIR = $(INSTALL) -d -m 755
 SHELL = /bin/sh
 
 ddobjs = fillbook.o genbook.o io.o logbook.o rescuebook.o main.o
-objs = arg_parser.o block.o logfile.o loggers.o rational.o $(ddobjs)
+objs = arg_parser.o block.o linux.o logfile.o loggers.o rational.o $(ddobjs)
 logobjs = arg_parser.o block.o logbook.o logfile.o ddrescuelog.o
 
 
@@ -29,6 +29,9 @@ ddrescuelog : $(logobjs)
 static_$(progname) : $(objs)
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -static -o $@ $(objs)
 
+linux.o : linux.cc
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(use_linux) -c -o $@ $<
+
 main.o : main.cc
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -DPROGVERSION=\"$(pkgversion)\" -c -o $@ $<
 
@@ -43,11 +46,12 @@ $(ddobjs)     : block.h ddrescue.h
 arg_parser.o  : arg_parser.h
 block.o       : block.h
 io.o          : loggers.h
+linux.o       : linux.h
 logfile.o     : block.h
 loggers.o     : block.h loggers.h
 rational.o    : rational.h
 rescuebook.o  : loggers.h
-main.o        : arg_parser.h rational.h loggers.h main_common.cc
+main.o        : arg_parser.h rational.h linux.h loggers.h main_common.cc
 ddrescuelog.o : Makefile arg_parser.h block.h ddrescue.h main_common.cc
 
 

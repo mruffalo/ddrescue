@@ -50,12 +50,20 @@ if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
 if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
 "${DDRESCUE}" -q -F ${in} out logfile
 if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
+"${DDRESCUE}" -q -F- --ask ${in} out logfile
+if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
+"${DDRESCUE}" -q -G --ask ${in} out logfile
+if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
 "${DDRESCUE}" -q -G ${in} out
 if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
 "${DDRESCUE}" -q -F- -G ${in} out logfile
 if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
 "${DDRESCUE}" -q -H ${logfile2i} ${in} out logfile
 if [ $? = 2 ] ; then printf . ; else printf - ; fail=1 ; fi
+"${DDRESCUE}" -q -K ${in} out
+if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
+"${DDRESCUE}" -q -K, ${in} out
+if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
 "${DDRESCUE}" -q -K0, ${in} out
 if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
 "${DDRESCUE}" -q -K0,65535 ${in} out
