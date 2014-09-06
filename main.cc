@@ -1,6 +1,5 @@
 /*  GNU ddrescue - Data recovery tool
-    Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012,
-    2013, 2014 Antonio Diaz Diaz.
+    Copyright (C) 2004-2014 Antonio Diaz Diaz.
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -113,9 +112,12 @@ void show_help( const int cluster, const int hardbs, const int skipbs )
                "  -v, --verbose                  be verbose (a 2nd -v gives more)\n"
                "  -w, --ignore-write-errors      make fill mode ignore write errors\n"
                "  -x, --extend-outfile=<bytes>   extend outfile size to be at least this long\n"
+               "  -X, --exit-on-error            exit after the first read error\n"
                "  -1, --log-rates=<file>         log rates and error sizes in file\n"
                "  -2, --log-reads=<file>         log all read operations in file\n"
                "      --ask                      ask for confirmation before starting the copy\n"
+               "      --cpass=<n>[,<n>]          select what copying pass(es) to run\n"
+               "      --unidirectional           run all passes in the same direction\n"
                "Numbers may be in decimal, hexadecimal or octal, and may be followed by a\n"
                "multiplier: s = sectors, k = 1000, Ki = 1024, M = 10^6, Mi = 2^20, etc...\n"
                "Time intervals have the format 1[.5][smhd] or 1/2[smhd].\n"
@@ -518,6 +520,27 @@ int do_rescue( const long long offset, Domain & domain,
 
 namespace {
 
+void parse_cpass( const std::string & arg, Rb_options & rb_opts )
+  {
+  bool error = arg.empty();
+  for( unsigned i = 0; i < arg.size(); ++i )
+    {
+    const char ch = arg[i];
+    if( ch < '1' || ch > '3' ) { error = true; break; }
+    rb_opts.cpass_bitset |= ( 1 << ( ch - '1' ) );
+    if( i + 1 < arg.size() )
+      {
+      if( arg[i+1] == ',' && i + 2 < arg.size() ) ++i;
+      else { error = true; break; }
+      }
+    }
+  if( error )
+    {
+    show_error( "Bad list of passes in option '--cpass'." );
+    std::exit( 1 );
+    }
+  }
+
 void parse_skipbs( const char * const arg, Rb_options & rb_opts,
                    const int hardbs )
   {
@@ -558,7 +581,7 @@ bool Rescuebook::reopen_infile()
 
 int main( const int argc, const char * const argv[] )
   {
-  enum Optcode { opt_ask = 256 };
+  enum Optcode { opt_ask = 256, opt_cpa, opt_uni };
   long long ipos = 0;
   long long opos = -1;
   long long max_size = -1;
@@ -628,7 +651,10 @@ int main( const int argc, const char * const argv[] )
     { 'V', "version",             Arg_parser::no  },
     { 'w', "ignore-write-errors", Arg_parser::no  },
     { 'x', "extend-outfile",      Arg_parser::yes },
+    { 'X', "exit-on-error",       Arg_parser::no  },
     { opt_ask, "ask",             Arg_parser::no  },
+    { opt_cpa, "cpass",           Arg_parser::yes },
+    { opt_uni, "unidirectional",  Arg_parser::no  },
     {  0 , 0,                     Arg_parser::no  } };
 
   const Arg_parser parser( argc, argv, options );
@@ -689,7 +715,10 @@ int main( const int argc, const char * const argv[] )
       case 'V': show_version(); return 0;
       case 'w': ignore_write_errors = true; break;
       case 'x': rb_opts.min_outfile_size = getnum( arg, hardbs, 1 ); break;
+      case 'X': rb_opts.exit_on_error = true; break;
       case opt_ask: ask = true; break;
+      case opt_cpa: parse_cpass( parser.argument( argind ), rb_opts ); break;
+      case opt_uni: rb_opts.unidirectional = true; break;
       default : internal_error( "uncaught option." );
       }
     } // end process options

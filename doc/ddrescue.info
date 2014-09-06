@@ -12,7 +12,7 @@ File: ddrescue.info,  Node: Top,  Next: Introduction,  Up: (dir)
 GNU ddrescue Manual
 *******************
 
-This manual is for GNU ddrescue (version 1.19-pre3, 16 August 2014).
+This manual is for GNU ddrescue (version 1.19-pre4, 6 September 2014).
 
 * Menu:
 
@@ -32,8 +32,7 @@ This manual is for GNU ddrescue (version 1.19-pre3, 16 August 2014).
 * Concept index::         Index of concepts
 
 
-   Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012,
-2013, 2014 Antonio Diaz Diaz.
+   Copyright (C) 2004-2014 Antonio Diaz Diaz.
 
    This manual is free documentation: you have unlimited permission to
 copy, distribute and modify it.
@@ -225,9 +224,8 @@ pass, with skipping disabled. (The purpose is to delimit large errors
 fast, keep the logfile small, and produce good starting points for
 trimming). Only non-tried areas are read in large blocks. Trimming,
 scraping and retrying are done sector by sector. Each sector is tried at
-most two times; the first in this step (usually as part of a large block
-read, but sometimes as a single sector read), the second in one of the
-steps below as a single sector read.
+most two times; the first in this step as part of a large block read,
+the second in one of the steps below as a single sector read.
 
    3) (Second phase; Trimming) Trimming is done in one pass. For each
 non-trimmed block, read forwards one sector at a time from the leading
@@ -588,6 +586,14 @@ The format for running ddrescue is:
      option does nothing. Use this option to guarantee a minimum size
      for OUTFILE. Only regular files can be extended.
 
+'-X'
+'--exit-on-error'
+     Exit after the first read error is encountered during the copying
+     phase.  This is similar but different to '--timeout=0', which
+     waits until the screen status is refreshed (at least 1 second). If
+     there is at least one successful read per second, '--timeout=0'
+     does not make ddrescue to exit.
+
 '-1 FILE'
 '--log-rates=FILE'
      Log rates and error sizes every second in FILE. If FILE already
@@ -619,6 +625,15 @@ The format for running ddrescue is:
      If they can be obtained, ddrescue shows the model and serial
      number of the input and output devices. Else it shows the size in
      bytes of the corresponding file or device.
+
+'--cpass=N[,N]'
+     Select what pass(es) to run during the copying phase. Valid values
+     for N range from 1 to 3. To run only the given pass(es), specify
+     also '--no-trim' and '--no-scrape'.
+
+'--unidirectional'
+     Run all passes in the same direction. Forwards by default, or
+     backwards if the option '--reverse' is also given.
 
 
    Numbers given as arguments to options (positions, sizes, rates, etc)
@@ -699,7 +714,7 @@ Character   Meaning
 
 And here is an example logfile:
 
-     # Rescue Logfile. Created by GNU ddrescue version 1.19-pre3
+     # Rescue Logfile. Created by GNU ddrescue version 1.19-pre4
      # Command line: ddrescue -d -c18 /dev/fd0 fdimage logfile
      # Start time:   2014-05-03 09:37:44
      # Current time: 2014-05-03 09:38:19
@@ -1345,21 +1360,21 @@ Concept index
 
 Tag Table:
 Node: Top201
-Node: Introduction1380
-Node: Basic concepts4308
-Node: Important advice6185
-Node: Algorithm7294
-Node: Invoking ddrescue12095
-Node: Logfile structure27578
-Node: Examples30402
-Ref: lziprecover-example33945
-Node: Direct disc access35785
-Node: Fill mode37862
-Node: Generate mode42143
-Node: Ddrescuelog44090
-Node: Invoking ddrescuelog46380
-Node: Problems53355
-Node: Concept index53912
+Node: Introduction1327
+Node: Basic concepts4255
+Node: Important advice6132
+Node: Algorithm7241
+Node: Invoking ddrescue11993
+Node: Logfile structure28159
+Node: Examples30983
+Ref: lziprecover-example34526
+Node: Direct disc access36366
+Node: Fill mode38443
+Node: Generate mode42724
+Node: Ddrescuelog44671
+Node: Invoking ddrescuelog46961
+Node: Problems53936
+Node: Concept index54493
 
 End Tag Table
 

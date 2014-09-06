@@ -1,6 +1,6 @@
 #! /bin/sh
 # check script for GNU ddrescue - Data recovery tool
-# Copyright (C) 2009, 2010, 2011, 2012, 2013, 2014 Antonio Diaz Diaz.
+# Copyright (C) 2009-2014 Antonio Diaz Diaz.
 #
 # This script is free software: you have unlimited permission
 # to copy, distribute and modify it.
@@ -78,6 +78,10 @@ if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
 if [ $? = 2 ] ; then printf . ; else printf - ; fail=1 ; fi
 "${DDRESCUE}" -q -w ${in} out logfile
 if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
+"${DDRESCUE}" -q --cpass=1, ${in} out
+if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
+"${DDRESCUE}" -q --cpass=4 ${in} out
+if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
 
 rm -f logfile
 "${DDRESCUE}" -q -t -p -i15000 ${in} out logfile || fail=1
@@ -88,13 +92,13 @@ printf .
 rm -f out
 rm -f logfile
 "${DDRESCUE}" -q -R -i15000 ${in} out logfile || fail=1
-"${DDRESCUE}" -q -R -s15000 ${in} out logfile || fail=1
+"${DDRESCUE}" -q -R -s15000 --cpass=3 ${in} out logfile || fail=1
 cmp ${in} out || fail=1
 printf .
 
 rm -f out
 "${DDRESCUE}" -q -F+ -o15000 ${in} out2 logfile || fail=1
-"${DDRESCUE}" -q -R -S -i15000 -o0 out2 out || fail=1
+"${DDRESCUE}" -q -R -S -i15000 -o0 --unidirectional out2 out || fail=1
 cmp ${in} out || fail=1
 printf .
 
@@ -112,10 +116,10 @@ cmp ${in} out || fail=1
 printf .
 
 rm -f out
-"${DDRESCUE}" -q -O -m ${logfile1} ${in} out || fail=1
+"${DDRESCUE}" -q -X -m ${logfile1} ${in} out || fail=1
 cmp ${in1} out || fail=1
 printf .
-"${DDRESCUE}" -q -O -L -m ${logfile2i} ${in} out || fail=1
+"${DDRESCUE}" -q -X -L -m ${logfile2i} ${in} out || fail=1
 cmp ${in} out || fail=1
 printf .
 

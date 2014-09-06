@@ -1,6 +1,5 @@
 /*  GNU ddrescue - Data recovery tool
-    Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012,
-    2013, 2014 Antonio Diaz Diaz.
+    Copyright (C) 2004-2014 Antonio Diaz Diaz.
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -128,12 +127,14 @@ struct Rb_options
   long long min_outfile_size;
   long long min_read_rate;
   long timeout;
+  int cpass_bitset;		// 0 = all, or 1 | 2 | 4 for passes 1, 2, 3
   int max_errors;
   int max_retries;
   int o_direct;			// O_DIRECT or 0
   int skipbs;			// initial size to skip on read error
   int max_skipbs;		// maximum size to skip on read error
   bool complete_only;
+  bool exit_on_error;
   bool new_errors_only;
   bool noscrape;
   bool notrim;
@@ -142,29 +143,34 @@ struct Rb_options
   bool reverse;
   bool sparse;
   bool try_again;
+  bool unidirectional;
 
   Rb_options()
     : max_error_rate( -1 ), min_outfile_size( -1 ), min_read_rate( -1 ),
-      timeout( -1 ), max_errors( -1 ), max_retries( 0 ), o_direct( 0 ),
-      skipbs( default_skipbs ), max_skipbs( max_max_skipbs ),
-      complete_only( false ), new_errors_only( false ), noscrape( false ),
-      notrim( false ), reopen_on_error( false ), retrim( false ),
-      reverse( false ), sparse( false ), try_again( false )
+      timeout( -1 ), cpass_bitset( 0 ), max_errors( -1 ), max_retries( 0 ),
+      o_direct( 0 ), skipbs( default_skipbs ), max_skipbs( max_max_skipbs ),
+      complete_only( false ), exit_on_error( false ),
+      new_errors_only( false ), noscrape( false ), notrim( false ),
+      reopen_on_error( false ), retrim( false ), reverse( false ),
+      sparse( false ), try_again( false ), unidirectional( false )
       {}
 
   bool operator==( const Rb_options & o ) const
     { return ( max_error_rate == o.max_error_rate &&
                min_outfile_size == o.min_outfile_size &&
                min_read_rate == o.min_read_rate && timeout == o.timeout &&
+               cpass_bitset == o.cpass_bitset &&
                max_errors == o.max_errors && max_retries == o.max_retries &&
                o_direct == o.o_direct && skipbs == o.skipbs &&
                max_skipbs == o.max_skipbs &&
                complete_only == o.complete_only &&
+               exit_on_error == o.exit_on_error &&
                new_errors_only == o.new_errors_only &&
                noscrape == o.noscrape && notrim == o.notrim &&
                reopen_on_error == o.reopen_on_error &&
                retrim == o.retrim && reverse == o.reverse &&
-               sparse == o.sparse && try_again == o.try_again ); }
+               sparse == o.sparse && try_again == o.try_again &&
+               unidirectional == o.unidirectional ); }
   bool operator!=( const Rb_options & o ) const
     { return !( *this == o ); }
   };
@@ -209,7 +215,7 @@ class Rescuebook : public Logbook, public Rb_options
                        const char * const msg, const bool forward );
   int copy_and_update2( const Block & b, int & copied_size,
                         int & error_size, const char * const msg,
-                        const bool forward, const bool small_try );
+                        const bool forward );
   bool reopen_infile();
   int copy_non_tried();
   int fcopy_non_tried( const char * const msg, const int pass );

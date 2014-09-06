@@ -20,9 +20,6 @@ all : $(progname) ddrescuelog
 $(progname) : $(objs)
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $(objs)
 
-$(progname)_profiled : $(objs)
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -pg -o $@ $(objs)
-
 ddrescuelog : $(logobjs)
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $(logobjs)
 
@@ -138,7 +135,7 @@ dist : doc
 	lzip -v -9 $(DISTNAME).tar
 
 clean :
-	-rm -f $(progname) $(progname)_profiled $(objs)
+	-rm -f $(progname) $(objs)
 	-rm -f static_$(progname) ddrescuelog ddrescuelog.o
 
 distclean : clean

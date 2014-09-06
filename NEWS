@@ -2,8 +2,19 @@ Changes in version 1.19:
 
 A race condition at start of run with "--timeout=0" has been fixed.
 
+The new option "-X, --exit-on-error", which makes ddrescue exit after
+the first read error is encountered, has been added.
+
 The new option "--ask", which asks for confirmation before starting the
 copy, has been added.
+
+The new option "--cpass", which selects what passes to run during the
+copying phase, has been added.
+
+The new option "--unidirectional", which runs all passes in the same
+direction (forwards or backwards), has been added.
+
+Ddrescue now skips on the first error during the copying phase.
 
 Trimming is now done in one pass and may be run in reverse.
 

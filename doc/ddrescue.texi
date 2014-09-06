@@ -6,8 +6,8 @@
 @finalout
 @c %**end of header
 
-@set UPDATED 16 August 2014
-@set VERSION 1.19-pre3
+@set UPDATED 6 September 2014
+@set VERSION 1.19-pre4
 
 @dircategory GNU Packages
 @direntry
@@ -52,8 +52,7 @@ This manual is for GNU ddrescue (version @value{VERSION}, @value{UPDATED}).
 @end menu
 
 @sp 1
-Copyright @copyright{} 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011,
-2012, 2013, 2014 Antonio Diaz Diaz.
+Copyright @copyright{} 2004-2014 Antonio Diaz Diaz.
 
 This manual is free documentation: you have unlimited permission
 to copy, distribute and modify it.
@@ -241,9 +240,8 @@ pass, with skipping disabled. (The purpose is to delimit large errors
 fast, keep the logfile small, and produce good starting points for
 trimming). Only non-tried areas are read in large blocks. Trimming,
 scraping and retrying are done sector by sector. Each sector is tried at
-most two times; the first in this step (usually as part of a large block
-read, but sometimes as a single sector read), the second in one of the
-steps below as a single sector read.
+most two times; the first in this step as part of a large block read,
+the second in one of the steps below as a single sector read.
 
 3) (Second phase; Trimming) Trimming is done in one pass. For each
 non-trimmed block, read forwards one sector at a time from the leading
@@ -612,6 +610,14 @@ If the size of @var{outfile} is already equal or longer than @var{bytes}
 then this option does nothing. Use this option to guarantee a minimum
 size for @var{outfile}. Only regular files can be extended.
 
+@item -X
+@itemx --exit-on-error
+Exit after the first read error is encountered during the copying phase.
+This is similar but different to @samp{--timeout=0}, which waits until
+the screen status is refreshed (at least 1 second). If there is at least
+one successful read per second, @samp{--timeout=0} does not make
+ddrescue to exit.
+
 @item -1 @var{file}
 @itemx --log-rates=@var{file}
 Log rates and error sizes every second in @var{file}. If @var{file}
@@ -642,6 +648,15 @@ status 1.@*
 If they can be obtained, ddrescue shows the model and serial number of
 the input and output devices. Else it shows the size in bytes of the
 corresponding file or device.
+
+@item --cpass=@var{n}[,@var{n}]
+Select what pass(es) to run during the copying phase. Valid values for
+@var{n} range from 1 to 3. To run only the given pass(es), specify also
+@samp{--no-trim} and @samp{--no-scrape}.
+
+@item --unidirectional
+Run all passes in the same direction. Forwards by default, or backwards
+if the option @samp{--reverse} is also given.
 
 @end table
 
