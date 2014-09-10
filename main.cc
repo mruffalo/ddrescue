@@ -102,13 +102,15 @@ void show_help( const int cluster, const int hardbs, const int skipbs )
                "  -o, --output-position=<bytes>  starting position in output file [ipos]\n"
                "  -O, --reopen-on-error          reopen input file after every read error\n"
                "  -p, --preallocate              preallocate space on disc for output file\n"
+               "  -P, --data-preview[=<lines>]   show some lines of the latest data read [3]\n"
                "  -q, --quiet                    suppress all messages\n"
                "  -r, --retry-passes=<n>         exit after <n> retry passes (-1=infinity) [0]\n"
-               "  -R, --reverse                  reverse direction of some copy operations\n"
+               "  -R, --reverse                  reverse the direction of all passes\n"
                "  -s, --size=<bytes>             maximum size of input data to be copied\n"
                "  -S, --sparse                   use sparse writes for output file\n"
                "  -t, --truncate                 truncate output file to zero size\n"
                "  -T, --timeout=<interval>       maximum time since last successful read\n"
+               "  -u, --unidirectional           run all passes in the same direction\n"
                "  -v, --verbose                  be verbose (a 2nd -v gives more)\n"
                "  -w, --ignore-write-errors      make fill mode ignore write errors\n"
                "  -x, --extend-outfile=<bytes>   extend outfile size to be at least this long\n"
@@ -117,7 +119,7 @@ void show_help( const int cluster, const int hardbs, const int skipbs )
                "  -2, --log-reads=<file>         log all read operations in file\n"
                "      --ask                      ask for confirmation before starting the copy\n"
                "      --cpass=<n>[,<n>]          select what copying pass(es) to run\n"
-               "      --unidirectional           run all passes in the same direction\n"
+               "      --pause=<interval>         time to wait between passes [0]\n"
                "Numbers may be in decimal, hexadecimal or octal, and may be followed by a\n"
                "multiplier: s = sectors, k = 1000, Ki = 1024, M = 10^6, Mi = 2^20, etc...\n"
                "Time intervals have the format 1[.5][smhd] or 1/2[smhd].\n"
@@ -484,30 +486,33 @@ int do_rescue( const long long offset, Domain & domain,
       if( rescuebook.max_retries >= 0 )
         { nl = true;
           std::printf( "Max retry passes: %d    ", rescuebook.max_retries ); }
-      if( nl ) { nl = false; std::printf( "\n" ); }
+      if( nl ) { nl = false; std::fputc( '\n', stdout ); }
 
       if( rescuebook.min_read_rate == 0 )
         { nl = true; std::printf( "Min read rate: auto    " ); }
       else if( rescuebook.min_read_rate > 0 )
         { nl = true; std::printf( "Min read rate:  %6sB/s    ",
                                   format_num( rescuebook.min_read_rate, 99999 ) ); }
+      if( rescuebook.pause > 0 )
+        { nl = true; std::printf( "Pause: %s    ",
+                                  format_time( rescuebook.pause ) ); }
       if( rescuebook.timeout >= 0 )
-        { nl = true; std::printf( "Max time since last successful read: %s",
+        { nl = true; std::printf( "Timeout: %s",
                                   format_time( rescuebook.timeout ) ); }
-      if( nl ) { nl = false; std::printf( "\n" ); }
+      if( nl ) { nl = false; std::fputc( '\n', stdout ); }
 
       std::printf( "Direct: %s    ", rescuebook.o_direct ? "yes" : "no" );
       std::printf( "Sparse: %s    ", rescuebook.sparse ? "yes" : "no" );
       std::printf( "Trim: %s    ", !rescuebook.notrim ? "yes" : "no" );
       std::printf( "Scrape: %s    ", !rescuebook.noscrape ? "yes" : "no" );
       std::printf( "Truncate: %s    ", o_trunc ? "yes" : "no" );
-      std::printf( "\n" );
+      std::fputc( '\n', stdout );
       if( rescuebook.complete_only )
         { nl = true; std::printf( "Complete only    " ); }
       if( rescuebook.reverse ) { nl = true; std::printf( "Reverse mode" ); }
-      if( nl ) { nl = false; std::printf( "\n" ); }
+      if( nl ) { nl = false; std::fputc( '\n', stdout ); }
       }
-    std::printf( "\n" );
+    std::fputc( '\n', stdout );
     }
   return rescuebook.do_rescue( ides, odes );
   }
@@ -581,7 +586,7 @@ bool Rescuebook::reopen_infile()
 
 int main( const int argc, const char * const argv[] )
   {
-  enum Optcode { opt_ask = 256, opt_cpa, opt_uni };
+  enum Optcode { opt_ask = 256, opt_cpa, opt_pau };
   long long ipos = 0;
   long long opos = -1;
   long long max_size = -1;
@@ -640,6 +645,7 @@ int main( const int argc, const char * const argv[] )
     { 'o', "output-position",     Arg_parser::yes },
     { 'O', "reopen-on-error",     Arg_parser::no  },
     { 'p', "preallocate",         Arg_parser::no  },
+    { 'P', "data-preview",        Arg_parser::maybe },
     { 'q', "quiet",               Arg_parser::no  },
     { 'r', "retry-passes",        Arg_parser::yes },
     { 'R', "reverse",             Arg_parser::no  },
@@ -647,6 +653,7 @@ int main( const int argc, const char * const argv[] )
     { 'S', "sparse",              Arg_parser::no  },
     { 't', "truncate",            Arg_parser::no  },
     { 'T', "timeout",             Arg_parser::yes },
+    { 'u', "unidirectional",      Arg_parser::no  },
     { 'v', "verbose",             Arg_parser::no  },
     { 'V', "version",             Arg_parser::no  },
     { 'w', "ignore-write-errors", Arg_parser::no  },
@@ -654,7 +661,7 @@ int main( const int argc, const char * const argv[] )
     { 'X', "exit-on-error",       Arg_parser::no  },
     { opt_ask, "ask",             Arg_parser::no  },
     { opt_cpa, "cpass",           Arg_parser::yes },
-    { opt_uni, "unidirectional",  Arg_parser::no  },
+    { opt_pau, "pause",           Arg_parser::yes },
     {  0 , 0,                     Arg_parser::no  } };
 
   const Arg_parser parser( argc, argv, options );
@@ -704,6 +711,8 @@ int main( const int argc, const char * const argv[] )
       case 'o': opos = getnum( arg, hardbs, 0 ); break;
       case 'O': rb_opts.reopen_on_error = true; break;
       case 'p': preallocate = true; break;
+      case 'P': rb_opts.preview_lines = arg[0] ? getnum( arg, 0, 1, 32 ) : 3;
+                break;
       case 'q': verbosity = -1; break;
       case 'r': rb_opts.max_retries = getnum( arg, 0, -1, INT_MAX ); break;
       case 'R': rb_opts.reverse = true; break;
@@ -711,6 +720,7 @@ int main( const int argc, const char * const argv[] )
       case 'S': rb_opts.sparse = true; break;
       case 't': o_trunc = O_TRUNC; break;
       case 'T': rb_opts.timeout = parse_time_interval( arg ); break;
+      case 'u': rb_opts.unidirectional = true; break;
       case 'v': if( verbosity < 4 ) ++verbosity; break;
       case 'V': show_version(); return 0;
       case 'w': ignore_write_errors = true; break;
@@ -718,7 +728,7 @@ int main( const int argc, const char * const argv[] )
       case 'X': rb_opts.exit_on_error = true; break;
       case opt_ask: ask = true; break;
       case opt_cpa: parse_cpass( parser.argument( argind ), rb_opts ); break;
-      case opt_uni: rb_opts.unidirectional = true; break;
+      case opt_pau: rb_opts.pause = parse_time_interval( arg ); break;
       default : internal_error( "uncaught option." );
       }
     } // end process options
@@ -752,7 +762,7 @@ int main( const int argc, const char * const argv[] )
           return 1; }
       if( rb_opts != Rb_options() || test_mode_logfile_name ||
           verify_input_size || preallocate || o_trunc )
-        show_error( "warning: Options -aACdeEHIKlMnOprRStTx are ignored in fill mode." );
+        show_error( "warning: Options -aACdeEHIKlMnOpPrRStTuxX are ignored in fill mode." );
       return do_fill( opos - ipos, domain, iname, oname, logname, cluster,
                       hardbs, filltypes, ignore_write_errors, synchronous );
     case m_generate:
@@ -761,7 +771,7 @@ int main( const int argc, const char * const argv[] )
           return 1; }
       if( rb_opts != Rb_options() || synchronous || test_mode_logfile_name ||
           verify_input_size || preallocate || o_trunc || ignore_write_errors )
-        show_error( "warning: Options -aACdDeEHIKlMnOprRStTwx are ignored in generate mode." );
+        show_error( "warning: Options -aACdDeEHIKlMnOpPrRStTuwxX are ignored in generate mode." );
       return do_generate( opos - ipos, domain, iname, oname, logname,
                           cluster, hardbs );
     case m_none:

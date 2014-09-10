@@ -126,11 +126,13 @@ struct Rb_options
   long long max_error_rate;
   long long min_outfile_size;
   long long min_read_rate;
+  long pause;
   long timeout;
   int cpass_bitset;		// 0 = all, or 1 | 2 | 4 for passes 1, 2, 3
   int max_errors;
   int max_retries;
   int o_direct;			// O_DIRECT or 0
+  int preview_lines;		// preview lines to show. 0 = disable
   int skipbs;			// initial size to skip on read error
   int max_skipbs;		// maximum size to skip on read error
   bool complete_only;
@@ -147,8 +149,9 @@ struct Rb_options
 
   Rb_options()
     : max_error_rate( -1 ), min_outfile_size( -1 ), min_read_rate( -1 ),
-      timeout( -1 ), cpass_bitset( 0 ), max_errors( -1 ), max_retries( 0 ),
-      o_direct( 0 ), skipbs( default_skipbs ), max_skipbs( max_max_skipbs ),
+      pause( 0 ), timeout( -1 ), cpass_bitset( 0 ), max_errors( -1 ),
+      max_retries( 0 ), o_direct( 0 ), preview_lines( 0 ),
+      skipbs( default_skipbs ), max_skipbs( max_max_skipbs ),
       complete_only( false ), exit_on_error( false ),
       new_errors_only( false ), noscrape( false ), notrim( false ),
       reopen_on_error( false ), retrim( false ), reverse( false ),
@@ -158,11 +161,11 @@ struct Rb_options
   bool operator==( const Rb_options & o ) const
     { return ( max_error_rate == o.max_error_rate &&
                min_outfile_size == o.min_outfile_size &&
-               min_read_rate == o.min_read_rate && timeout == o.timeout &&
-               cpass_bitset == o.cpass_bitset &&
+               min_read_rate == o.min_read_rate && pause == o.pause &&
+               timeout == o.timeout && cpass_bitset == o.cpass_bitset &&
                max_errors == o.max_errors && max_retries == o.max_retries &&
-               o_direct == o.o_direct && skipbs == o.skipbs &&
-               max_skipbs == o.max_skipbs &&
+               o_direct == o.o_direct && preview_lines == o.preview_lines &&
+               skipbs == o.skipbs && max_skipbs == o.max_skipbs &&
                complete_only == o.complete_only &&
                exit_on_error == o.exit_on_error &&
                new_errors_only == o.new_errors_only &&
@@ -190,11 +193,13 @@ class Rescuebook : public Logbook, public Rb_options
   const bool access_works, synchronous_;
 					// variables for update_rates
   long long a_rate, c_rate, first_size, last_size;
+  long long iobuf_ipos;			// last pos read in iobuf, or -1
   long long last_ipos;
   long t0, t1, ts;			// start, current, last successful
   int oldlen;
   bool rates_updated;
   bool first_post;			// variable for show_status
+  bool just_paused;			// variable for update_and_pause
 
   bool extend_outfile_size();
   int copy_block( const Block & b, int & copied_size, int & error_size );
@@ -217,13 +222,15 @@ class Rescuebook : public Logbook, public Rb_options
                         int & error_size, const char * const msg,
                         const bool forward );
   bool reopen_infile();
+  bool update_and_pause();
   int copy_non_tried();
   int fcopy_non_tried( const char * const msg, const int pass );
   int rcopy_non_tried( const char * const msg, const int pass );
   int trim_errors();
   int scrape_errors();
   int copy_errors();
-  int rcopy_errors();
+  int fcopy_errors( const char * const msg, const int retry );
+  int rcopy_errors( const char * const msg, const int retry );
   void update_rates( const bool force = false );
   void show_status( const long long ipos, const char * const msg = 0,
                     const bool force = false );

@@ -2,8 +2,15 @@ Changes in version 1.19:
 
 A race condition at start of run with "--timeout=0" has been fixed.
 
+The new option "-P, --data-preview", which makes ddrescue show a few
+lines of the latest data read, has been added.
+
+The new option "-u, --unidirectional", which runs all passes in the same
+direction (forwards or backwards), has been added.
+
 The new option "-X, --exit-on-error", which makes ddrescue exit after
-the first read error is encountered, has been added.
+the first read error is encountered during the copying phase, has been
+added.
 
 The new option "--ask", which asks for confirmation before starting the
 copy, has been added.
@@ -11,8 +18,8 @@ copy, has been added.
 The new option "--cpass", which selects what passes to run during the
 copying phase, has been added.
 
-The new option "--unidirectional", which runs all passes in the same
-direction (forwards or backwards), has been added.
+The new option "--pause", which inserts a pause between passes, has been
+added.
 
 Ddrescue now skips on the first error during the copying phase.
 
@@ -23,6 +30,9 @@ together the data not recovered by the copying or trimming phases.
 Scraping reads each non-scraped block forwards, one sector at a time.
 
 The long name of option "-n" has been changed to "--no-scrape".
+
+During the retrying phase the direction is now reversed after each pass.
+Use "--unidirectional" to override.
 
 The option "-l, --logfile-size" is no more needed and has been removed.
 

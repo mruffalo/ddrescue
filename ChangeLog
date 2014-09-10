@@ -1,3 +1,11 @@
+2014-09-10  Antonio Diaz Diaz  <antonio@gnu.org>
+
+	* Version 1.19-rc1 released.
+	* Added new option '-P, --data-preview'.
+	* Added new option '--pause'.
+	* Asigned short name '-u' to option '--unidirectional'.
+	* rescuebook.cc: Alternate direction of passes during retrying phase.
+
 2014-09-06  Antonio Diaz Diaz  <antonio@gnu.org>
 
 	* Version 1.19-pre4 released.

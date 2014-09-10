@@ -6,7 +6,7 @@
 # to copy, distribute and modify it.
 
 pkgname=ddrescue
-pkgversion=1.19-pre4
+pkgversion=1.19-rc1
 progname=ddrescue
 use_linux=
 srctrigger=doc/${pkgname}.texi

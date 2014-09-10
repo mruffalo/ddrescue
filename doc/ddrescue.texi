@@ -6,8 +6,8 @@
 @finalout
 @c %**end of header
 
-@set UPDATED 6 September 2014
-@set VERSION 1.19-pre4
+@set UPDATED 10 September 2014
+@set VERSION 1.19-rc1
 
 @dircategory GNU Packages
 @direntry
@@ -256,9 +256,10 @@ non-scraped block is read forwards, one sector at a time. Any bad
 sectors found are marked as bad-sector.
 
 5) (Fourth phase; Retrying) Optionally try to read again the bad sectors
-until the specified number of retry passes is reached. Every bad sector
-is tried only once in each pass. Ddrescue can't know if a bad sector is
-unrecoverable or if it will be eventually read after some retries.
+until the specified number of retry passes is reached. The direction is
+reversed after each pass. Every bad sector is tried only once in each
+pass. Ddrescue can't know if a bad sector is unrecoverable or if it will
+be eventually read after some retries.
 
 6) Optionally write a logfile for later use.
 
@@ -539,6 +540,12 @@ size to preallocate, you may need to specify it with some combination of
 the @samp{--input-position}, @samp{--output-position}, @samp{--size},
 and @samp{--domain-logfile} options.
 
+@item -P[@var{lines}]
+@itemx --data-preview[=@var{lines}]
+Show @var{lines} lines of the latest data read in @w{@samp{16-byte hex +
+ASCII}} format. Valid values for @var{lines} range from 1 to 32. If
+@var{lines} is omitted, a default value of 3 is used.
+
 @item -q
 @itemx --quiet
 Quiet operation. Suppress all messages.
@@ -553,11 +560,10 @@ of retry passes.
 @item -R
 @itemx --reverse
 Reverse the direction of all passes (copying, trimming, scraping and
-retrying), running them backwards from the end of the rescue domain,
-except the second pass of copying which is now run forwards from the
-beginning of the rescue domain. @samp{--reverse} does not modify the
-size of the blocks copied during each phase, just the order in which
-they are tried.
+retrying). Every pass that is normally run forwards will now be run
+backwards, and vice versa. @samp{--reverse} does not modify the size of
+the blocks copied during each phase, just the order in which they are
+tried.
 
 @item -s @var{bytes}
 @itemx --size=@var{bytes}
@@ -591,6 +597,11 @@ Defaults to infinity. @var{interval} is a rational number (like 1.5 or
 @samp{d}, meaning seconds, minutes, hours and days respectively. If no
 unit is specified, it defaults to seconds.
 
+@item -u
+@itemx --unidirectional
+Run all passes in the same direction. Forwards by default, or backwards
+if the option @samp{--reverse} is also given.
+
 @item -v
 @itemx --verbose
 Verbose mode. Further -v's (up to 4) increase the verbosity level.
@@ -617,6 +628,11 @@ This is similar but different to @samp{--timeout=0}, which waits until
 the screen status is refreshed (at least 1 second). If there is at least
 one successful read per second, @samp{--timeout=0} does not make
 ddrescue to exit.
+
+This is also similar but different to @samp{--max-errors=+0}, which
+exits when a new error area is found. If the read errors are adjacent to
+existing error areas, no new error areas are produced (just enlarged),
+and @samp{--max-errors=+0} does not make ddrescue to exit.
 
 @item -1 @var{file}
 @itemx --log-rates=@var{file}
@@ -654,9 +670,9 @@ Select what pass(es) to run during the copying phase. Valid values for
 @var{n} range from 1 to 3. To run only the given pass(es), specify also
 @samp{--no-trim} and @samp{--no-scrape}.
 
-@item --unidirectional
-Run all passes in the same direction. Forwards by default, or backwards
-if the option @samp{--reverse} is also given.
+@item --pause=@var{interval}
+Time to wait between passes. Defaults to 0. @var{interval} is formatted
+as in the option @samp{--timeout} above.
 
 @end table
 

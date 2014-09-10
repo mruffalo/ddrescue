@@ -12,7 +12,7 @@ File: ddrescue.info,  Node: Top,  Next: Introduction,  Up: (dir)
 GNU ddrescue Manual
 *******************
 
-This manual is for GNU ddrescue (version 1.19-pre4, 6 September 2014).
+This manual is for GNU ddrescue (version 1.19-rc1, 10 September 2014).
 
 * Menu:
 
@@ -240,10 +240,10 @@ non-scraped block is read forwards, one sector at a time. Any bad
 sectors found are marked as bad-sector.
 
    5) (Fourth phase; Retrying) Optionally try to read again the bad
-sectors until the specified number of retry passes is reached. Every
-bad sector is tried only once in each pass. Ddrescue can't know if a
-bad sector is unrecoverable or if it will be eventually read after some
-retries.
+sectors until the specified number of retry passes is reached. The
+direction is reversed after each pass. Every bad sector is tried only
+once in each pass. Ddrescue can't know if a bad sector is unrecoverable
+or if it will be eventually read after some retries.
 
    6) Optionally write a logfile for later use.
 
@@ -515,6 +515,12 @@ The format for running ddrescue is:
      some combination of the '--input-position', '--output-position',
      '--size', and '--domain-logfile' options.
 
+'-P[LINES]'
+'--data-preview[=LINES]'
+     Show LINES lines of the latest data read in '16-byte hex + ASCII'
+     format. Valid values for LINES range from 1 to 32. If LINES is
+     omitted, a default value of 3 is used.
+
 '-q'
 '--quiet'
      Quiet operation. Suppress all messages.
@@ -529,11 +535,10 @@ The format for running ddrescue is:
 '-R'
 '--reverse'
      Reverse the direction of all passes (copying, trimming, scraping
-     and retrying), running them backwards from the end of the rescue
-     domain, except the second pass of copying which is now run
-     forwards from the beginning of the rescue domain. '--reverse' does
-     not modify the size of the blocks copied during each phase, just
-     the order in which they are tried.
+     and retrying). Every pass that is normally run forwards will now
+     be run backwards, and vice versa. '--reverse' does not modify the
+     size of the blocks copied during each phase, just the order in
+     which they are tried.
 
 '-s BYTES'
 '--size=BYTES'
@@ -566,6 +571,11 @@ The format for running ddrescue is:
      seconds, minutes, hours and days respectively. If no unit is
      specified, it defaults to seconds.
 
+'-u'
+'--unidirectional'
+     Run all passes in the same direction. Forwards by default, or
+     backwards if the option '--reverse' is also given.
+
 '-v'
 '--verbose'
      Verbose mode. Further -v's (up to 4) increase the verbosity level.
@@ -593,6 +603,12 @@ The format for running ddrescue is:
      waits until the screen status is refreshed (at least 1 second). If
      there is at least one successful read per second, '--timeout=0'
      does not make ddrescue to exit.
+
+     This is also similar but different to '--max-errors=+0', which
+     exits when a new error area is found. If the read errors are
+     adjacent to existing error areas, no new error areas are produced
+     (just enlarged), and '--max-errors=+0' does not make ddrescue to
+     exit.
 
 '-1 FILE'
 '--log-rates=FILE'
@@ -631,9 +647,9 @@ The format for running ddrescue is:
      for N range from 1 to 3. To run only the given pass(es), specify
      also '--no-trim' and '--no-scrape'.
 
-'--unidirectional'
-     Run all passes in the same direction. Forwards by default, or
-     backwards if the option '--reverse' is also given.
+'--pause=INTERVAL'
+     Time to wait between passes. Defaults to 0. INTERVAL is formatted
+     as in the option '--timeout' above.
 
 
    Numbers given as arguments to options (positions, sizes, rates, etc)
@@ -714,7 +730,7 @@ Character   Meaning
 
 And here is an example logfile:
 
-     # Rescue Logfile. Created by GNU ddrescue version 1.19-pre4
+     # Rescue Logfile. Created by GNU ddrescue version 1.19-rc1
      # Command line: ddrescue -d -c18 /dev/fd0 fdimage logfile
      # Start time:   2014-05-03 09:37:44
      # Current time: 2014-05-03 09:38:19
@@ -1364,17 +1380,17 @@ Node: Introduction1327
 Node: Basic concepts4255
 Node: Important advice6132
 Node: Algorithm7241
-Node: Invoking ddrescue11993
-Node: Logfile structure28159
-Node: Examples30983
-Ref: lziprecover-example34526
-Node: Direct disc access36366
-Node: Fill mode38443
-Node: Generate mode42724
-Node: Ddrescuelog44671
-Node: Invoking ddrescuelog46961
-Node: Problems53936
-Node: Concept index54493
+Node: Invoking ddrescue12036
+Node: Logfile structure28767
+Node: Examples31590
+Ref: lziprecover-example35133
+Node: Direct disc access36973
+Node: Fill mode39050
+Node: Generate mode43331
+Node: Ddrescuelog45278
+Node: Invoking ddrescuelog47568
+Node: Problems54543
+Node: Concept index55100
 
 End Tag Table
 

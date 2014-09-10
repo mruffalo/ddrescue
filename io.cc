@@ -191,6 +191,7 @@ int Rescuebook::copy_block( const Block & b, int & copied_size, int & error_size
 
   if( copied_size > 0 )
     {
+    iobuf_ipos = b.pos();
     const long long pos = b.pos() + offset();
     if( sparse_size >= 0 && block_is_zero( iobuf(), copied_size ) )
       {
@@ -205,6 +206,7 @@ int Rescuebook::copy_block( const Block & b, int & copied_size, int & error_size
       return 1;
       }
     }
+  else iobuf_ipos = -1;
   read_logger.print_line( b.pos(), b.size(), copied_size, error_size );
   return 0;
   }
