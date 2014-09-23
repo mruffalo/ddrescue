@@ -21,6 +21,8 @@ copying phase, has been added.
 The new option "--pause", which inserts a pause between passes, has been
 added.
 
+The option "-l, --logfile-size" is no more needed and has been removed.
+
 Ddrescue now skips on the first error during the copying phase.
 
 Trimming is now done in one pass and may be run in reverse.
@@ -33,8 +35,6 @@ The long name of option "-n" has been changed to "--no-scrape".
 
 During the retrying phase the direction is now reversed after each pass.
 Use "--unidirectional" to override.
-
-The option "-l, --logfile-size" is no more needed and has been removed.
 
 Model and serial number of ATA devices are shown with "--ask" or "-vv"
 on Linux.

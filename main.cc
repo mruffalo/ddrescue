@@ -612,7 +612,6 @@ int main( const int argc, const char * const argv[] )
   command_line = argv[0];
   for( int i = 1; i < argc; ++i )
     { command_line += ' '; command_line += argv[i]; }
-  initial_time_ = std::time( 0 );
 
   const Arg_parser::Option options[] =
     {

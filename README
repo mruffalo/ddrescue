@@ -27,8 +27,9 @@ Automatic merging of backups: If you have two or more damaged copies of
 a file, cdrom, etc, and run ddrescue on all of them, one at a time, with
 the same output file, you will probably obtain a complete and error-free
 file. This is so because the probability of having the same area damaged
-in all copies is low. Using the logfile, only the needed blocks are read
-from the second and successive copies.
+in all copies is low (if the errors are randomly located). Using the
+logfile, only the needed blocks are read from the second and successive
+copies.
 
 Ddrescue recommends lzip for compression of backups because the lzip
 format is designed for long-term data archiving and provides data

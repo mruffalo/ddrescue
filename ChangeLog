@@ -1,41 +1,22 @@
-2014-09-10  Antonio Diaz Diaz  <antonio@gnu.org>
+2014-09-23  Antonio Diaz Diaz  <antonio@gnu.org>
 
-	* Version 1.19-rc1 released.
+	* Version 1.19-rc2 released.
+	* Fixed a race condition at start of run with '--timeout=0'.
 	* Added new option '-P, --data-preview'.
-	* Added new option '--pause'.
-	* Asigned short name '-u' to option '--unidirectional'.
-	* rescuebook.cc: Alternate direction of passes during retrying phase.
-
-2014-09-06  Antonio Diaz Diaz  <antonio@gnu.org>
-
-	* Version 1.19-pre4 released.
+	* Added new option '-u, --unidirectional'.
 	* Added new option '-X, --exit-on-error'.
-	* Added new option '--cpass'.
-	* Added new option '--unidirectional'.
-	* Skip on the first error during the copying phase.
-
-2014-08-16  Antonio Diaz Diaz  <antonio@gnu.org>
-
-	* Version 1.19-pre3 released.
 	* Added new option '--ask' to ask for user confirmation.
+	* Added new option '--cpass' to select passes during copying phase.
+	* Added new option '--pause' to insert a pause between passes.
+	* Removed option '-l, --logfile-size'.
+	* Skip on the first error during the copying phase.
+	* rescuebook.cc: Trimming done in one pass, may be run in reverse.
+	* The splitting phase has been replaced by a scraping phase.
+	* Changed long name of option '-n' to '--no-scrape'.
+	* rescuebook.cc: Alternate direction of passes during retrying phase.
 	* Show ATA model and serial number with '--ask' or '-vv' on Linux.
 	* configure: Added new option '--enable-linux'.
 	* New files linux.h linux.cc.
-
-2014-07-09  Antonio Diaz Diaz  <antonio@gnu.org>
-
-	* Version 1.19-pre2 released.
-	* The splitting phase has been replaced by a scraping phase.
-	* Changed long name of option '-n' to '--no-scrape'.
-	* Removed option '-l, --logfile-size'.
-	* rescuebook.cc: Trimming may now be run in reverse.
-
-2014-06-26  Antonio Diaz Diaz  <antonio@gnu.org>
-
-	* Version 1.19-pre1 released.
-	* Fixed a race condition at start of run with '--timeout=0'.
-	* rescuebook.cc: Trimming is now done in one pass.
-	* rescuebook.cc: Splitting is now done in several passes.
 	* License changed to GPL version 2 or later.
 
 2014-06-10  Antonio Diaz Diaz  <antonio@gnu.org>

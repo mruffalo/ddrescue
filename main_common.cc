@@ -19,7 +19,6 @@ namespace {
 
 const char * const program_year = "2014";
 std::string command_line;
-long initial_time_;
 
 
 void show_version()
@@ -196,14 +195,20 @@ int not_writable( const char * const logname )
   }
 
 
-long initial_time() { return initial_time_; }
+long initial_time()
+  {
+  static long initial_time_ = 0;
+
+  if( initial_time_ == 0 ) initial_time_ = std::time( 0 );
+  return initial_time_;
+  }
 
 
 bool write_logfile_header( FILE * const f, const char * const logtype )
   {
   static std::string timestamp;
 
-  if( timestamp.empty() ) timestamp = get_timestamp( initial_time_ );
+  if( timestamp.empty() ) timestamp = get_timestamp( initial_time() );
   return ( std::fprintf( f, "# %s Logfile. Created by %s version %s\n"
                             "# Command line: %s\n"
                             "# Start time:   %s\n",

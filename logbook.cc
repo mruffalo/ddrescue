@@ -52,7 +52,7 @@ Logbook::Logbook( const long long offset, const long long isize, Domain & dom,
   : Logfile( logname ), offset_( offset ), logfile_isize_( 0 ),
     domain_( dom ), hardbs_( hardbs ), softbs_( cluster * hardbs ),
     final_msg_( 0 ), final_errno_( 0 ),
-    ul_t1( initial_time() ), logfile_exists_( false )
+    ul_t1( 0 ), logfile_exists_( false )
   {
   int alignment = sysconf( _SC_PAGESIZE );
   if( alignment < hardbs_ || alignment % hardbs_ ) alignment = hardbs_;
@@ -91,6 +91,7 @@ bool Logbook::update_logfile( const int odes, const bool force )
   if( !filename() ) return true;
   const int interval = 30 + std::min( 270, sblocks() / 38 );	// 30s to 5m
   const long t2 = std::time( 0 );
+  if( ul_t1 == 0 ) ul_t1 = t2;				// initialize
   if( !force && t2 - ul_t1 < interval ) return true;
   ul_t1 = t2;
   if( odes >= 0 ) fsync( odes );
