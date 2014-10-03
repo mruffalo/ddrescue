@@ -6,8 +6,8 @@
 @finalout
 @c %**end of header
 
-@set UPDATED 23 September 2014
-@set VERSION 1.19-rc2
+@set UPDATED 3 October 2014
+@set VERSION 1.19
 
 @dircategory GNU Packages
 @direntry
@@ -668,8 +668,9 @@ corresponding file or device.
 
 @item --cpass=@var{n}[,@var{n}]
 Select what pass(es) to run during the copying phase. Valid values for
-@var{n} range from 1 to 3. To run only the given pass(es), specify also
-@samp{--no-trim} and @samp{--no-scrape}.
+@var{n} range from 0 to 3. @samp{--cpass=0} skips the copying phase
+entirely. To run only the given pass(es), specify also @samp{--no-trim}
+and @samp{--no-scrape}.
 
 @item --pause=@var{interval}
 Time to wait between passes. Defaults to 0. @var{interval} is formatted

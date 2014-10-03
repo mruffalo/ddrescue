@@ -1,6 +1,6 @@
-2014-09-23  Antonio Diaz Diaz  <antonio@gnu.org>
+2014-10-03  Antonio Diaz Diaz  <antonio@gnu.org>
 
-	* Version 1.19-rc2 released.
+	* Version 1.19 released.
 	* Fixed a race condition at start of run with '--timeout=0'.
 	* Added new option '-P, --data-preview'.
 	* Added new option '-u, --unidirectional'.

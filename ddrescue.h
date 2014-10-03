@@ -128,7 +128,7 @@ struct Rb_options
   long long min_read_rate;
   long pause;
   long timeout;
-  int cpass_bitset;		// 0 = all, or 1 | 2 | 4 for passes 1, 2, 3
+  int cpass_bitset;		// 1 | 2 | 4 for passes 1, 2, 3
   int max_errors;
   int max_retries;
   int o_direct;			// O_DIRECT or 0
@@ -149,7 +149,7 @@ struct Rb_options
 
   Rb_options()
     : max_error_rate( -1 ), min_outfile_size( -1 ), min_read_rate( -1 ),
-      pause( 0 ), timeout( -1 ), cpass_bitset( 0 ), max_errors( -1 ),
+      pause( 0 ), timeout( -1 ), cpass_bitset( 7 ), max_errors( -1 ),
       max_retries( 0 ), o_direct( 0 ), preview_lines( 0 ),
       skipbs( default_skipbs ), max_skipbs( max_max_skipbs ),
       complete_only( false ), exit_on_error( false ),

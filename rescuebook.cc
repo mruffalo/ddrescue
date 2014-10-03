@@ -149,9 +149,9 @@ int Rescuebook::copy_non_tried()
   const int msglen = std::strlen( msgbuf );
   bool forward = !reverse;
 
-  for( int pass = 1; cpass_bitset == 0 || pass <= 3; ++pass )
+  for( int pass = 1; pass <= 3; ++pass )
     {
-    if( cpass_bitset == 0 || cpass_bitset & ( 1 << ( pass - 1 ) ) )
+    if( cpass_bitset & ( 1 << ( pass - 1 ) ) )
       {
       first_post = true;
       update_and_pause();

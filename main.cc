@@ -528,11 +528,12 @@ namespace {
 void parse_cpass( const std::string & arg, Rb_options & rb_opts )
   {
   bool error = arg.empty();
+  rb_opts.cpass_bitset = 0;
   for( unsigned i = 0; i < arg.size(); ++i )
     {
     const char ch = arg[i];
-    if( ch < '1' || ch > '3' ) { error = true; break; }
-    rb_opts.cpass_bitset |= ( 1 << ( ch - '1' ) );
+    if( ch < '0' || ch > '3' ) { error = true; break; }
+    if( ch > '0' ) rb_opts.cpass_bitset |= ( 1 << ( ch - '1' ) );
     if( i + 1 < arg.size() )
       {
       if( arg[i+1] == ',' && i + 2 < arg.size() ) ++i;
