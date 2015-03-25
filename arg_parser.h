@@ -1,5 +1,5 @@
 /*  Arg_parser - POSIX/GNU command line argument parser. (C++ version)
-    Copyright (C) 2006-2014 Antonio Diaz Diaz.
+    Copyright (C) 2006-2015 Antonio Diaz Diaz.
 
     This library is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by

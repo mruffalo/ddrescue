@@ -16,7 +16,9 @@ from a new position, etc.
 
 If you use the logfile feature of ddrescue, the data is rescued very
 efficiently, (only the needed blocks are read). Also you can interrupt
-the rescue at any time and resume it later at the same point.
+the rescue at any time and resume it later at the same point. The
+logfile is an essential part of ddrescue's effectiveness. Use it unless
+you know what you are doing.
 
 Ddrescue does not write zeros to the output when it finds bad sectors in
 the input, and does not truncate the output file if not asked to. So,
@@ -41,9 +43,9 @@ the cause of file corruption is damaged media, the combination ddrescue
 damaged copies.
 
 Recordable CD and DVD media keep their data only for a finite time
-(typically for many years). After that time, data loss develops slowly
+(typically for some years). After that time, data loss develops slowly
 with read errors growing from the outer media region towards the inside.
-Just make two (or more) copies of every important CD/DVD you burn so
+Just make two (or more) copies of every important CD-ROM/DVD you burn so
 that you can later recover them with ddrescue.
 
 The logfile is periodically saved to disc. So in case of a crash you can
@@ -76,7 +78,7 @@ SATA, SCSI, old MFM drives, floppy discs, or even flash media cards like
 SD).
 
 
-Copyright (C) 2004-2014 Antonio Diaz Diaz.
+Copyright (C) 2004-2015 Antonio Diaz Diaz.
 
 This file is free documentation: you have unlimited permission to copy,
 distribute and modify it.

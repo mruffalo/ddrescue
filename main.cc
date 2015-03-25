@@ -1,5 +1,5 @@
 /*  GNU ddrescue - Data recovery tool
-    Copyright (C) 2004-2014 Antonio Diaz Diaz.
+    Copyright (C) 2004-2015 Antonio Diaz Diaz.
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -42,8 +42,8 @@
 #include "rational.h"
 #include "block.h"
 #include "ddrescue.h"
-#include "linux.h"
 #include "loggers.h"
+#include "non_posix.h"
 
 #ifndef O_BINARY
 #define O_BINARY 0
@@ -83,11 +83,11 @@ void show_help( const int cluster, const int hardbs, const int skipbs )
                "  -c, --cluster-size=<sectors>   sectors to copy at a time [%d]\n", cluster );
   std::printf( "  -C, --complete-only            do not read new data beyond logfile limits\n"
                "  -d, --direct                   use direct disc access for input file\n"
-               "  -D, --synchronous              use synchronous writes for output file\n"
+               "  -D, --odirect                  use direct disc access for output file\n"
                "  -e, --max-errors=[+]<n>        maximum number of [new] error areas allowed\n"
                "  -E, --max-error-rate=<bytes>   maximum allowed rate of read errors per second\n"
                "  -f, --force                    overwrite output device or partition\n"
-               "  -F, --fill-mode=<types>        fill given type blocks with infile data (?*/-+)\n"
+               "  -F, --fill-mode=<types>        fill blocks of given types with data (?*/-+l)\n"
                "  -G, --generate-mode            generate approximate logfile from partial copy\n"
                "  -H, --test-mode=<file>         set map of good/bad blocks from given logile\n"
                "  -i, --input-position=<bytes>   starting position of domain in input file [0]\n"
@@ -115,10 +115,12 @@ void show_help( const int cluster, const int hardbs, const int skipbs )
                "  -w, --ignore-write-errors      make fill mode ignore write errors\n"
                "  -x, --extend-outfile=<bytes>   extend outfile size to be at least this long\n"
                "  -X, --exit-on-error            exit after the first read error\n"
+               "  -y, --synchronous              use synchronous writes for output file\n"
                "  -1, --log-rates=<file>         log rates and error sizes in file\n"
                "  -2, --log-reads=<file>         log all read operations in file\n"
                "      --ask                      ask for confirmation before starting the copy\n"
                "      --cpass=<n>[,<n>]          select what copying pass(es) to run\n"
+               "      --max-read-rate=<bytes>    maximum read rate in bytes/s\n"
                "      --pause=<interval>         time to wait between passes [0]\n"
                "Numbers may be in decimal, hexadecimal or octal, and may be followed by a\n"
                "multiplier: s = sectors, k = 1000, Ki = 1024, M = 10^6, Mi = 2^20, etc...\n"
@@ -236,7 +238,7 @@ int do_fill( const long long offset, Domain & domain,
              const char * const iname, const char * const oname,
              const char * const logname,
              const int cluster, const int hardbs,
-             const std::string & filltypes, const bool ignore_write_errors,
+             const std::string & filltypes, const Fb_options & fb_opts,
              const bool synchronous )
   {
   if( !logname )
@@ -246,7 +248,7 @@ int do_fill( const long long offset, Domain & domain,
     }
 
   Fillbook fillbook( offset, domain, logname, cluster, hardbs,
-                     ignore_write_errors, synchronous );
+                     fb_opts, synchronous );
   if( !fillbook.logfile_exists() ) return not_readable( logname );
   if( fillbook.domain().empty() ) return empty_domain();
   if( fillbook.read_only() ) return not_writable( logname );
@@ -302,9 +304,9 @@ int do_generate( const long long offset, Domain & domain,
 
   Genbook genbook( offset, isize, domain, logname, cluster, hardbs );
   if( genbook.domain().empty() ) return empty_domain();
-  if( !genbook.blank() && genbook.current_status() != Logbook::generating )
+  if( !genbook.blank() && genbook.current_status() != Logfile::generating )
     {
-    show_error( "Logfile alredy exists and is non-empty.", 0, true );
+    show_error( "Logfile alredy exists and is not empty.", 0, true );
     return 1;
     }
   if( genbook.read_only() ) return not_writable( logname );
@@ -392,7 +394,7 @@ int do_rescue( const long long offset, Domain & domain,
                const bool ask, const bool preallocate,
                const bool synchronous, const bool verify_input_size )
   {
-  const int ides = open( iname, O_RDONLY | rb_opts.o_direct | O_BINARY );
+  const int ides = open( iname, O_RDONLY | rb_opts.o_direct_in | O_BINARY );
   if( ides < 0 )
     { show_error( "Can't open input file", errno ); return 1; }
   long long isize = lseek( ides, 0, SEEK_END );
@@ -437,8 +439,8 @@ int do_rescue( const long long offset, Domain & domain,
 
   if( ask && !user_agrees_ids( rescuebook, iname, oname, ides ) ) return 1;
 
-  const int odes = open( oname, O_CREAT | O_WRONLY | o_trunc | O_BINARY,
-                         outmode );
+  const int odes = open( oname, O_CREAT | O_WRONLY | rb_opts.o_direct_out |
+                         o_trunc | O_BINARY, outmode );
   if( odes < 0 )
     { show_error( "Can't open output file", errno ); return 1; }
   if( lseek( odes, 0, SEEK_SET ) )
@@ -483,29 +485,35 @@ int do_rescue( const long long offset, Domain & domain,
         std::printf( "Max %serrors: %d    ", rescuebook.new_errors_only ?
                      "new " : "", rescuebook.max_errors );
         }
-      if( rescuebook.max_retries >= 0 )
-        { nl = true;
-          std::printf( "Max retry passes: %d    ", rescuebook.max_retries ); }
       if( nl ) { nl = false; std::fputc( '\n', stdout ); }
 
+      if( rescuebook.max_read_rate > 0 )
+        { nl = true; std::printf( "Max read rate:  %6sB/s    ",
+                                  format_num( rescuebook.max_read_rate, 99999 ) ); }
       if( rescuebook.min_read_rate == 0 )
         { nl = true; std::printf( "Min read rate: auto    " ); }
       else if( rescuebook.min_read_rate > 0 )
         { nl = true; std::printf( "Min read rate:  %6sB/s    ",
                                   format_num( rescuebook.min_read_rate, 99999 ) ); }
+      if( nl ) { nl = false; std::fputc( '\n', stdout ); }
+
       if( rescuebook.pause > 0 )
-        { nl = true; std::printf( "Pause: %s    ",
+        { nl = true; std::printf( "Pause: %-10s ",
                                   format_time( rescuebook.pause ) ); }
       if( rescuebook.timeout >= 0 )
         { nl = true; std::printf( "Timeout: %s",
                                   format_time( rescuebook.timeout ) ); }
       if( nl ) { nl = false; std::fputc( '\n', stdout ); }
 
-      std::printf( "Direct: %s    ", rescuebook.o_direct ? "yes" : "no" );
-      std::printf( "Sparse: %s    ", rescuebook.sparse ? "yes" : "no" );
-      std::printf( "Trim: %s    ", !rescuebook.notrim ? "yes" : "no" );
-      std::printf( "Scrape: %s    ", !rescuebook.noscrape ? "yes" : "no" );
-      std::printf( "Truncate: %s    ", o_trunc ? "yes" : "no" );
+      std::printf( "Direct in: %s    ", rescuebook.o_direct_in ? "yes" : "no " );
+      std::printf( "Direct out: %s    ", rescuebook.o_direct_out ? "yes" : "no " );
+      std::printf( "Sparse: %s    ", rescuebook.sparse ? "yes" : "no " );
+      std::printf( "Truncate: %s    ", o_trunc ? "yes" : "no " );
+      std::fputc( '\n', stdout );
+      std::printf( "Trim: %s         ", !rescuebook.notrim ? "yes" : "no " );
+      std::printf( "Scrape: %s        ", !rescuebook.noscrape ? "yes" : "no " );
+      if( rescuebook.max_retries >= 0 )
+          std::printf( "Max retry passes: %d", rescuebook.max_retries );
       std::fputc( '\n', stdout );
       if( rescuebook.complete_only )
         { nl = true; std::printf( "Complete only    " ); }
@@ -569,13 +577,19 @@ void parse_skipbs( const char * const arg, Rb_options & rb_opts,
     }
   }
 
+void check_o_direct()
+  {
+  if( O_DIRECT == 0 )
+    { show_error( "Direct disc access not available." ); std::exit( 1 ); }
+  }
+
 } // end namespace
 
 
 bool Rescuebook::reopen_infile()
   {
   if( ides_ >= 0 ) close( ides_ );
-  ides_ = open( iname_, O_RDONLY | o_direct | O_BINARY );
+  ides_ = open( iname_, O_RDONLY | o_direct_in | O_BINARY );
   if( ides_ < 0 )
     { final_msg( "Can't reopen input file", errno ); return false; }
   const long long isize = lseek( ides_, 0, SEEK_END );
@@ -587,7 +601,7 @@ bool Rescuebook::reopen_infile()
 
 int main( const int argc, const char * const argv[] )
   {
-  enum Optcode { opt_ask = 256, opt_cpa, opt_pau };
+  enum Optcode { opt_ask = 256, opt_cpa, opt_pau, opt_rat };
   long long ipos = 0;
   long long opos = -1;
   long long max_size = -1;
@@ -600,10 +614,10 @@ int main( const int argc, const char * const argv[] )
   int hardbs = default_hardbs;
   int o_trunc = 0;
   Mode program_mode = m_none;
+  Fb_options fb_opts;
   Rb_options rb_opts;
   bool ask = false;
   bool force = false;
-  bool ignore_write_errors = false;
   bool loose = false;
   bool preallocate = false;
   bool synchronous = false;
@@ -625,7 +639,7 @@ int main( const int argc, const char * const argv[] )
     { 'c', "cluster-size",        Arg_parser::yes },
     { 'C', "complete-only",       Arg_parser::no  },
     { 'd', "direct",              Arg_parser::no  },
-    { 'D', "synchronous",         Arg_parser::no  },
+    { 'D', "odirect",             Arg_parser::no  },
     { 'e', "max-errors",          Arg_parser::yes },
     { 'E', "max-error-rate",      Arg_parser::yes },
     { 'f', "force",               Arg_parser::no  },
@@ -640,7 +654,6 @@ int main( const int argc, const char * const argv[] )
     { 'm', "domain-logfile",      Arg_parser::yes },
     { 'M', "retrim",              Arg_parser::no  },
     { 'n', "no-scrape",           Arg_parser::no  },
-    { 'n', "no-split",            Arg_parser::no  },
     { 'N', "no-trim",             Arg_parser::no  },
     { 'o', "output-position",     Arg_parser::yes },
     { 'O', "reopen-on-error",     Arg_parser::no  },
@@ -659,9 +672,11 @@ int main( const int argc, const char * const argv[] )
     { 'w', "ignore-write-errors", Arg_parser::no  },
     { 'x', "extend-outfile",      Arg_parser::yes },
     { 'X', "exit-on-error",       Arg_parser::no  },
+    { 'y', "synchronous",         Arg_parser::no  },
     { opt_ask, "ask",             Arg_parser::no  },
     { opt_cpa, "cpass",           Arg_parser::yes },
     { opt_pau, "pause",           Arg_parser::yes },
+    { opt_rat, "max-read-rate",   Arg_parser::yes },
     {  0 , 0,                     Arg_parser::no  } };
 
   const Arg_parser parser( argc, argv, options );
@@ -684,17 +699,15 @@ int main( const int argc, const char * const argv[] )
       case 'B': format_num( 0, 0, -1 ); break;		// set binary prefixes
       case 'c': cluster = getnum( arg, 0, 1, INT_MAX ); break;
       case 'C': rb_opts.complete_only = true; break;
-      case 'd': rb_opts.o_direct = O_DIRECT;
-                if( rb_opts.o_direct == 0 )
-                  { show_error( "Direct disc access not available." ); return 1; }
-                break;
-      case 'D': synchronous = true; break;
+      case 'd': rb_opts.o_direct_in = O_DIRECT; check_o_direct(); break;
+      case 'D': rb_opts.o_direct_out = O_DIRECT; check_o_direct(); break;
       case 'e': rb_opts.new_errors_only = ( *arg == '+' );
                 rb_opts.max_errors = getnum( arg, 0, 0, INT_MAX ); break;
       case 'E': rb_opts.max_error_rate = getnum( arg, hardbs, 0 ); break;
       case 'f': force = true; break;
       case 'F': set_mode( program_mode, m_fill ); filltypes = arg;
-                check_types( filltypes, "fill-mode" ); break;
+                fb_opts.write_location_data =
+                  check_types( filltypes, "fill-mode", true ); break;
       case 'G': set_mode( program_mode, m_generate ); break;
       case 'h': show_help( cluster_bytes / default_hardbs, default_hardbs,
                            Rb_options::default_skipbs );
@@ -723,12 +736,14 @@ int main( const int argc, const char * const argv[] )
       case 'u': rb_opts.unidirectional = true; break;
       case 'v': if( verbosity < 4 ) ++verbosity; break;
       case 'V': show_version(); return 0;
-      case 'w': ignore_write_errors = true; break;
+      case 'w': fb_opts.ignore_write_errors = true; break;
       case 'x': rb_opts.min_outfile_size = getnum( arg, hardbs, 1 ); break;
       case 'X': rb_opts.exit_on_error = true; break;
+      case 'y': synchronous = true; break;
       case opt_ask: ask = true; break;
       case opt_cpa: parse_cpass( parser.argument( argind ), rb_opts ); break;
       case opt_pau: rb_opts.pause = parse_time_interval( arg ); break;
+      case opt_rat: rb_opts.max_read_rate = getnum( arg, hardbs, 1 ); break;
       default : internal_error( "uncaught option." );
       }
     } // end process options
@@ -764,19 +779,19 @@ int main( const int argc, const char * const argv[] )
           verify_input_size || preallocate || o_trunc )
         show_error( "warning: Options -aACdeEHIKlMnOpPrRStTuxX are ignored in fill mode." );
       return do_fill( opos - ipos, domain, iname, oname, logname, cluster,
-                      hardbs, filltypes, ignore_write_errors, synchronous );
+                      hardbs, filltypes, fb_opts, synchronous );
     case m_generate:
       if( ask )
         { show_error( "Option '--ask' is incompatible with generate mode.", 0, true );
           return 1; }
-      if( rb_opts != Rb_options() || synchronous || test_mode_logfile_name ||
-          verify_input_size || preallocate || o_trunc || ignore_write_errors )
-        show_error( "warning: Options -aACdDeEHIKlMnOpPrRStTuwxX are ignored in generate mode." );
+      if( fb_opts != Fb_options() || rb_opts != Rb_options() || synchronous ||
+          test_mode_logfile_name || verify_input_size || preallocate || o_trunc )
+        show_error( "warning: Options -aACdDeEHIKlMnOpPrRStTuwxXy are ignored in generate mode." );
       return do_generate( opos - ipos, domain, iname, oname, logname,
                           cluster, hardbs );
     case m_none:
       {
-      if( ignore_write_errors )
+      if( fb_opts != Fb_options() )
         { show_error( "Option '-w' is incompatible with rescue mode.", 0, true );
           return 1; }
       const Domain * const test_domain = test_mode_logfile_name ?

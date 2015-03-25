@@ -6,8 +6,8 @@
 @finalout
 @c %**end of header
 
-@set UPDATED 3 October 2014
-@set VERSION 1.19
+@set UPDATED 25 March 2015
+@set VERSION 1.20-pre1
 
 @dircategory GNU Packages
 @direntry
@@ -41,6 +41,7 @@ This manual is for GNU ddrescue (version @value{VERSION}, @value{UPDATED}).
 * Algorithm::             How ddrescue recovers the data
 * Invoking ddrescue::     Command line interface
 * Logfile structure::     Detailed format of the logfile
+* Optical media::         Copying CD-ROMs and DVDs
 * Examples::              A small tutorial with examples
 * Direct disc access::    Bypassing the kernel cache
 * Fill mode::             Selectively overwriting the output file
@@ -52,7 +53,7 @@ This manual is for GNU ddrescue (version @value{VERSION}, @value{UPDATED}).
 @end menu
 
 @sp 1
-Copyright @copyright{} 2004-2014 Antonio Diaz Diaz.
+Copyright @copyright{} 2004-2015 Antonio Diaz Diaz.
 
 This manual is free documentation: you have unlimited permission
 to copy, distribute and modify it.
@@ -72,7 +73,9 @@ from a new position, etc.
 
 If you use the logfile feature of ddrescue, the data is rescued very
 efficiently, (only the needed blocks are read). Also you can interrupt
-the rescue at any time and resume it later at the same point.
+the rescue at any time and resume it later at the same point. The
+logfile is an essential part of ddrescue's effectiveness. Use it unless
+you know what you are doing.
 
 Ddrescue does not write zeros to the output when it finds bad sectors in
 the input, and does not truncate the output file if not asked to. So,
@@ -95,12 +98,6 @@ lziprecover corrects corrupt sectors with data from other copies). If
 the cause of file corruption is damaged media, the combination ddrescue
 + lziprecover is the best option for recovering data from multiple
 damaged copies. @xref{lziprecover-example}, for an example.
-
-Recordable CD and DVD media keep their data only for a finite time
-(typically for many years). After that time, data loss develops slowly
-with read errors growing from the outer media region towards the inside.
-Just make two (or more) copies of every important CD/DVD you burn so
-that you can later recover them with ddrescue.
 
 Because ddrescue needs to read and write at random places, it only works
 on seekable (random access) input and output files.
@@ -149,15 +146,16 @@ file system. /dev/hda1, /dev/sdb3, are partition names.
 @item Recoverable formats
 As ddrescue uses standard library functions to read data from the device
 being rescued, only mountable device formats can be rescued with
-ddrescue. DVDs can be mounted and they can be rescued, "compact disc
-digital audio" CDs can't, "video CDs"[1] maybe.@*
-[1] http://en.wikipedia.org/wiki/Video_CD
+ddrescue. CD-ROMs and DVDs can be mounted and they can be rescued,
+"compact disc digital audio" CDs can't, "video CDs"[1] maybe.@* [1]
+http://en.wikipedia.org/wiki/Video_CD
 
 @item Rescue domain
 Block or set of blocks to be acted upon (rescued, listed, etc). You can
 define it with the options @samp{--input-position}, @samp{--size} and
 @samp{--domain-logfile}. The rescue domain defaults to the whole input
-file or logfile.
+file or logfile. Ddrescue will never try to read any data outside of the
+rescue domain. If it does, please, report it as a bug.
 
 The amount of data rescued, number of errors, etc, shown by ddrescue may
 vary or even become zero if you limit the rescue domain. Don't worry,
@@ -265,12 +263,22 @@ be eventually read after some retries.
 6) Optionally write a logfile for later use.
 
 @sp 1
-The total error size (@samp{errsize}) is sum of the sizes of all the
-non-trimmed, non-scraped and bad-sector blocks. It increases during the
-copying phase and may decrease during trimming, scraping and retrying.
-Note that as ddrescue scrapes or retries the failed blocks, the good
-data found may divide them into smaller blocks, decreasing the total
-error size but increasing the number of errors.
+The total error size (errsize) is the sum of the sizes of all the
+bad-sector blocks. It increases during the trimming and scraping phases,
+and may decrease during the retrying phase. Non-trimmed and non-scraped
+blocks are not considered errors. Note that as ddrescue retries the
+failed blocks, the good data found may divide them into smaller blocks,
+decreasing the total error size but increasing the number of errors.
+
+The @samp{remaining time} is calculated using the average rate of the
+last 30 seconds and does not take into account that some parts may be
+excluded from the rescue (for example with @samp{--no-trim}), or that
+some areas may be unrecoverable. Therefore it may be very imprecise, may
+vary widely during the rescue, and may show a non-zero value at the end
+of the rescue. In particular it may go down to a few seconds at the end
+of the first pass, just to grow to hours or days in the following
+passes. Such is the nature of ddrescue; the good parts are usually
+recovered fast, while the rest may take a long time.
 
 The logfile is periodically saved to disc, as well as when ddrescue
 finishes or is interrupted. So in case of a crash you can resume the
@@ -377,20 +385,27 @@ only be used after a first rescue attempt, possibly limited with the
 
 @item -d
 @itemx --direct
-Use direct disc access to read from @var{infile}, bypassing the kernel
-cache. (Open the file with the O_DIRECT flag). Use it only on devices or
-partitions, not on regular files. Sector size must be correctly set for
-this to work. Not all systems support this.
+Use direct disc access (@pxref{Direct disc access}) to read from
+@var{infile}, bypassing the kernel cache. (Open the file with the
+O_DIRECT flag). Use it only on devices or partitions, not on regular
+files. Sector size must be correctly set for this to work. Not all
+systems support this.
 
 If your system does not support direct disc access, ddrescue will warn
 you. If the sector size is not correctly set, all reads will result in
-errors, and no data will be rescued.
+errors and no data will be rescued.
 
 @item -D
-@itemx --synchronous
-Use synchronous writes for @var{outfile}. (Issue a fsync call after
-every write). May be useful when forcing the drive to remap its bad
-sectors.
+@itemx --odirect
+Use direct disc access to write to @var{outfile}, bypassing the kernel
+cache. (Open the file with the O_DIRECT flag). Sector size must be
+correctly set for this to work. Not all systems support this.
+
+If your system does not support direct disc access, ddrescue will warn
+you. If the sector size is not correctly set, a write error will result
+and no data will be rescued. Some OSs have a bug that prevents them from
+detecting write errors properly (or at all) on some devices if direct
+disc access is not used for @var{outfile}.
 
 @item -e [+]@var{n}
 @itemx --max-errors=[+]@var{n}
@@ -405,7 +420,8 @@ Maximum rate of errors allowed before giving up, in bytes per second.
 Defaults to infinity. The rate being measured is that of actually failed
 reads, so the rescue may finish because of this rate being exceeded even
 if the total error size (errsize) does not change because the areas
-being tried are already marked as errors.
+being tried are being marked as non-trimmed or non-scraped, or are
+already marked as errors.
 
 @item -f
 @itemx --force
@@ -419,8 +435,9 @@ regular files.
 Fill the blocks in @var{outfile} specified as any of @var{types} in
 @var{logfile}, with data read from @var{infile}. @var{types} contains
 one or more of the status characters defined in the chapter Logfile
-structure (@pxref{Logfile structure}). See the chapter Fill mode
-(@pxref{Fill mode}) for a complete description of the fill mode.
+structure (@pxref{Logfile structure}) and an optional @samp{l} for
+sector location data. See the chapter Fill mode (@pxref{Fill mode}) for
+a complete description of the fill mode.
 
 @item -G
 @itemx --generate-mode
@@ -635,6 +652,12 @@ exits when a new error area is found. If the read errors are adjacent to
 existing error areas, no new error areas are produced (just enlarged),
 and @samp{--max-errors=+0} does not make ddrescue to exit.
 
+@item -y
+@itemx --synchronous
+Use synchronous writes for @var{outfile}. (Issue a fsync call after
+every write). May be useful when forcing the drive to remap its bad
+sectors.
+
 @item -1 @var{file}
 @itemx --log-rates=@var{file}
 Log rates and error sizes every second in @var{file}. If @var{file}
@@ -672,6 +695,11 @@ Select what pass(es) to run during the copying phase. Valid values for
 entirely. To run only the given pass(es), specify also @samp{--no-trim}
 and @samp{--no-scrape}.
 
+@item --max-read-rate=@var{bytes}
+Maximum read rate, in bytes per second. @var{bytes} is rounded up to the
+equivalent of a whole number of cluster reads per second. Use this
+option to limit the bandwidth used by ddrescue.
+
 @item --pause=@var{interval}
 Time to wait between passes. Defaults to 0. @var{interval} is formatted
 as in the option @samp{--timeout} above.
@@ -704,8 +732,8 @@ found, invalid flags, I/O errors, etc), 2 to indicate a corrupt or
 invalid input file, 3 for an internal consistency error (eg, bug) which
 caused ddrescue to panic.
 
-If ddrescue is interrupted by a signal, it updates the logfile and then
-terminates by raising the signal received.
+If ddrescue is interrupted by a signal, it updates @var{logfile} and
+then terminates by raising the signal received.
 
 
 @node Logfile structure
@@ -781,10 +809,115 @@ And here is an example logfile:
 If you edit the file, you may use decimal, hexadecimal or octal values,
 using the same syntax as integer constants in C++.
 
-NOTE: Logfiles generated by a version of ddrescue prior to 1.6 lack the
+NOTE: Logfiles created by a version of ddrescue prior to 1.6 lack the
 status line. If you want to use an old logfile with ddrescue 1.6 or
 later, you will have to insert a line like @samp{0 +} at the beginning
 of the logfile.
+
+
+@node Optical media
+@chapter Copying CD-ROMs and DVDs
+@cindex optical media
+
+Ddrescue may be better than dd for copying recordable CD-ROMs because
+the two lead out sectors at the end of some of them may cause a read
+error that prevents the whole last record from being copied by dd,
+potentially losing data. Also dd may create an image larger than the
+original if the @samp{sync} conversion and a block size larger than the
+sector size are specified.
+
+Recordable CD and DVD media keep their data only for a finite time
+(typically for some years). After that time, data loss develops slowly
+with read errors growing from the outer media region towards the inside.
+Just make two (or more) copies of every important CD-ROM/DVD you burn so
+that you can later recover them with ddrescue.
+
+If you have only one copy of a CD-ROM or DVD that fails when being
+copied, and if you have access to multiple optical media drives, you
+have a better chance of recovering the bad sectors since one drive may
+fail to read a particular sector, but another drive might be able to
+squeeze the data out of it, depending on the laser frequency and the
+sensitivity of the laser-sensor that reads the reflected laser light.
+
+@sp 1
+@noindent
+Example 1: Rescue a CD-ROM in /dev/cdrom.
+
+@example
+ddrescue -n -b2048 /dev/cdrom cdimage logfile
+ddrescue -d -r1 -b2048 /dev/cdrom cdimage logfile
+  (if errsize is zero, cdimage now contains a complete image of the
+   CD-ROM and you can write it to a blank CD-ROM)
+@end example
+
+@sp 1
+@noindent
+Example 2: Rescue a CD-ROM in /dev/cdrom from two copies.
+
+@example
+ddrescue -n -b2048 /dev/cdrom cdimage logfile
+ddrescue -d -b2048 /dev/cdrom cdimage logfile
+  (insert second copy in the CD drive)
+ddrescue -d -r1 -b2048 /dev/cdrom cdimage logfile
+  (if errsize is zero, cdimage now contains a complete image of the
+   CD-ROM and you can write it to a blank CD-ROM)
+@end example
+
+@sp 1
+@noindent
+Example 3: Rescue a CD-ROM in /dev/cdrom using two CD drives from two
+different computers, writing the image into an USB drive nounted on
+/mnt/memory.
+
+@example
+ddrescue -n -b2048 /dev/cdrom /mnt/memory/cdimage /mnt/memory/logfile
+ddrescue -d -r1 -b2048 /dev/cdrom /mnt/memory/cdimage /mnt/memory/logfile
+  (umount the USB drive and move both USB drive and CD-ROM to second
+   computer)
+ddrescue -d -r1 -b2048 /dev/cdrom /mnt/memory/cdimage /mnt/memory/logfile
+  (if errsize is zero, /mnt/memory/cdimage now contains a complete image
+   of the CD-ROM and you can write it to a blank CD-ROM)
+@end example
+
+@sp 1
+@noindent
+Example 4: Merge the partially recovered images of 3 identical DVDs
+using their logfiles as domain logfiles.
+
+@example
+ddrescue -m logfile1 dvdimage1 dvdimage logfile
+ddrescue -m logfile2 dvdimage2 dvdimage logfile
+ddrescue -m logfile3 dvdimage3 dvdimage logfile
+  (if errsize is zero, dvdimage now contains a complete image of the DVD
+   and you can write it to a blank DVD)
+@end example
+
+@sp 1
+@anchor{lziprecover-example}
+@noindent
+Example 5: Rescue a lzip compressed backup from two copies on CD-ROM
+with error-checked merging of copies
+@ifnothtml
+(@xref{Top,lziprecover manual,,lziprecover},
+@end ifnothtml
+@ifhtml
+(See the
+@uref{http://www.nongnu.org/lzip/manual/lziprecover_manual.html,,lziprecover manual}
+@end ifhtml
+for details about lziprecover).
+
+@example
+ddrescue -d -r1 -b2048 /dev/cdrom cdimage1 logfile1
+mount -t iso9660 -o loop,ro cdimage1 /mnt/cdimage
+cp /mnt/cdimage/backup.tar.lz rescued1.tar.lz
+umount /mnt/cdimage
+  (insert second copy in the CD drive)
+ddrescue -d -r1 -b2048 /dev/cdrom cdimage2 logfile2
+mount -t iso9660 -o loop,ro cdimage2 /mnt/cdimage
+cp /mnt/cdimage/backup.tar.lz rescued2.tar.lz
+umount /mnt/cdimage
+lziprecover -m -v -o backup.tar.lz rescued1.tar.lz rescued2.tar.lz
+@end example
 
 
 @node Examples
@@ -822,6 +955,8 @@ then try to repair the partition table and the partitions on the copy.
 If the damaged drive is not listed in /dev, then you cannot rescue it.
 At least not with ddrescue.
 
+@xref{Optical media}, for rescue examples of CD-ROMs and DVDs.
+
 @sp 1
 @noindent
 Example 1: Rescue a whole disc with two ext2 partitions in /dev/hda to
@@ -854,71 +989,7 @@ mount -t ext2 -o ro /dev/hdb2 /mnt
 
 @sp 1
 @noindent
-Example 3: Rescue a CD-ROM in /dev/cdrom.
-
-@example
-ddrescue -n -b2048 /dev/cdrom cdimage logfile
-ddrescue -d -b2048 /dev/cdrom cdimage logfile
-  (if errsize is zero, cdimage now contains a complete image of the
-   CD-ROM and you can write it to a blank CD-ROM)
-@end example
-
-@sp 1
-@noindent
-Example 4: Rescue a CD-ROM in /dev/cdrom from two copies.
-
-@example
-ddrescue -n -b2048 /dev/cdrom cdimage logfile
-ddrescue -d -b2048 /dev/cdrom cdimage logfile
-  (insert second copy in the CD drive)
-ddrescue -d -r1 -b2048 /dev/cdrom cdimage logfile
-  (if errsize is zero, cdimage now contains a complete image of the
-   CD-ROM and you can write it to a blank CD-ROM)
-@end example
-
-@sp 1
-@noindent
-Example 5: Merge the partially recovered images of 3 identical DVDs
-using their logfiles as domain logfiles.
-
-@example
-ddrescue -m logfile1 dvdimage1 dvdimage logfile
-ddrescue -m logfile2 dvdimage2 dvdimage logfile
-ddrescue -m logfile3 dvdimage3 dvdimage logfile
-  (if errsize is zero, dvdimage now contains a complete image of the DVD
-   and you can write it to a blank DVD)
-@end example
-
-@sp 1
-@anchor{lziprecover-example}
-@noindent
-Example 6: Rescue a lzip compressed backup from two copies on CD-ROM
-with error-checked merging of copies
-@ifnothtml
-(@xref{Top,lziprecover manual,,lziprecover},
-@end ifnothtml
-@ifhtml
-(See the
-@uref{http://www.nongnu.org/lzip/manual/lziprecover_manual.html,,lziprecover manual}
-@end ifhtml
-for details about lziprecover).
-
-@example
-ddrescue -b2048 /dev/cdrom cdimage1 logfile1
-mount -t iso9660 -o loop,ro cdimage1 /mnt/cdimage
-cp /mnt/cdimage/backup.tar.lz rescued1.tar.lz
-umount /mnt/cdimage
-  (insert second copy in the CD drive)
-ddrescue -b2048 /dev/cdrom cdimage2 logfile2
-mount -t iso9660 -o loop,ro cdimage2 /mnt/cdimage
-cp /mnt/cdimage/backup.tar.lz rescued2.tar.lz
-umount /mnt/cdimage
-lziprecover -m -v -o backup.tar.lz rescued1.tar.lz rescued2.tar.lz
-@end example
-
-@sp 1
-@noindent
-Example 7: While rescuing the whole drive /dev/hda to /dev/hdb, /dev/hda
+Example 3: While rescuing the whole drive /dev/hda to /dev/hdb, /dev/hda
 freezes up at position 12345678.
 
 @example
@@ -926,13 +997,13 @@ ddrescue -f /dev/hda /dev/hdb logfile       <-- /dev/hda freezes here
   (restart /dev/hda or reboot computer)
   (restart copy at a safe distance from the troubled sector)
 ddrescue -f -i 12350000 /dev/hda /dev/hdb logfile
-  (copy backwards down to the troubled sector)
+  (then copy backwards down to the troubled sector)
 ddrescue -f -R /dev/hda /dev/hdb logfile
 @end example
 
 @sp 1
 @noindent
-Example 8: While rescuing the whole drive /dev/hda to /dev/hdb, /dev/hdb
+Example 4: While rescuing the whole drive /dev/hda to /dev/hdb, /dev/hdb
 fails and you have to rescue data to a third drive, /dev/hdc.
 
 @example
@@ -944,7 +1015,7 @@ ddrescue -d -f -r3 /dev/hda /dev/hdc logfile2
 
 @sp 1
 @noindent
-Example 9: While rescuing the whole drive /dev/hda to /dev/hdb, /dev/hda
+Example 5: While rescuing the whole drive /dev/hda to /dev/hdb, /dev/hda
 stops responding and disappears from /dev.
 
 @example
@@ -960,16 +1031,16 @@ ddrescue -d -f -r3 /dev/hda /dev/hdb logfile
 @cindex direct disc access
 @cindex raw devices
 
-If you notice that the positions and sizes in the logfile are ALWAYS
+If you notice that the positions and sizes in @var{logfile} are always
 multiples of the sector size, maybe your kernel is caching the disc
 accesses and grouping them. In this case you may want to use direct disc
-access or a raw device to bypass the kernel cache and rescue more of
-your data.
+access for @var{infile}, or read from a raw device, to bypass the kernel
+cache and rescue more of your data.
 
 NOTE! Sector size must be correctly set with the @samp{--sector-size}
-option for this to work. Only whole sectors can be read; both
-@samp{--input-position} and @samp{--size} must be a multiple of sector
-size.
+option for direct disc access to work. Only whole sectors can be read or
+written; both @samp{--input-position} (or @samp{--output-position} for
+direct writes) and @samp{--size} must be a multiple of sector size.
 
 Try the @samp{--direct} option first. If direct disc access is not
 available in your system, try raw devices. Read your system
@@ -1022,34 +1093,39 @@ mount -t ext2 -o ro /dev/hdc1 /mnt
 When ddrescue is invoked with the @samp{--fill-mode} option it operates
 in "fill mode", which is different from the default "rescue mode". That
 is, if you use the @samp{--fill-mode} option, ddrescue does not rescue
-anything. It only fills with data read from the input file the blocks of
-the output file whose status character from the logfile coincides with
+anything. It only fills with data read from @var{infile} the blocks of
+@var{outfile} whose status character from @var{logfile} coincides with
 one of the type characters specified as argument to the
 @samp{--fill-mode} option.
 
-In fill mode the input file may have any size. If it is too small, the
+If the argument of the @samp{--fill-mode} option contains an @samp{l},
+ddrescue will write location data (position, sector number and status)
+into each sector filled. With bad sectors filled in this way, it should
+be possible to retry the recovery of important files, as location of the
+error is known by looking into the unfinished copy of the file.
+
+In fill mode @var{infile} may have any size. If it is too small, the
 data will be duplicated as many times as necessary to fill the input
 buffer. If it is too big, only the data needed to fill the input buffer
 will be read. Then the same data will be written to every cluster or
 sector to be filled.
 
-Note that in fill mode the input file is always read from position 0. If
-you specify a @samp{--input-position}, it refers to the original input
-file from which the logfile was built, and is only used to calculate the
-offset between input and output positions.
+Note that in fill mode @var{infile} is always read from position 0. If
+you specify a @samp{--input-position}, it refers to the original
+@var{infile} from which @var{logfile} was built, and is only used to
+calculate the offset between input and output positions.
 
-Note also that when filling the input file of the original rescue run
-you should set @samp{--input-position} and @samp{--output-position} to
-identical values, whereas when filling the output file of the original
-rescue run you should keep the original offset between
-@samp{--input-position} and @samp{--output-position}.
+Note also that when filling the @var{infile} of the original rescue run
+you should not set @samp{--output-position}, whereas when filling the
+@var{outfile} of the original rescue run you should keep the original
+offset between @samp{--input-position} and @samp{--output-position}.
 
 The @samp{--fill-mode} option implies the @samp{--complete-only} option.
 
-In fill mode the logfile is updated to allow resumability when
-interrupted or in case of a crash, but as nothing is being rescued the
-logfile is not destroyed. The status line is the only part of the
-logfile that is modified.
+In fill mode @var{logfile} is updated to allow resumability when
+interrupted or in case of a crash, but as nothing is being rescued
+@var{logfile} is not destroyed. The status line is the only part of
+@var{logfile} that is modified.
 
 @sp 1
 @noindent
@@ -1099,18 +1175,26 @@ sparse writes. This yields a logfile with only finished (@samp{+}) and
 bad-sector (@samp{-}) blocks.
 
 2) Fill the bad-sector blocks of the copied drive or image file with a
-string not present in any file, for example "DEADBEEF".
+string not present in any file, for example "DEADBEEF". Use
+@samp{--fill-mode=l-} if you want location data.
 
-3) Mount the copied drive (or the image file, via loopback device).
+3) Mount the copied drive (or the image file, via loopback device)
+read-only.
 
 4) Grep for the fill string in all the files. Those files containing the
 string reside (at least partially) in damaged disc areas. Note that if
 all the damaged areas are in unused space, grep will not find the string
 in any file, which means that no files are damaged.
 
-5) Unmount the copied drive or image file.
+5) Take note of the location data of any important files that you want
+to retry.
 
-6) Optionally fill the bad-sector blocks of the copied drive or image
+6) Unmount the copied drive or image file.
+
+7) Retry the sectors belonging to the important files until they are
+rescued or until it is clear that they can't be rescued.
+
+8) Optionally fill the bad-sector blocks of the copied drive or image
 file with zeros to restore the disc image.
 
 @noindent
@@ -1119,12 +1203,16 @@ Example 4: Figure out what files are in the bad areas of the disc.
 @example
 ddrescue -b2048 /dev/cdrom cdimage logfile
 printf "DEADBEEF" > tmpfile
-ddrescue --fill-mode=- tmpfile cdimage logfile
+ddrescue --fill-mode=l- tmpfile cdimage logfile
 rm tmpfile
 mount -t iso9660 -o loop,ro cdimage /mnt/cdimage
 find /mnt/cdimage -type f -exec grep -l "DEADBEEF" '@{@}' ';'
+  (note that my_thesis.txt has a bad sector at pos 0x12345000)
 umount /mnt/cdimage
+ddrescue -b2048 -i0x12345000 -s2048 -r10 -d /dev/cdrom cdimage logfile
 ddrescue --fill-mode=- /dev/zero cdimage logfile
+mount -t iso9660 -o loop,ro cdimage /mnt/cdimage
+cp -a /mnt/cdimage/my_thesis.txt /safe/place/my_thesis.txt
 @end example
 
 
@@ -1132,16 +1220,17 @@ ddrescue --fill-mode=- /dev/zero cdimage logfile
 @chapter Generate mode
 @cindex generate Mode
 
-NOTE: When ddrescue is invoked with the @samp{--generate-mode} option it
+When ddrescue is invoked with the @samp{--generate-mode} option it
 operates in "generate mode", which is different from the default "rescue
 mode". That is, if you use the @samp{--generate-mode} option, ddrescue
-does not rescue anything. It only tries to generate a logfile for later
-use.
+does not rescue anything. It only tries to generate a @var{logfile} for
+later use.
 
-So you didn't read the tutorial and started ddrescue without a logfile.
-Now, two days later, your computer crashed and you can't know how much
-data ddrescue managed to save. And even worse, you can't resume the
-rescue; you have to restart it from the very beginning.
+So you didn't read the important advice (@pxref{Important advice}) and
+started ddrescue without a @var{logfile}. Now, two days later, your
+computer crashed and you can't know how much data ddrescue managed to
+save. And even worse, you can't resume the rescue; you have to restart
+it from the very beginning.
 
 Or maybe you started copying a drive with @w{@code{dd
 conv=noerror,sync}} and are now in the same situation described above.
@@ -1149,16 +1238,17 @@ In this case, note that you can't use a copy made by dd unless it was
 invoked with the @samp{sync} conversion argument.
 
 Don't despair (yet). Ddrescue can in some cases generate an approximate
-logfile, from the input file and the (partial) copy, that is almost as
-good as an exact logfile. It makes this by simply assuming that sectors
-containing all zeros were not rescued.
+@var{logfile}, from @var{infile} and the (partial) copy in
+@var{outfile}, that is almost as good as an exact @var{logfile}. It
+makes this by simply assuming that sectors containing all zeros were not
+rescued.
 
 However, if the destination of the copy was a drive or a partition, (or
 an existing regular file and truncation was not requested), most
 probably you will need to restart ddrescue from the very beginning.
-(This time with a logfile, of course). The reason is that old data may
-be present in the drive that have not been overwritten yet, and may be
-thus non-tried but non-zero.
+(This time with a @var{logfile}, of course). The reason is that old data
+may be present in the drive that have not been overwritten yet, and may
+be thus non-tried but non-zero.
 
 For example, if you first tried one of these commands:
 @example
@@ -1235,8 +1325,8 @@ somehow on /dev/hdb.
 @example
 ddrescue -f /dev/hda /dev/hdb logfile
 fdisk /dev/hdb                                <-- get partition sizes
-ddrescuelog -l- -b512 -i63b -o0 -s9767457b -b4096 logfile > badblocks1
-ddrescuelog -l- -b512 -i9767520b -o0 -s128520b -b4096 logfile > badblocks2
+ddrescuelog -l- -b512 -i63s -o0 -s9767457s -b4096 logfile > badblocks1
+ddrescuelog -l- -b512 -i9767520s -o0 -s128520s -b4096 logfile > badblocks2
 e2fsck -v -f -L badblocks1 /dev/hdb1
 e2fsck -v -f -L badblocks2 /dev/hdb2
 @end example
@@ -1288,13 +1378,14 @@ SI prefixes (powers of 1000) are used by default. (See table above,
 
 @item -c[@var{type1}@var{type2}]
 @itemx --create-logfile[=@var{type1}@var{type2}]
-Create a logfile from a list of block numbers read from standard input.
-Only blocks included in the rescue domain will be added to @var{logfile}.
+Create a @var{logfile} from a list of block numbers read from standard
+input. Only blocks included in the rescue domain will be added to
+@var{logfile}.
 
 @var{type1} and @var{type2} are block status characters as defined in
 the chapter Logfile structure (@pxref{Logfile structure}). @var{type1}
 sets the type for blocks included in the list, while @var{type2} sets
-the type for the rest of the logfile. If not specified, @var{type1}
+the type for the rest of @var{logfile}. If not specified, @var{type1}
 defaults to @samp{+} and @var{type2} defaults to @samp{-}.
 
 @item -C[@var{type}]
@@ -1304,7 +1395,7 @@ with blocks of type @var{type}, and write the completed logfile to
 standard output. @var{type} is one of the block status characters
 defined in the chapter Logfile structure (@pxref{Logfile structure}). If
 @var{type} is not specified, the gaps are filled with non-tried blocks.
-All gaps in the logfile are filled. Domain options are ignored.
+All gaps in @var{logfile} are filled. Domain options are ignored.
 
 @item -d
 @itemx --delete-if-done
@@ -1325,7 +1416,7 @@ Force overwrite of @var{logfile}.
 @item -i @var{bytes}
 @itemx --input-position=@var{bytes}
 Starting position of the rescue domain, in bytes. Defaults to 0. It
-refers to a position in the original input file.
+refers to a position in the original @var{infile}.
 
 @item -l @var{types}
 @itemx --list-blocks=@var{types}
@@ -1362,9 +1453,9 @@ equivalent to @samp{--change-types=?*/-+,++++-}
 
 @item -o @var{bytes}
 @itemx --output-position=@var{bytes}
-Starting position of the image of the rescue domain in the output file,
-in bytes. Is used by the @samp{--list-blocks} option. Defaults to
-@samp{--input-position}.
+Starting position of the image of the rescue domain in the original
+@var{outfile}, in bytes. Is used by the @samp{--list-blocks} option.
+Defaults to @samp{--input-position}.
 
 @item -p @var{file}
 @itemx --compare-logfile=@var{file}
@@ -1386,13 +1477,14 @@ Quiet operation. Suppress all messages.
 @item -s @var{bytes}
 @itemx --size=@var{bytes}
 Maximum size of the rescue domain, in bytes. It refers to a size in the
-original input file.
+original @var{infile}.
 
 @item -t
 @itemx --show-status
-Print a summary of @var{logfile} contents on the standard output. The
-summary can be restricted to one or several parts of @var{logfile} if
-the domain setting options are used.
+Print a summary of the contents of each @var{logfile} to the standard
+output. This option allows more than one @var{logfile}. If the domain
+setting options are used, the summary can be restricted to one or
+several parts of @var{logfile}.
 
 @item -v
 @itemx --verbose
@@ -1440,7 +1532,7 @@ for all eternity, if not longer.
 
 If you find a bug in GNU ddrescue, please send electronic mail to
 @email{bug-ddrescue@@gnu.org}. Include the version number, which you can
-find by running @w{@samp{ddrescue --version}}.
+find by running @w{@code{ddrescue --version}}.
 
 
 @node Concept index

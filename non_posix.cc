@@ -1,5 +1,5 @@
 /*  GNU ddrescue - Data recovery tool
-    Copyright (C) 2014 Antonio Diaz Diaz.
+    Copyright (C) 2014, 2015 Antonio Diaz Diaz.
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -17,13 +17,14 @@
 
 #define _FILE_OFFSET_BITS 64
 
-#include "linux.h"
+#include "non_posix.h"
 
-#ifdef USE_LINUX
+#ifdef USE_NON_POSIX
 #include <cctype>
 #include <string>
 #include <sys/ioctl.h>
-#include <linux/hdreg.h>
+
+namespace {
 
 void sanitize_string( std::string & str )
   {
@@ -37,6 +38,26 @@ void sanitize_string( std::string & str )
     if( str[i-1] == ' ' && ( i <= 1 || i >= str.size() || str[i-2] == ' ' ) )
       str.erase( i - 1, 1 );
   }
+
+} // end namespace
+
+#ifdef __HAIKU__
+#include <Drivers.h>
+
+const char * device_id( const int fd )
+  {
+  static std::string id_str;
+  char buf[256];
+
+  if( ioctl( fd, B_GET_DEVICE_NAME, buf, sizeof buf ) != 0 ) return 0;
+  buf[(sizeof buf)-1] = 0;	// make sure it is null-terminated
+  id_str = (const char *)buf;
+  sanitize_string( id_str );
+  return id_str.c_str();
+  }
+
+#else				// use linux by default
+#include <linux/hdreg.h>
 
 const char * device_id( const int fd )
   {
@@ -53,7 +74,9 @@ const char * device_id( const int fd )
   return 0;
   }
 
-#else
+#endif
+
+#else	// USE_NON_POSIX
 
 const char * device_id( const int ) { return 0; }
 

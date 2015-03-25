@@ -1,5 +1,5 @@
 /*  GNU ddrescue - Data recovery tool
-    Copyright (C) 2004-2014 Antonio Diaz Diaz.
+    Copyright (C) 2004-2015 Antonio Diaz Diaz.
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -68,7 +68,7 @@ int Genbook::check_all()
 void Genbook::show_status( const long long ipos, const char * const msg,
                            bool force )
   {
-  const char * const up = "\x1b[A";
+  const char * const up = "\x1B[A";
   if( t0 == 0 )
     {
     t0 = t1 = initial_time();
@@ -97,7 +97,7 @@ void Genbook::show_status( const long long ipos, const char * const msg,
     std::printf( "rescued: %10sB,  generated:%10sB,  current rate: %9sB/s\n",
                  format_num( recsize ), format_num( gensize ),
                  format_num( c_rate, 99999 ) );
-    std::printf( "   opos: %10sB,   run time:  %9s,  average rate: %9sB/s\n",
+    std::printf( "   opos: %10sB,   run time: %10s,  average rate: %9sB/s\n",
                  format_num( last_ipos + offset() ), format_time( t1 - t0 ),
                  format_num( a_rate, 99999 ) );
     if( msg && msg[0] )
@@ -124,8 +124,7 @@ int Genbook::do_generate( const int odes )
     if( !domain().includes( sb ) )
       { if( domain() < sb ) break; else continue; }
     if( sb.status() == Sblock::finished ) recsize += sb.size();
-    if( sb.status() != Sblock::non_tried || i + 1 < sblocks() )
-      gensize += sb.size();
+    if( sb.status() != Sblock::non_tried ) gensize += sb.size();
     }
   set_signals();
   if( verbosity >= 0 )

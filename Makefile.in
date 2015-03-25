@@ -7,11 +7,13 @@ INSTALL_DIR = $(INSTALL) -d -m 755
 SHELL = /bin/sh
 
 ddobjs = fillbook.o genbook.o io.o logbook.o rescuebook.o main.o
-objs = arg_parser.o block.o linux.o logfile.o loggers.o rational.o $(ddobjs)
+objs = arg_parser.o block.o non_posix.o logfile.o loggers.o rational.o $(ddobjs)
 logobjs = arg_parser.o block.o logbook.o logfile.o ddrescuelog.o
 
 
-.PHONY : all install install-bin install-info install-man install-strip \
+.PHONY : all install install-bin install-info install-man \
+         install-strip install-compress install-strip-compress \
+         install-bin-strip install-info-compress install-man-compress \
          uninstall uninstall-bin uninstall-info uninstall-man \
          doc info man check dist clean distclean
 
@@ -26,8 +28,8 @@ ddrescuelog : $(logobjs)
 static_$(progname) : $(objs)
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -static -o $@ $(objs)
 
-linux.o : linux.cc
-	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(use_linux) -c -o $@ $<
+non_posix.o : non_posix.cc
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(use_non_posix) -c -o $@ $<
 
 main.o : main.cc
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -DPROGVERSION=\"$(pkgversion)\" -c -o $@ $<
@@ -39,17 +41,17 @@ ddrescuelog.o : ddrescuelog.cc
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c -o $@ $<
 
 $(objs)       : Makefile
-$(ddobjs)     : block.h ddrescue.h
+$(ddobjs)     : block.h ddrescue.h sliding_avg.h
 arg_parser.o  : arg_parser.h
 block.o       : block.h
 io.o          : loggers.h
-linux.o       : linux.h
 logfile.o     : block.h
 loggers.o     : block.h loggers.h
+non_posix.o   : non_posix.h
 rational.o    : rational.h
 rescuebook.o  : loggers.h
-main.o        : arg_parser.h rational.h linux.h loggers.h main_common.cc
-ddrescuelog.o : Makefile arg_parser.h block.h ddrescue.h main_common.cc
+main.o        : arg_parser.h rational.h loggers.h non_posix.h main_common.cc
+ddrescuelog.o : Makefile arg_parser.h block.h main_common.cc
 
 
 doc : info man
@@ -74,26 +76,39 @@ check : all
 	@$(VPATH)/testsuite/check.sh $(VPATH)/testsuite $(pkgversion)
 
 install : install-bin install-info install-man
+install-strip : install-bin-strip install-info install-man
+install-compress : install-bin install-info-compress install-man-compress
+install-strip-compress : install-bin-strip install-info-compress install-man-compress
 
 install-bin : all
 	if [ ! -d "$(DESTDIR)$(bindir)" ] ; then $(INSTALL_DIR) "$(DESTDIR)$(bindir)" ; fi
 	$(INSTALL_PROGRAM) ./$(progname) "$(DESTDIR)$(bindir)/$(progname)"
 	$(INSTALL_PROGRAM) ./ddrescuelog "$(DESTDIR)$(bindir)/ddrescuelog"
 
+install-bin-strip : all
+	$(MAKE) INSTALL_PROGRAM='$(INSTALL_PROGRAM) -s' install-bin
+
 install-info :
 	if [ ! -d "$(DESTDIR)$(infodir)" ] ; then $(INSTALL_DIR) "$(DESTDIR)$(infodir)" ; fi
+	-rm -f "$(DESTDIR)$(infodir)/$(pkgname).info"*
 	$(INSTALL_DATA) $(VPATH)/doc/$(pkgname).info "$(DESTDIR)$(infodir)/$(pkgname).info"
 	-install-info --info-dir="$(DESTDIR)$(infodir)" "$(DESTDIR)$(infodir)/$(pkgname).info"
 
+install-info-compress : install-info
+	lzip -v -9 "$(DESTDIR)$(infodir)/$(pkgname).info"
+
 install-man :
 	if [ ! -d "$(DESTDIR)$(mandir)/man1" ] ; then $(INSTALL_DIR) "$(DESTDIR)$(mandir)/man1" ; fi
+	-rm -f "$(DESTDIR)$(mandir)/man1/$(progname).1"*
+	-rm -f "$(DESTDIR)$(mandir)/man1/ddrescuelog.1"*
 	$(INSTALL_DATA) $(VPATH)/doc/$(progname).1 "$(DESTDIR)$(mandir)/man1/$(progname).1"
 	$(INSTALL_DATA) $(VPATH)/doc/ddrescuelog.1 "$(DESTDIR)$(mandir)/man1/ddrescuelog.1"
 
-install-strip : all
-	$(MAKE) INSTALL_PROGRAM='$(INSTALL_PROGRAM) -s' install
+install-man-compress : install-man
+	lzip -v -9 "$(DESTDIR)$(mandir)/man1/$(progname).1"
+	lzip -v -9 "$(DESTDIR)$(mandir)/man1/ddrescuelog.1"
 
-uninstall : uninstall-bin uninstall-info uninstall-man
+uninstall : uninstall-man uninstall-info uninstall-bin
 
 uninstall-bin :
 	-rm -f "$(DESTDIR)$(bindir)/$(progname)"
@@ -101,11 +116,11 @@ uninstall-bin :
 
 uninstall-info :
 	-install-info --info-dir="$(DESTDIR)$(infodir)" --remove "$(DESTDIR)$(infodir)/$(pkgname).info"
-	-rm -f "$(DESTDIR)$(infodir)/$(pkgname).info"
+	-rm -f "$(DESTDIR)$(infodir)/$(pkgname).info"*
 
 uninstall-man :
-	-rm -f "$(DESTDIR)$(mandir)/man1/$(progname).1"
-	-rm -f "$(DESTDIR)$(mandir)/man1/ddrescuelog.1"
+	-rm -f "$(DESTDIR)$(mandir)/man1/$(progname).1"*
+	-rm -f "$(DESTDIR)$(mandir)/man1/ddrescuelog.1"*
 
 dist : doc
 	ln -sf $(VPATH) $(DISTNAME)
@@ -127,8 +142,7 @@ dist : doc
 	  $(DISTNAME)/testsuite/logfile2i \
 	  $(DISTNAME)/testsuite/logfile_blank \
 	  $(DISTNAME)/testsuite/test.txt \
-	  $(DISTNAME)/testsuite/test1.txt \
-	  $(DISTNAME)/testsuite/test2.txt \
+	  $(DISTNAME)/testsuite/test[1-5].txt \
 	  $(DISTNAME)/*.h \
 	  $(DISTNAME)/*.cc
 	rm -f $(DISTNAME)

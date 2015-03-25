@@ -1,5 +1,5 @@
 /*  GNU ddrescue - Data recovery tool
-    Copyright (C) 2004-2014 Antonio Diaz Diaz.
+    Copyright (C) 2004-2015 Antonio Diaz Diaz.
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -53,10 +53,10 @@ int Fillbook::fill_areas( const std::string & filltypes )
       if( verbosity >= 0 )
         { show_status( b.pos(), msg, first_post ); first_post = false; }
       if( interrupted() ) return -1;
-      const int retval = fill_block( b );
+      const int retval = fill_block( Sblock( b, sb.status() ) );
       if( retval )					// write error
         {
-        if( !ignore_write_errors_ ) return retval;
+        if( !ignore_write_errors ) return retval;
         if( b.size() > hardbs() )	// fill the area a hardbs at a time
           { b.size( hardbs() ); continue; }
         }
@@ -73,7 +73,7 @@ int Fillbook::fill_areas( const std::string & filltypes )
 void Fillbook::show_status( const long long ipos, const char * const msg,
                             bool force )
   {
-  const char * const up = "\x1b[A";
+  const char * const up = "\x1B[A";
   if( t0 == 0 )
     {
     t0 = t1 = initial_time();
@@ -105,7 +105,7 @@ void Fillbook::show_status( const long long ipos, const char * const msg,
     std::printf( "remain size: %10sB,  remain areas: %6u,  average rate: %9sB/s\n",
                  format_num( remaining_size ), remaining_areas,
                  format_num( a_rate, 99999 ) );
-    std::printf( "current pos: %10sB,  run time:  %9s\n",
+    std::printf( "current pos: %10sB,  run time: %10s\n",
                  format_num( last_ipos + offset() ), format_time( t1 - t0 ) );
     if( msg && msg[0] )
       {

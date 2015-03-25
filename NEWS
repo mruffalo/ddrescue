@@ -1,45 +1,31 @@
-Changes in version 1.19:
+Changes in version 1.20:
 
-A race condition at start of run with "--timeout=0" has been fixed.
+The short name of option "--synchronous" has been changed to "-y".
 
-The new option "-P, --data-preview", which makes ddrescue show a few
-lines of the latest data read, has been added.
+The new option "-D, --odirect" has been added. This introduces a subtle
+backward incompatibility because "-D" was the short name of option
+"--synchronous".
 
-The new option "-u, --unidirectional", which runs all passes in the same
-direction (forwards or backwards), has been added.
+The new option "--max-read-rate" has been added.
 
-The new option "-X, --exit-on-error", which makes ddrescue exit after
-the first read error is encountered during the copying phase, has been
-added.
+Accounting change; only bad_sector blocks are now included in "errsize".
 
-The new option "--ask", which asks for confirmation before starting the
-copy, has been added.
+The estimated remaining rescue time is now shown on the screen.
 
-The new option "--cpass", which selects what passes to run during the
-copying phase, has been added.
+Times are now shown in days, hours, minutes and seconds, instead of as a
+fraction of the appropriate unit.
 
-The new option "--pause", which inserts a pause between passes, has been
-added.
+Fill mode has been extended to write location data into each sector.
 
-The option "-l, --logfile-size" is no more needed and has been removed.
+Device name is now shown with "--ask" or "-vv" on Haiku.
 
-Ddrescue now skips on the first error during the copying phase.
+Ddrescuelog can now show the status of more than one logfile.
 
-Trimming is now done in one pass and may be run in reverse.
+The new chapter "Optical media" has been added to the manual.
 
-The splitting phase has been replaced by a "scraping" phase that scrapes
-together the data not recovered by the copying or trimming phases.
-Scraping reads each non-scraped block forwards, one sector at a time.
+The configure option "--enable-linux" has been renamed to
+"--enable-non-posix".
 
-The long name of option "-n" has been changed to "--no-scrape".
-
-During the retrying phase the direction is now reversed after each pass.
-Use "--unidirectional" to override.
-
-Model and serial number of ATA devices are shown with "--ask" or "-vv"
-on Linux.
-
-The configure script now accepts the option "--enable-linux" to enable
-the compilation of linux-specific code.
-
-The license has been changed to GPL version 2 or later.
+The targets "install-compress", "install-strip-compress",
+"install-info-compress" and "install-man-compress" have been added to
+the Makefile.

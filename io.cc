@@ -1,5 +1,5 @@
 /*  GNU ddrescue - Data recovery tool
-    Copyright (C) 2004-2014 Antonio Diaz Diaz.
+    Copyright (C) 2004-2015 Antonio Diaz Diaz.
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -105,15 +105,28 @@ int writeblock( const int fd, const uint8_t * const buf, const int size,
 
 // Return values: 1 write error, 0 OK.
 //
-int Fillbook::fill_block( const Block & b )
+int Fillbook::fill_block( const Sblock & sb )
   {
-  if( b.size() <= 0 ) internal_error( "bad size filling a Block." );
-  const int size = b.size();
+  if( sb.size() <= 0 || sb.size() > softbs() )
+    internal_error( "bad size filling a Block." );
+  const int size = sb.size();
 
-  if( writeblock( odes_, iobuf(), size, b.pos() + offset() ) != size ||
+  if( write_location_data )	// write location data into each sector
+    for( long long pos = sb.pos(); pos < sb.end(); pos += hardbs() )
+      {
+      char * const buf = (char *)iobuf() + ( pos - sb.pos() );
+      const int bufsize = std::min( 80LL, sb.end() - pos );
+      const int len = snprintf( buf, bufsize,
+                                "\n# position      sector  status\n"
+                                "0x%08llX  0x%08llX  %c\n",
+                                pos, pos / hardbs(), sb.status() );
+      if( len > 0 && len < bufsize )
+        std::memset( buf + len, ' ', bufsize - len );
+      }
+  if( writeblock( odes_, iobuf(), size, sb.pos() + offset() ) != size ||
       ( synchronous_ && fsync( odes_ ) < 0 && errno != EINVAL ) )
     {
-    if( !ignore_write_errors_ ) final_msg( "Write error", errno );
+    if( !ignore_write_errors ) final_msg( "Write error", errno );
     return 1;
     }
   filled_size += size; remaining_size -= size;
@@ -212,22 +225,25 @@ int Rescuebook::copy_block( const Block & b, int & copied_size, int & error_size
   }
 
 
-const char * format_time( long t )
+const char * format_time( long t, const bool low_prec )
   {
   enum { buffers = 8, bufsize = 16 };
   static char buffer[buffers][bufsize];	// circle of static buffers for printf
   static int current = 0;
+  if( t < 0 ) return "n/a";
   char * const buf = buffer[current++]; current %= buffers;
-  int fraction = 0;
-  char unit = 's';
+  const long d = t / 86400; t %= 86400;
+  const long h = t / 3600; t %= 3600;
+  const long m = t / 60; t %= 60;
+  int len = 0;
 
-  if( t >= 86400 ) { fraction = ( t % 86400 ) / 864; t /= 86400; unit = 'd'; }
-  else if( t >= 3600 ) { fraction = ( t % 3600 ) / 36; t /= 3600; unit = 'h'; }
-  else if( t >= 60 ) { fraction = (10 * ( t % 60 )) / 6; t /= 60; unit = 'm'; }
-  if( fraction == 0 )
-    snprintf( buf, bufsize, "%ld %c", t, unit );
-  else
-    snprintf( buf, bufsize, "%ld.%02d %c", t, fraction, unit );
+  if( d > 0 ) len = snprintf( buf, bufsize, "%ldd", d );
+  if( h > 0 && len >= 0 && len <= 7 - ( h > 9 ) )
+    len += snprintf( buf + len, bufsize - len, "%s%ldh", len ? " " : "", h );
+  if( m > 0 && len >= 0 && len <= 7 - ( m > 9 ) )
+    len += snprintf( buf + len, bufsize - len, "%s%ldm", len ? " " : "", m );
+  if( ( t > 0 && len >= 0 && len <= 7 - ( t > 9 ) && !low_prec ) || len == 0 )
+    len += snprintf( buf + len, bufsize - len, "%s%lds", len ? " " : "", t );
   return buf;
   }
 

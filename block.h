@@ -1,5 +1,5 @@
 /*  GNU ddrescue - Data recovery tool
-    Copyright (C) 2004-2014 Antonio Diaz Diaz.
+    Copyright (C) 2004-2015 Antonio Diaz Diaz.
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -110,8 +110,7 @@ public:
   static bool isstatus( const int st )
     { return ( st == non_tried || st == non_trimmed || st == non_scraped ||
                st == bad_sector || st == finished ); }
-  static bool is_good_status( const Status st )
-    { return ( st == non_tried || st == finished ); }
+  static bool is_good_status( const Status st ) { return st != bad_sector; }
   };
 
 
@@ -193,8 +192,6 @@ private:
   bool read_only_;
   std::vector< Sblock > sblock_vector;	// note: blocks are consecutive
 
-  void erase_sblock( const int i )
-    { sblock_vector.erase( sblock_vector.begin() + i ); }
   void insert_sblock( const int i, const Sblock & sb )
     { sblock_vector.insert( sblock_vector.begin() + i, sb ); }
 
@@ -243,9 +240,9 @@ public:
 
   int find_index( const long long pos ) const;
   void find_chunk( Block & b, const Sblock::Status st,
-                   const Domain & domain, const int alignment = 1 ) const;
+                   const Domain & domain, const int alignment ) const;
   void rfind_chunk( Block & b, const Sblock::Status st,
-                    const Domain & domain, const int alignment = 1 ) const;
+                    const Domain & domain, const int alignment ) const;
   int change_chunk_status( const Block & b, const Sblock::Status st,
                            const Domain & domain );
 

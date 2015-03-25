@@ -1,5 +1,5 @@
 /*  GNU ddrescuelog - Tool for ddrescue logfiles
-    Copyright (C) 2011-2014 Antonio Diaz Diaz.
+    Copyright (C) 2011-2015 Antonio Diaz Diaz.
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -34,7 +34,6 @@
 
 #include "arg_parser.h"
 #include "block.h"
-#include "ddrescue.h"
 
 
 namespace {
@@ -464,11 +463,9 @@ int do_show_status( Domain & domain, const char * const logname )
   long long size_bad_sector = 0, size_finished = 0;
   int areas_non_tried = 0, areas_non_trimmed = 0, areas_non_scraped = 0;
   int areas_bad_sector = 0, areas_finished = 0;
-  int errors = 0;
-  Sblock::Status old_status = Sblock::non_tried;
-  bool first_block = true, good = true;
   Logfile logfile( logname );
   if( !logfile.read_logfile() ) return not_readable( logname );
+  logfile.compact_sblock_vector();
   const Block extent = logfile.extent();
   domain.crop( extent );
   if( domain.empty() ) return empty_domain();
@@ -479,61 +476,49 @@ int do_show_status( Domain & domain, const char * const logname )
     {
     const Sblock & sb = logfile.sblock( i );
     if( !domain.includes( sb ) )
-      {
-      if( domain < sb ) break;
-      else { first_block = true; good = true; continue; }
-      }
-    const bool sc = ( first_block || sb.status() != old_status );
-    first_block = false;
+      { if( domain < sb ) break; else continue; }
     switch( sb.status() )
       {
-      case Sblock::non_tried:   size_non_tried += sb.size(); good = true;
-                                if( sc ) ++areas_non_tried; break;
-      case Sblock::finished:    size_finished += sb.size(); good = true;
-                                if( sc ) ++areas_finished; break;
+      case Sblock::non_tried:   size_non_tried += sb.size();
+                                ++areas_non_tried; break;
+      case Sblock::finished:    size_finished += sb.size();
+                                ++areas_finished; break;
       case Sblock::non_trimmed: size_non_trimmed += sb.size();
-                                if( good ) { good = false; ++errors; }
-                                if( sc ) ++areas_non_trimmed; break;
+                                ++areas_non_trimmed; break;
       case Sblock::non_scraped: size_non_scraped += sb.size();
-                                if( good ) { good = false; ++errors; }
-                                if( sc ) ++areas_non_scraped; break;
+                                ++areas_non_scraped; break;
       case Sblock::bad_sector:  size_bad_sector += sb.size();
-                                if( good ) { good = false; ++errors; }
-                                if( sc ) ++areas_bad_sector; break;
+                                ++areas_bad_sector; break;
       }
-    old_status = sb.status();
     }
 
   const long long domain_size = domain.in_size();
-  const long long errsize = size_non_trimmed + size_non_scraped + size_bad_sector;
+  if( verbosity >= 1 ) std::printf( "\n%s", logname );
   std::printf( "\n   current pos: %10sB,  current status: %s\n",
                format_num( logfile.current_pos() ),
                logfile.status_name( logfile.current_status() ) );
-  std::printf( "logfile extent: %10sB,  in %5d area(s)\n",
+  std::printf( "logfile extent: %10sB,  in %6d area(s)\n",
                format_num( extent.size() ), true_sblocks );
-  if( domain.pos() > 0 || domain.end() < extent.end() )
+  if( domain.pos() > 0 || domain.end() < extent.end() || domain.blocks() > 1 )
     {
     std::printf( "  domain begin: %10sB,  domain end: %10sB\n",
                  format_num( domain.pos() ), format_num( domain.end() ) );
-    std::printf( "   domain size: %10sB,  in %5d area(s)\n",
+    std::printf( "   domain size: %10sB,  in %6d area(s)\n",
                  format_num( domain_size ), domain.blocks() );
     }
-  std::printf( "       rescued: %10sB,  in %5d area(s)  (%s)\n",
+  std::printf( "       rescued: %10sB,  in %6d area(s)  (%s)\n",
                format_num( size_finished ), areas_finished,
                format_percentage( size_finished, domain_size ) );
-  std::printf( "     non-tried: %10sB,  in %5d area(s)  (%s)\n",
+  std::printf( "     non-tried: %10sB,  in %6d area(s)  (%s)\n",
                format_num( size_non_tried ), areas_non_tried,
                format_percentage( size_non_tried, domain_size ) );
-  std::printf( "\n       errsize: %10sB,  errors: %8u  (%s)\n",
-               format_num( errsize ), errors,
-               format_percentage( errsize, domain_size ) );
-  std::printf( "   non-trimmed: %10sB,  in %5d area(s)  (%s)\n",
+  std::printf( "   non-trimmed: %10sB,  in %6d area(s)  (%s)\n",
                format_num( size_non_trimmed ), areas_non_trimmed,
                format_percentage( size_non_trimmed, domain_size ) );
-  std::printf( "   non-scraped: %10sB,  in %5d area(s)  (%s)\n",
+  std::printf( "   non-scraped: %10sB,  in %6d area(s)  (%s)\n",
                format_num( size_non_scraped ), areas_non_scraped,
                format_percentage( size_non_scraped, domain_size ) );
-  std::printf( "    bad-sector: %10sB,  in %5d area(s)  (%s)\n",
+  std::printf( "       errsize: %10sB,  errors:  %8u  (%s)\n",
                format_num( size_bad_sector ), areas_bad_sector,
                format_percentage( size_bad_sector, domain_size ) );
   return 0;
@@ -654,7 +639,13 @@ int main( const int argc, const char * const argv[] )
 
   if( opos < 0 ) opos = ipos;
 
-  if( argind + 1 != parser.arguments() )
+  if( program_mode == m_status )
+    {
+    if( argind >= parser.arguments() )
+      { show_error( "At least one logfile must be specified.", 0, true );
+        return 1; }
+    }
+  else if( argind + 1 != parser.arguments() )
     {
     if( argind < parser.arguments() )
       show_error( "Too many files.", 0, true );
@@ -663,30 +654,33 @@ int main( const int argc, const char * const argv[] )
     return 1;
     }
 
-  const char * const logname = parser.argument( argind++ ).c_str();
-
-  // end scan arguments
-
-  Domain domain( ipos, max_size, domain_logfile_name, loose );
-
-  switch( program_mode )
+  int retval = 0;
+  for( ; argind < parser.arguments(); ++argind )
     {
-    case m_none: internal_error( "invalid operation." ); break;
-    case m_and:
-    case m_or:
-    case m_xor:
-      return do_logic_ops( domain, logname, second_logname, program_mode );
-    case m_change: return change_types( domain, logname, types1, types2 );
-    case m_compare:
-      return compare_logfiles( domain, logname, second_logname, as_domain, loose );
-    case m_complete: return complete_logfile( logname, complete_type );
-    case m_create: return create_logfile( domain, logname, hardbs,
-                                          type1, type2, force );
-    case m_delete: return test_if_done( domain, logname, true );
-    case m_done_st: return test_if_done( domain, logname, false );
-    case m_invert: return change_types( domain, logname, "?*/-+", "++++-" );
-    case m_list:
-      return to_badblocks( opos - ipos, domain, logname, hardbs, types1 );
-    case m_status: return do_show_status( domain, logname );
+    const char * const logname = parser.argument( argind ).c_str();
+    Domain domain( ipos, max_size, domain_logfile_name, loose );
+
+    switch( program_mode )
+      {
+      case m_none: internal_error( "invalid operation." ); break;
+      case m_and:
+      case m_or:
+      case m_xor:
+        return do_logic_ops( domain, logname, second_logname, program_mode );
+      case m_change: return change_types( domain, logname, types1, types2 );
+      case m_compare:
+        return compare_logfiles( domain, logname, second_logname, as_domain, loose );
+      case m_complete: return complete_logfile( logname, complete_type );
+      case m_create: return create_logfile( domain, logname, hardbs,
+                                            type1, type2, force );
+      case m_delete: return test_if_done( domain, logname, true );
+      case m_done_st: return test_if_done( domain, logname, false );
+      case m_invert: return change_types( domain, logname, "?*/-+", "++++-" );
+      case m_list:
+        return to_badblocks( opos - ipos, domain, logname, hardbs, types1 );
+      case m_status:
+        retval = std::max( retval, do_show_status( domain, logname ) );
+      }
     }
+  return retval;
   }

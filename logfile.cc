@@ -1,5 +1,5 @@
 /*  GNU ddrescue - Data recovery tool
-    Copyright (C) 2004-2014 Antonio Diaz Diaz.
+    Copyright (C) 2004-2015 Antonio Diaz Diaz.
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -320,7 +320,7 @@ void Logfile::split_by_logfile_borders( const Logfile & logfile )
 int Logfile::find_index( const long long pos ) const
   {
   if( index_ < 0 || index_ >= sblocks() ) index_ = sblocks() / 2;
-  while( index_ + 1 < sblocks() && pos >= sblock_vector[index_].end() )
+  while( index_ + 1 < sblocks() && pos >= sblock_vector[index_+1].pos() )
     ++index_;
   while( index_ > 0 && pos < sblock_vector[index_].pos() )
     --index_;
@@ -397,16 +397,17 @@ int Logfile::change_chunk_status( const Block & b, const Sblock::Status st,
     internal_error( "can't change status of chunk not in rescue domain." );
   if( !sblock_vector[index_].includes( b ) )
     internal_error( "can't change status of chunk spread over more than 1 block." );
-  if( sblock_vector[index_].status() == st ) return 0;
-
-  const bool old_st_good = Sblock::is_good_status( sblock_vector[index_].status() );
+  const Sblock::Status old_st = sblock_vector[index_].status();
+  if( st == old_st ) return 0;
+  const bool old_st_good = Sblock::is_good_status( old_st );
   const bool new_st_good = Sblock::is_good_status( st );
   bool bl_st_good = ( index_ <= 0 ||
-                      !domain.includes( sblock_vector[index_-1] ) ||
-                      Sblock::is_good_status( sblock_vector[index_-1].status() ) );
+                      Sblock::is_good_status( sblock_vector[index_-1].status() ) ||
+                      !domain.includes( sblock_vector[index_-1] ) );
   bool br_st_good = ( index_ + 1 >= sblocks() ||
-                      !domain.includes( sblock_vector[index_+1] ) ||
-                      Sblock::is_good_status( sblock_vector[index_+1].status() ) );
+                      Sblock::is_good_status( sblock_vector[index_+1].status() ) ||
+                      !domain.includes( sblock_vector[index_+1] ) );
+
   if( sblock_vector[index_].pos() < b.pos() )
     {
     if( sblock_vector[index_].end() == b.end() &&
@@ -422,28 +423,30 @@ int Logfile::change_chunk_status( const Block & b, const Sblock::Status st,
     }
   if( sblock_vector[index_].size() > b.size() )
     {
-    br_st_good = Sblock::is_good_status( sblock_vector[index_].status() );
     if( index_ > 0 && sblock_vector[index_-1].status() == st &&
         domain.includes( sblock_vector[index_-1] ) )
       sblock_vector[index_-1].shift( sblock_vector[index_], b.end() );
     else
       insert_sblock( index_,
                      Sblock( sblock_vector[index_].split( b.end() ), st ) );
+    br_st_good = old_st_good;
     }
   else
     {
     sblock_vector[index_].status( st );
-    if( index_ > 0 && sblock_vector[index_-1].status() == st &&
-        domain.includes( sblock_vector[index_-1] ) )
+    const bool bl_join = ( index_ > 0 &&
+                           sblock_vector[index_-1].status() == st &&
+                           domain.includes( sblock_vector[index_-1] ) );
+    const bool br_join = ( index_ + 1 < sblocks() &&
+                           sblock_vector[index_+1].status() == st &&
+                           domain.includes( sblock_vector[index_+1] ) );
+    if( bl_join || br_join )
       {
-      sblock_vector[index_-1].join( sblock_vector[index_] );
-      erase_sblock( index_ ); --index_;
-      }
-    if( index_ + 1 < sblocks() && sblock_vector[index_+1].status() == st &&
-        domain.includes( sblock_vector[index_+1] ) )
-      {
-      sblock_vector[index_].join( sblock_vector[index_+1] );
-      erase_sblock( index_ + 1 );
+      if( br_join ) sblock_vector[index_].join( sblock_vector[index_+1] );
+      if( bl_join )
+        { --index_; sblock_vector[index_].join( sblock_vector[index_+1] ); }
+      sblock_vector.erase( sblock_vector.begin() + ( index_ + 1 ),
+                           sblock_vector.begin() + ( index_ + 1 + bl_join + br_join ) );
       }
     }
   int retval = 0;

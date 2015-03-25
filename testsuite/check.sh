@@ -1,6 +1,6 @@
 #! /bin/sh
 # check script for GNU ddrescue - Data recovery tool
-# Copyright (C) 2009-2014 Antonio Diaz Diaz.
+# Copyright (C) 2009-2015 Antonio Diaz Diaz.
 #
 # This script is free software: you have unlimited permission
 # to copy, distribute and modify it.
@@ -25,6 +25,9 @@ cd "${objdir}"/tmp
 in="${testdir}"/test.txt
 in1="${testdir}"/test1.txt
 in2="${testdir}"/test2.txt
+in3="${testdir}"/test3.txt
+in4="${testdir}"/test4.txt
+in5="${testdir}"/test5.txt
 blank="${testdir}"/logfile_blank
 logfile1="${testdir}"/logfile1
 logfile2="${testdir}"/logfile2
@@ -72,7 +75,7 @@ if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
 if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
 "${DDRESCUE}" -q -i -1 ${in} out
 if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
-"${DDRESCUE}" -q -m ${logfile1} -m ${logfile1} ${in} out logfile
+"${DDRESCUE}" -q -m ${logfile1} -m ${logfile2} ${in} out logfile
 if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
 "${DDRESCUE}" -q -m ${logfile2i} ${in} out logfile
 if [ $? = 2 ] ; then printf . ; else printf - ; fail=1 ; fi
@@ -85,7 +88,7 @@ if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
 
 rm -f logfile
 "${DDRESCUE}" -q -t -p -i15000 ${in} out logfile || fail=1
-"${DDRESCUE}" -q -D -f -n -s15000 ${in} out logfile || fail=1
+"${DDRESCUE}" -q -y -f -n -s15000 ${in} out logfile || fail=1
 cmp ${in} out || fail=1
 printf .
 
@@ -111,7 +114,14 @@ rm -f out
 "${DDRESCUE}" -q -O -H ${logfile1} ${in} out || fail=1
 cmp ${in1} out || fail=1
 printf .
-"${DDRESCUE}" -q -O -L -K0 -H ${logfile2i} ${in} out || fail=1
+"${DDRESCUE}" -q -O -L -K0 -H ${logfile2i} ${in2} out || fail=1
+cmp ${in} out || fail=1
+printf .
+
+rm -f out
+"${DDRESCUE}" -q -H ${logfile3} ${in3} out || fail=1
+"${DDRESCUE}" -q -H ${logfile4} ${in4} out || fail=1
+"${DDRESCUE}" -q -H ${logfile5} ${in5} out || fail=1
 cmp ${in} out || fail=1
 printf .
 
@@ -119,7 +129,7 @@ rm -f out
 "${DDRESCUE}" -q -X -m ${logfile1} ${in} out || fail=1
 cmp ${in1} out || fail=1
 printf .
-"${DDRESCUE}" -q -X -L -m ${logfile2i} ${in} out || fail=1
+"${DDRESCUE}" -q -X -L -m ${logfile2i} ${in2} out || fail=1
 cmp ${in} out || fail=1
 printf .
 
@@ -127,13 +137,20 @@ rm -f out
 "${DDRESCUE}" -q -R -m ${logfile2} ${in} out || fail=1
 cmp ${in2} out || fail=1
 printf .
-"${DDRESCUE}" -q -R -K,64KiB -m ${logfile1} ${in} out || fail=1
+"${DDRESCUE}" -q -R -K,64KiB -m ${logfile1} ${in1} out || fail=1
+cmp ${in} out || fail=1
+printf .
+
+rm -f out
+"${DDRESCUE}" -q -m ${logfile5} ${in5} out || fail=1
+"${DDRESCUE}" -q -m ${logfile4} ${in4} out || fail=1
+"${DDRESCUE}" -q -m ${logfile3} ${in3} out || fail=1
 cmp ${in} out || fail=1
 printf .
 
 rm -f out
 cat ${logfile1} > logfile || framework_failure
-"${DDRESCUE}" -q -I ${in} out logfile || fail=1
+"${DDRESCUE}" -q -I ${in2} out logfile || fail=1
 cat ${logfile2} > logfile || framework_failure
 "${DDRESCUE}" -q -I ${in} out logfile || fail=1
 cmp ${in} out || fail=1
@@ -141,9 +158,9 @@ printf .
 
 rm -f out
 cat ${logfile1} > logfile || framework_failure
-"${DDRESCUE}" -q -R ${in} out logfile || fail=1
+"${DDRESCUE}" -q -R ${in2} out logfile || fail=1
 cat ${logfile2} > logfile || framework_failure
-"${DDRESCUE}" -q -R ${in} out logfile || fail=1
+"${DDRESCUE}" -q -R -C ${in1} out logfile || fail=1
 cmp ${in} out || fail=1
 printf .
 
@@ -189,6 +206,8 @@ printf "\ntesting ddrescuelog-%s..." "$2"
 "${DDRESCUELOG}" -q logfile
 if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
 "${DDRESCUELOG}" -q -d
+if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
+"${DDRESCUELOG}" -q -l+l ${logfile1}
 if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
 "${DDRESCUELOG}" -q -t -d logfile
 if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi

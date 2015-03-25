@@ -1,5 +1,5 @@
 /*  GNU ddrescue - Data recovery tool
-    Copyright (C) 2004-2014 Antonio Diaz Diaz.
+    Copyright (C) 2004-2015 Antonio Diaz Diaz.
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -17,7 +17,7 @@
 
 namespace {
 
-const char * const program_year = "2014";
+const char * const program_year = "2015";
 std::string command_line;
 
 
@@ -53,10 +53,6 @@ long long getnum( const char * const ptr, const int hardbs,
       {
       case ' ': break;
       case ',': if( !comma ) { bad_multiplier = true; } break;
-      case 'b':
-      case 's': if( hardbs > 0 ) { factor = hardbs; exponent = 1; }
-                else bad_multiplier = true;
-                break;
       case 'Y': exponent = 8; break;
       case 'Z': exponent = 7; break;
       case 'E': exponent = 6; break;
@@ -67,6 +63,9 @@ long long getnum( const char * const ptr, const int hardbs,
       case 'K': if( factor == 1024 ) exponent = 1; else bad_multiplier = true;
                 break;
       case 'k': if( factor == 1000 ) exponent = 1; else bad_multiplier = true;
+                break;
+      case 's': if( hardbs > 0 ) { factor = hardbs; exponent = 1; }
+                else bad_multiplier = true;
                 break;
       default: bad_multiplier = true;
       }
@@ -91,12 +90,19 @@ long long getnum( const char * const ptr, const int hardbs,
   }
 
 
-void check_types( const std::string & types, const char * const opt_name )
+bool check_types( std::string & types, const char * const opt_name,
+                  const bool allow_l = false )
   {
   bool error = false;
-  for( unsigned i = 0; i < types.size(); ++i )
+  bool write_location_data = false;
+  for( int i = types.size(); i > 0; )
+    {
+    if( types[--i] == 'l' )
+      { if( !allow_l ) { error = true; break; }
+        write_location_data = true; types.erase( i, 1 ); continue; }
     if( !Sblock::isstatus( types[i] ) )
       { error = true; break; }
+    }
   if( !types.size() || error )
     {
     char buf[80];
@@ -104,6 +110,7 @@ void check_types( const std::string & types, const char * const opt_name )
     show_error( buf, 0, true );
     std::exit( 1 );
     }
+  return write_location_data;
   }
 
 
@@ -173,7 +180,8 @@ void internal_error( const char * const msg )
   }
 
 
-int empty_domain() { show_error( "Empty domain." ); return 0; }
+int empty_domain()
+  { show_error( "Nothing to do; domain is empty." ); return 0; }
 
 
 int not_readable( const char * const logname )

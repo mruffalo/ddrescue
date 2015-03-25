@@ -1,5 +1,5 @@
 /*  GNU ddrescue - Data recovery tool
-    Copyright (C) 2004-2014 Antonio Diaz Diaz.
+    Copyright (C) 2004-2015 Antonio Diaz Diaz.
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -56,14 +56,28 @@ public:
   };
 
 
-class Fillbook : public Logbook
+struct Fb_options
+  {
+  bool ignore_write_errors;
+  bool write_location_data;
+
+  Fb_options() : ignore_write_errors( false ), write_location_data( false ) {}
+
+  bool operator==( const Fb_options & o ) const
+    { return ( ignore_write_errors == o.ignore_write_errors &&
+               write_location_data == o.write_location_data ); }
+  bool operator!=( const Fb_options & o ) const
+    { return !( *this == o ); }
+  };
+
+
+class Fillbook : public Logbook, public Fb_options
   {
   long long filled_size;		// size already filled
   long long remaining_size;		// size to be filled
   int filled_areas;			// areas already filled
   int remaining_areas;			// areas to be filled
   int odes_;				// output file descriptor
-  const bool ignore_write_errors_;
   const bool synchronous_;
 					// variables for show_status
   long long a_rate, c_rate, first_size, last_size;
@@ -72,16 +86,16 @@ class Fillbook : public Logbook
   int oldlen;
 
   int fill_areas( const std::string & filltypes );
-  int fill_block( const Block & b );
+  int fill_block( const Sblock & sb );
   void show_status( const long long ipos, const char * const msg = 0,
                     bool force = false );
 
 public:
   Fillbook( const long long offset, Domain & dom,
             const char * const logname, const int cluster, const int hardbs,
-            const bool ignore_write_errors, const bool synchronous )
+            const Fb_options & fb_opts, const bool synchronous )
     : Logbook( offset, 0, dom, logname, cluster, hardbs, true ),
-      ignore_write_errors_( ignore_write_errors ),
+      Fb_options( fb_opts ),
       synchronous_( synchronous ),
       a_rate( 0 ), c_rate( 0 ), first_size( 0 ), last_size( 0 ),
       last_ipos( 0 ), t0( 0 ), t1( 0 ), oldlen( 0 )
@@ -119,19 +133,23 @@ public:
   };
 
 
+#include "sliding_avg.h"
+
 struct Rb_options
   {
   enum { default_skipbs = 65536, max_max_skipbs = 1 << 30 };
 
   long long max_error_rate;
   long long min_outfile_size;
+  long long max_read_rate;
   long long min_read_rate;
   long pause;
   long timeout;
   int cpass_bitset;		// 1 | 2 | 4 for passes 1, 2, 3
   int max_errors;
   int max_retries;
-  int o_direct;			// O_DIRECT or 0
+  int o_direct_in;		// O_DIRECT or 0
+  int o_direct_out;		// O_DIRECT or 0
   int preview_lines;		// preview lines to show. 0 = disable
   int skipbs;			// initial size to skip on read error
   int max_skipbs;		// maximum size to skip on read error
@@ -148,10 +166,10 @@ struct Rb_options
   bool unidirectional;
 
   Rb_options()
-    : max_error_rate( -1 ), min_outfile_size( -1 ), min_read_rate( -1 ),
-      pause( 0 ), timeout( -1 ), cpass_bitset( 7 ), max_errors( -1 ),
-      max_retries( 0 ), o_direct( 0 ), preview_lines( 0 ),
-      skipbs( default_skipbs ), max_skipbs( max_max_skipbs ),
+    : max_error_rate( -1 ), min_outfile_size( -1 ), max_read_rate( 0 ),
+      min_read_rate( -1 ), pause( 0 ), timeout( -1 ), cpass_bitset( 7 ),
+      max_errors( -1 ), max_retries( 0 ), o_direct_in( 0 ), o_direct_out( 0 ),
+      preview_lines( 0 ), skipbs( default_skipbs ), max_skipbs( max_max_skipbs ),
       complete_only( false ), exit_on_error( false ),
       new_errors_only( false ), noscrape( false ), notrim( false ),
       reopen_on_error( false ), retrim( false ), reverse( false ),
@@ -161,10 +179,12 @@ struct Rb_options
   bool operator==( const Rb_options & o ) const
     { return ( max_error_rate == o.max_error_rate &&
                min_outfile_size == o.min_outfile_size &&
+               max_read_rate == o.max_read_rate &&
                min_read_rate == o.min_read_rate && pause == o.pause &&
                timeout == o.timeout && cpass_bitset == o.cpass_bitset &&
                max_errors == o.max_errors && max_retries == o.max_retries &&
-               o_direct == o.o_direct && preview_lines == o.preview_lines &&
+               o_direct_in == o.o_direct_in && o_direct_out == o.o_direct_out &&
+               preview_lines == o.preview_lines &&
                skipbs == o.skipbs && max_skipbs == o.max_skipbs &&
                complete_only == o.complete_only &&
                exit_on_error == o.exit_on_error &&
@@ -190,7 +210,7 @@ class Rescuebook : public Logbook, public Rb_options
 					// 1 rate, 2 errors, 4 timeout
   int errors;				// error areas found so far
   int ides_, odes_;			// input and output file descriptors
-  const bool access_works, synchronous_;
+  const bool synchronous_;
 					// variables for update_rates
   long long a_rate, c_rate, first_size, last_size;
   long long iobuf_ipos;			// last pos read in iobuf, or -1
@@ -198,7 +218,8 @@ class Rescuebook : public Logbook, public Rb_options
   long t0, t1, ts;			// start, current, last successful
   int oldlen;
   bool rates_updated;
-  bool first_post;			// variable for show_status
+  Sliding_average sliding_avg;		// variables for show_status
+  bool first_post;
   bool just_paused;			// variable for update_and_pause
 
   bool extend_outfile_size();
@@ -214,13 +235,10 @@ class Rescuebook : public Logbook, public Rb_options
                ( ( min_read_rate > 0 && c_rate < min_read_rate &&
                    c_rate < a_rate / 2 ) ||
                  ( min_read_rate == 0 && c_rate < a_rate / 10 ) ) ); }
-  int update( const Block & b, const Sblock::Status st,
-              const int copied_size, const int error_size );
-  int copy_and_update( const Block & b, int & error_size,
-                       const char * const msg, const bool forward );
-  int copy_and_update2( const Block & b, int & copied_size,
-                        int & error_size, const char * const msg,
-                        const bool forward );
+  int copy_and_update( const Block & b, int & copied_size,
+                       int & error_size, const char * const msg,
+                       const Status curr_st, const bool forward,
+                       const Sblock::Status st = Sblock::bad_sector );
   bool reopen_infile();
   bool update_and_pause();
   int copy_non_tried();
@@ -260,7 +278,7 @@ inline int round_up( int size, const int hardbs )
 
 // Defined in io.cc
 //
-const char * format_time( long t );
+const char * format_time( long t, const bool low_prec = false );
 bool interrupted();
 void set_signals();
 int signaled_exit();

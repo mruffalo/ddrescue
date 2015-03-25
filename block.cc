@@ -1,5 +1,5 @@
 /*  GNU ddrescue - Data recovery tool
-    Copyright (C) 2004-2014 Antonio Diaz Diaz.
+    Copyright (C) 2004-2015 Antonio Diaz Diaz.
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -45,10 +45,10 @@ void Block::align_pos( const int alignment )
 //
 void Block::align_end( const int alignment )
   {
-  if( alignment > 1 && size_ > 0 )
+  if( alignment > 1 )
     {
-    const long long new_end = end() - ( end() % alignment );
-    if( pos_ < new_end ) size_ = new_end - pos_;
+    const int rest = end() % alignment;
+    if( size_ > rest ) size_ -= rest;
     }
   }
 
