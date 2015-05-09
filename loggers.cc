@@ -35,10 +35,10 @@ const char * format_time_dhms( const long t )
   const long h = ( t / 3600 ) % 24;
   const long d = t / 86400;
 
-  if( d ) snprintf( buf, sizeof buf, "%lud:%02luh:%02lum:%02lus", d, h, m, s );
-  else if( h ) snprintf( buf, sizeof buf, "%luh:%02lum:%02lus", h, m, s );
-  else if( m ) snprintf( buf, sizeof buf, "%lum:%02lus", m, s );
-  else snprintf( buf, sizeof buf, "%lus", s );
+  if( d ) snprintf( buf, sizeof buf, "%ldd:%02ldh:%02ldm:%02lds", d, h, m, s );
+  else if( h ) snprintf( buf, sizeof buf, "%ldh:%02ldm:%02lds", h, m, s );
+  else if( m ) snprintf( buf, sizeof buf, "%ldm:%02lds", m, s );
+  else snprintf( buf, sizeof buf, "%lds", s );
   return buf;
   }
 
@@ -74,12 +74,12 @@ bool Rate_logger::open_file()
 
 bool Rate_logger::print_line( const long time, const long long ipos,
                               const long long a_rate, const long long c_rate,
-                              const int errors, const long long errsize )
+                              const long errors, const long long errsize )
   {
   if( f && !error && time > last_time )
     {
     last_time = time;
-    if( std::fprintf( f, "%2lu  0x%08llX  %8llu  %8llu  %7u  %8llu\n",
+    if( std::fprintf( f, "%2ld  0x%08llX  %8lld  %8lld  %7ld  %8lld\n",
                       time, ipos, c_rate, a_rate, errors, errsize ) < 0 )
       error = true;
     }
@@ -105,7 +105,7 @@ bool Read_logger::print_line( const long long ipos, const long long size,
                               const int copied_size, const int error_size )
   {
   if( f && !error &&
-      std::fprintf( f, "0x%08llX	%llu	%u	%u\n",
+      std::fprintf( f, "0x%08llX	%lld	%d	%d\n",
                     ipos, size, copied_size, error_size ) < 0 )
     error = true;
   prev_is_msg = false;

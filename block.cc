@@ -109,7 +109,7 @@ Domain::Domain( const long long p, const long long s,
     std::exit( 1 );
     }
   logfile.compact_sblock_vector();
-  for( int i = 0; i < logfile.sblocks(); ++i )
+  for( long i = 0; i < logfile.sblocks(); ++i )
     {
     const Sblock & sb = logfile.sblock( i );
     if( sb.status() == Sblock::finished ) block_vector.push_back( sb );
@@ -121,7 +121,7 @@ Domain::Domain( const long long p, const long long s,
 
 void Domain::crop( const Block & b )
   {
-  unsigned r = block_vector.size();
+  unsigned long r = block_vector.size();
   while( r > 0 && b < block_vector[r-1] ) --r;
   if( r > 0 ) block_vector[r-1].crop( b );
   if( r <= 0 || block_vector[r-1].size() <= 0 )	// no block overlaps b
@@ -130,7 +130,7 @@ void Domain::crop( const Block & b )
     block_vector.erase( block_vector.begin() + r, block_vector.end() );
   if( b.pos() <= 0 ) return;
   --r;		// block_vector[r] is now the last non-cropped-out block
-  unsigned l = 0;
+  unsigned long l = 0;
   while( l < r && block_vector[l] < b ) ++l;
   if( l < r ) block_vector[l].crop( b );	// crop block overlapping b
   if( l > 0 )					// remove blocks before b

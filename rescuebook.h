@@ -15,125 +15,33 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-class Logbook : public Logfile
+class Sliding_average		// Calculates the average of the last N terms
   {
-  const long long offset_;		// outfile offset (opos - ipos);
-  long long logfile_isize_;
-  Domain & domain_;			// rescue domain
-  uint8_t *iobuf_base, *iobuf_;		// iobuf is aligned to page and hardbs
-  const int hardbs_, softbs_;
-  const char * final_msg_;
-  int final_errno_;
-  long ul_t1;				// variable for update_logfile
-  bool logfile_exists_;
-
-  Logbook( const Logbook & );		// declared as private
-  void operator=( const Logbook & );	// declared as private
+  unsigned index;
+  std::vector<long long> data;
 
 public:
-  Logbook( const long long offset, const long long isize, Domain & dom,
-           const char * const logname, const int cluster,
-           const int hardbs, const bool complete_only );
-  ~Logbook() { delete[] iobuf_base; }
+  Sliding_average( const unsigned terms ) : index( terms )
+    { data.reserve( terms ); }
 
-  bool update_logfile( const int odes = -1, const bool force = false );
+  void reset() { if( index < data.size() ) index = data.size(); data.clear(); }
 
-  const Domain & domain() const { return domain_; }
-  uint8_t * iobuf() const { return iobuf_; }
-  int hardbs() const { return hardbs_; }
-  int softbs() const { return softbs_; }
-  long long offset() const { return offset_; }
-  const char * final_msg() const { return final_msg_; }
-  int final_errno() const { return final_errno_; }
-  bool logfile_exists() const { return logfile_exists_; }
-  long long logfile_isize() const { return logfile_isize_; }
+  void add_term( const long long term )
+    {
+    if( index < data.size() ) data[index++] = term;
+    else if( index > data.size() ) data.push_back( term );
+    if( index == data.size() ) index = 0;
+    }
 
-  void final_msg( const char * const msg, const int e = 0 )
-    { final_msg_ = msg; final_errno_ = e; }
-
-  void truncate_domain( const long long end )
-    { domain_.crop_by_file_size( end ); }
+  long long operator()() const
+    {
+    long long avg = 0;
+    for( unsigned i = 0; i < data.size(); ++i ) avg += data[i];
+    if( data.size() ) avg /= data.size();
+    return avg;
+    }
   };
 
-
-struct Fb_options
-  {
-  bool ignore_write_errors;
-  bool write_location_data;
-
-  Fb_options() : ignore_write_errors( false ), write_location_data( false ) {}
-
-  bool operator==( const Fb_options & o ) const
-    { return ( ignore_write_errors == o.ignore_write_errors &&
-               write_location_data == o.write_location_data ); }
-  bool operator!=( const Fb_options & o ) const
-    { return !( *this == o ); }
-  };
-
-
-class Fillbook : public Logbook, public Fb_options
-  {
-  long long filled_size;		// size already filled
-  long long remaining_size;		// size to be filled
-  int filled_areas;			// areas already filled
-  int remaining_areas;			// areas to be filled
-  int odes_;				// output file descriptor
-  const bool synchronous_;
-					// variables for show_status
-  long long a_rate, c_rate, first_size, last_size;
-  long long last_ipos;
-  long t0, t1;				// start, current times
-  int oldlen;
-
-  int fill_areas( const std::string & filltypes );
-  int fill_block( const Sblock & sb );
-  void show_status( const long long ipos, const char * const msg = 0,
-                    bool force = false );
-
-public:
-  Fillbook( const long long offset, Domain & dom,
-            const char * const logname, const int cluster, const int hardbs,
-            const Fb_options & fb_opts, const bool synchronous )
-    : Logbook( offset, 0, dom, logname, cluster, hardbs, true ),
-      Fb_options( fb_opts ),
-      synchronous_( synchronous ),
-      a_rate( 0 ), c_rate( 0 ), first_size( 0 ), last_size( 0 ),
-      last_ipos( 0 ), t0( 0 ), t1( 0 ), oldlen( 0 )
-      {}
-
-  int do_fill( const int odes, const std::string & filltypes );
-  bool read_buffer( const int ides );
-  };
-
-
-class Genbook : public Logbook
-  {
-  long long recsize, gensize;		// total recovered and generated sizes
-  int odes_;				// output file descriptor
-					// variables for show_status
-  long long a_rate, c_rate, first_size, last_size;
-  long long last_ipos;
-  long t0, t1;				// start, current times
-  int oldlen;
-
-  void check_block( const Block & b, int & copied_size, int & error_size );
-  int check_all();
-  void show_status( const long long ipos, const char * const msg = 0,
-                    bool force = false );
-public:
-  Genbook( const long long offset, const long long isize,
-           Domain & dom, const char * const logname,
-           const int cluster, const int hardbs )
-    : Logbook( offset, isize, dom, logname, cluster, hardbs, false ),
-      a_rate( 0 ), c_rate( 0 ), first_size( 0 ), last_size( 0 ),
-      last_ipos( 0 ), t0( 0 ), t1( 0 ), oldlen( 0 )
-      {}
-
-  int do_generate( const int odes );
-  };
-
-
-#include "sliding_avg.h"
 
 struct Rb_options
   {
@@ -143,10 +51,10 @@ struct Rb_options
   long long min_outfile_size;
   long long max_read_rate;
   long long min_read_rate;
+  long max_errors;
   long pause;
   long timeout;
   int cpass_bitset;		// 1 | 2 | 4 for passes 1, 2, 3
-  int max_errors;
   int max_retries;
   int o_direct_in;		// O_DIRECT or 0
   int o_direct_out;		// O_DIRECT or 0
@@ -164,25 +72,28 @@ struct Rb_options
   bool sparse;
   bool try_again;
   bool unidirectional;
+  bool verify_on_error;
 
   Rb_options()
     : max_error_rate( -1 ), min_outfile_size( -1 ), max_read_rate( 0 ),
-      min_read_rate( -1 ), pause( 0 ), timeout( -1 ), cpass_bitset( 7 ),
-      max_errors( -1 ), max_retries( 0 ), o_direct_in( 0 ), o_direct_out( 0 ),
+      min_read_rate( -1 ), max_errors( -1 ), pause( 0 ), timeout( -1 ),
+      cpass_bitset( 7 ), max_retries( 0 ), o_direct_in( 0 ), o_direct_out( 0 ),
       preview_lines( 0 ), skipbs( default_skipbs ), max_skipbs( max_max_skipbs ),
       complete_only( false ), exit_on_error( false ),
       new_errors_only( false ), noscrape( false ), notrim( false ),
       reopen_on_error( false ), retrim( false ), reverse( false ),
-      sparse( false ), try_again( false ), unidirectional( false )
+      sparse( false ), try_again( false ), unidirectional( false ),
+      verify_on_error( false )
       {}
 
   bool operator==( const Rb_options & o ) const
     { return ( max_error_rate == o.max_error_rate &&
                min_outfile_size == o.min_outfile_size &&
                max_read_rate == o.max_read_rate &&
-               min_read_rate == o.min_read_rate && pause == o.pause &&
+               min_read_rate == o.min_read_rate &&
+               max_errors == o.max_errors && pause == o.pause &&
                timeout == o.timeout && cpass_bitset == o.cpass_bitset &&
-               max_errors == o.max_errors && max_retries == o.max_retries &&
+               max_retries == o.max_retries &&
                o_direct_in == o.o_direct_in && o_direct_out == o.o_direct_out &&
                preview_lines == o.preview_lines &&
                skipbs == o.skipbs && max_skipbs == o.max_skipbs &&
@@ -193,7 +104,8 @@ struct Rb_options
                reopen_on_error == o.reopen_on_error &&
                retrim == o.retrim && reverse == o.reverse &&
                sparse == o.sparse && try_again == o.try_again &&
-               unidirectional == o.unidirectional ); }
+               unidirectional == o.unidirectional &&
+               verify_on_error == o.verify_on_error ); }
   bool operator!=( const Rb_options & o ) const
     { return !( *this == o ); }
   };
@@ -208,9 +120,11 @@ class Rescuebook : public Logbook, public Rb_options
   const char * const iname_;
   int e_code;				// error code for errors_or_timeout
 					// 1 rate, 2 errors, 4 timeout
-  int errors;				// error areas found so far
+  long errors;				// error areas found so far
   int ides_, odes_;			// input and output file descriptors
   const bool synchronous_;
+  long long voe_ipos;			// pos of last good sector read, or -1
+  uint8_t * const voe_buf;		// copy of last good sector read
 					// variables for update_rates
   long long a_rate, c_rate, first_size, last_size;
   long long iobuf_ipos;			// last pos read in iobuf, or -1
@@ -219,8 +133,8 @@ class Rescuebook : public Logbook, public Rb_options
   int oldlen;
   bool rates_updated;
   Sliding_average sliding_avg;		// variables for show_status
-  bool first_post;
-  bool just_paused;			// variable for update_and_pause
+  bool first_post;			// first read in current pass
+  bool first_read;			// first read overall
 
   bool extend_outfile_size();
   int copy_block( const Block & b, int & copied_size, int & error_size );
@@ -240,7 +154,6 @@ class Rescuebook : public Logbook, public Rb_options
                        const Status curr_st, const bool forward,
                        const Sblock::Status st = Sblock::bad_sector );
   bool reopen_infile();
-  bool update_and_pause();
   int copy_non_tried();
   int fcopy_non_tried( const char * const msg, const int pass );
   int rcopy_non_tried( const char * const msg, const int pass );
@@ -261,24 +174,3 @@ public:
 
   int do_rescue( const int ides, const int odes );
   };
-
-
-// Round "size" to the next multiple of sector size (hardbs).
-//
-inline int round_up( int size, const int hardbs )
-  {
-  if( size % hardbs )
-    {
-    size -= size % hardbs;
-    if( INT_MAX - size >= hardbs ) size += hardbs;
-    }
-  return size;
-  }
-
-
-// Defined in io.cc
-//
-const char * format_time( long t, const bool low_prec = false );
-bool interrupted();
-void set_signals();
-int signaled_exit();

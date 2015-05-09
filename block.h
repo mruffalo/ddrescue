@@ -125,15 +125,15 @@ public:
   long long pos() const { return block_vector.front().pos(); }
   long long end() const { return block_vector.back().end(); }
   long long size() const { return end() - pos(); }
-  const Block & block( const int i ) const { return block_vector[i]; }
-  int blocks() const { return (int)block_vector.size(); }
+  const Block & block( const long i ) const { return block_vector[i]; }
+  long blocks() const { return block_vector.size(); }
   bool empty() const { return ( end() <= pos() ); }
   bool full() const { return ( !empty() && end() >= LLONG_MAX ); }
 
   long long in_size() const
     {
     long long s = 0;
-    for( unsigned i = 0; i < block_vector.size(); ++i )
+    for( unsigned long i = 0; i < block_vector.size(); ++i )
       s += block_vector[i].size();
     return s;
     }
@@ -141,7 +141,7 @@ public:
   bool operator!=( const Domain & d ) const
     {
     if( block_vector.size() != d.block_vector.size() ) return true;
-    for( unsigned i = 0; i < block_vector.size(); ++i )
+    for( unsigned long i = 0; i < block_vector.size(); ++i )
       if( block_vector[i] != d.block_vector[i] ) return true;
     return false;
     }
@@ -151,10 +151,10 @@ public:
 
   bool includes( const Block & b ) const
     {
-    unsigned l = 0, r = block_vector.size();
+    unsigned long l = 0, r = block_vector.size();
     while( l < r )
       {
-      const int m = ( l + r ) / 2;
+      const long m = ( l + r ) / 2;
       const Block & db = block_vector[m];
       if( db.includes( b ) ) return true;
       if( db < b ) l = m + 1; else if( b < db ) r = m; else break;
@@ -164,7 +164,7 @@ public:
 
   bool includes( const long long pos ) const
     {
-    for( unsigned i = 0; i < block_vector.size(); ++i )
+    for( unsigned long i = 0; i < block_vector.size(); ++i )
       if( block_vector[i].includes( pos ) ) return true;
     return false;
     }
@@ -188,11 +188,11 @@ private:
   const char * const filename_;
   std::string current_msg;
   Status current_status_;
-  mutable int index_;			// cached index of last find or change
+  mutable long index_;			// cached index of last find or change
   bool read_only_;
   std::vector< Sblock > sblock_vector;	// note: blocks are consecutive
 
-  void insert_sblock( const int i, const Sblock & sb )
+  void insert_sblock( const long i, const Sblock & sb )
     { sblock_vector.insert( sblock_vector.begin() + i, sb ); }
 
 public:
@@ -203,9 +203,8 @@ public:
   void compact_sblock_vector();
   void extend_sblock_vector( const long long isize );
   bool truncate_vector( const long long end, const bool force = false );
-  void make_blank()
-    { sblock_vector.clear();
-      sblock_vector.push_back( Sblock( 0, -1, Sblock::non_tried ) ); }
+  void set_to_status( const Sblock::Status st )
+    { sblock_vector.assign( 1, Sblock( 0, -1, st ) ); }
   bool read_logfile( const int default_sblock_status = 0 );
   int write_logfile( FILE * f = 0, const bool timestamp = false ) const;
 
@@ -224,21 +223,21 @@ public:
     { if( sblock_vector.empty() ) return Block( 0, 0 );
       return Block( sblock_vector.front().pos(),
                     sblock_vector.back().end() - sblock_vector.front().pos() ); }
-  const Sblock & sblock( const int i ) const { return sblock_vector[i]; }
-  int sblocks() const { return (int)sblock_vector.size(); }
-  void change_sblock_status( const int i, const Sblock::Status st )
+  const Sblock & sblock( const long i ) const { return sblock_vector[i]; }
+  long sblocks() const { return sblock_vector.size(); }
+  void change_sblock_status( const long i, const Sblock::Status st )
     { sblock_vector[i].status( st ); }
 
   void split_by_domain_borders( const Domain & domain );
   void split_by_logfile_borders( const Logfile & logfile );
-  bool try_split_sblock_by( const long long pos, const int i )
+  bool try_split_sblock_by( const long long pos, const long i )
     {
     if( sblock_vector[i].strictly_includes( pos ) )
       { insert_sblock( i, sblock_vector[i].split( pos ) ); return true; }
     return false;
     }
 
-  int find_index( const long long pos ) const;
+  long find_index( const long long pos ) const;
   void find_chunk( Block & b, const Sblock::Status st,
                    const Domain & domain, const int alignment ) const;
   void rfind_chunk( Block & b, const Sblock::Status st,

@@ -8,7 +8,7 @@ SHELL = /bin/sh
 
 ddobjs = fillbook.o genbook.o io.o logbook.o rescuebook.o main.o
 objs = arg_parser.o block.o non_posix.o logfile.o loggers.o rational.o $(ddobjs)
-logobjs = arg_parser.o block.o logbook.o logfile.o ddrescuelog.o
+logobjs = arg_parser.o block.o logfile.o ddrescuelog.o
 
 
 .PHONY : all install install-bin install-info install-man \
@@ -20,37 +20,36 @@ logobjs = arg_parser.o block.o logbook.o logfile.o ddrescuelog.o
 all : $(progname) ddrescuelog
 
 $(progname) : $(objs)
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $(objs)
+	$(CXX) $(LDFLAGS) $(CXXFLAGS) -o $@ $(objs)
 
 ddrescuelog : $(logobjs)
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $(logobjs)
+	$(CXX) $(LDFLAGS) $(CXXFLAGS) -o $@ $(logobjs)
 
 static_$(progname) : $(objs)
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -static -o $@ $(objs)
+	$(CXX) $(LDFLAGS) $(CXXFLAGS) -static -o $@ $(objs)
 
 non_posix.o : non_posix.cc
-	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(use_non_posix) -c -o $@ $<
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(use_non_posix) -c -o $@ $<
 
 main.o : main.cc
-	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -DPROGVERSION=\"$(pkgversion)\" -c -o $@ $<
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -DPROGVERSION=\"$(pkgversion)\" -c -o $@ $<
 
 ddrescuelog.o : ddrescuelog.cc
-	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -DPROGVERSION=\"$(pkgversion)\" -c -o $@ $<
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -DPROGVERSION=\"$(pkgversion)\" -c -o $@ $<
 
 %.o : %.cc
-	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c -o $@ $<
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c -o $@ $<
 
 $(objs)       : Makefile
-$(ddobjs)     : block.h ddrescue.h sliding_avg.h
+$(ddobjs)     : block.h logbook.h
 arg_parser.o  : arg_parser.h
 block.o       : block.h
-io.o          : loggers.h
 logfile.o     : block.h
 loggers.o     : block.h loggers.h
 non_posix.o   : non_posix.h
 rational.o    : rational.h
-rescuebook.o  : loggers.h
-main.o        : arg_parser.h rational.h loggers.h non_posix.h main_common.cc
+rescuebook.o  : loggers.h rescuebook.h
+main.o        : arg_parser.h rational.h loggers.h non_posix.h main_common.cc rescuebook.h
 ddrescuelog.o : Makefile arg_parser.h block.h main_common.cc
 
 

@@ -29,7 +29,57 @@
 #include <unistd.h>
 
 #include "block.h"
-#include "ddrescue.h"
+#include "logbook.h"
+
+
+const char * format_time( const long t, const bool low_prec )
+  {
+  enum { buffers = 8, bufsize = 16 };
+  static char buffer[buffers][bufsize];	// circle of static buffers for printf
+  static int current = 0;
+  if( t < 0 ) return "n/a";
+  char * const buf = buffer[current++]; current %= buffers;
+  const long s = t % 60;
+  const long m = ( t / 60 ) % 60;
+  const long h = ( t / 3600 ) % 24;
+  const long d = ( t / 86400 ) % 365;
+  const long y = t / 31536000;
+  int len = 0;				// max len is 11 chars (10h 10m 10s)
+
+  if( y > 0 ) len = snprintf( buf, bufsize, "%ldy", y );
+  if( d > 0 && len >= 0 && len <= 8 - ( d > 9 ) )
+    len += snprintf( buf + len, bufsize - len, "%s%ldd", len ? " " : "", d );
+  if( h > 0 && len >= 0 && len <= 8 - ( h > 9 ) )
+    len += snprintf( buf + len, bufsize - len, "%s%ldh", len ? " " : "", h );
+  if( m > 0 && len >= 0 && len <= 8 - ( m > 9 ) )
+    len += snprintf( buf + len, bufsize - len, "%s%ldm", len ? " " : "", m );
+  if( ( s > 0 && len >= 0 && len <= 8 - ( s > 9 ) && !low_prec ) || len == 0 )
+    len += snprintf( buf + len, bufsize - len, "%s%lds", len ? " " : "", s );
+  return buf;
+  }
+
+
+// If copied_size + error_size < b.size(), it means EOF has been reached.
+//
+void Genbook::check_block( const Block & b, int & copied_size, int & error_size )
+  {
+  if( b.size() <= 0 ) internal_error( "bad size checking a Block." );
+  copied_size = readblock( odes_, iobuf(), b.size(), b.pos() + offset() );
+  if( errno ) error_size = b.size() - copied_size;
+
+  for( int pos = 0; pos < copied_size; )
+    {
+    const int size = std::min( hardbs(), copied_size - pos );
+    if( !block_is_zero( iobuf() + pos, size ) )
+      {
+      change_chunk_status( Block( b.pos() + pos, size ),
+                           Sblock::finished, domain() );
+      recsize += size;
+      }
+    gensize += size;
+    pos += size;
+    }
+  }
 
 
 // Return values: 1 unexpected EOF, 0 OK, -1 interrupted, -2 logfile error.
@@ -94,10 +144,10 @@ void Genbook::show_status( const long long ipos, const char * const msg,
       last_size = gensize;
       }
     std::printf( "\r%s%s", up, up );
-    std::printf( "rescued: %10sB,  generated:%10sB,  current rate: %9sB/s\n",
+    std::printf( "rescued: %10sB,  generated:%10sB,  current rate: %8sB/s\n",
                  format_num( recsize ), format_num( gensize ),
                  format_num( c_rate, 99999 ) );
-    std::printf( "   opos: %10sB,   run time: %10s,  average rate: %9sB/s\n",
+    std::printf( "   opos: %10sB,  run time: %11s,  average rate: %8sB/s\n",
                  format_num( last_ipos + offset() ), format_time( t1 - t0 ),
                  format_num( a_rate, 99999 ) );
     if( msg && msg[0] )
@@ -118,7 +168,7 @@ int Genbook::do_generate( const int odes )
   recsize = 0; gensize = 0;
   odes_ = odes;
 
-  for( int i = 0; i < sblocks(); ++i )
+  for( long i = 0; i < sblocks(); ++i )
     {
     const Sblock & sb = sblock( i );
     if( !domain().includes( sb ) )

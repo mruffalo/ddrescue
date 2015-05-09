@@ -114,13 +114,13 @@ rm -f out
 "${DDRESCUE}" -q -O -H ${logfile1} ${in} out || fail=1
 cmp ${in1} out || fail=1
 printf .
-"${DDRESCUE}" -q -O -L -K0 -H ${logfile2i} ${in2} out || fail=1
+"${DDRESCUE}" -q -O -L -K0 -c1 -H ${logfile2i} ${in2} out || fail=1
 cmp ${in} out || fail=1
 printf .
 
 rm -f out
-"${DDRESCUE}" -q -H ${logfile3} ${in3} out || fail=1
-"${DDRESCUE}" -q -H ${logfile4} ${in4} out || fail=1
+"${DDRESCUE}" -q -c1 -H ${logfile3} ${in3} out || fail=1
+"${DDRESCUE}" -q -c2 -H ${logfile4} ${in4} out || fail=1
 "${DDRESCUE}" -q -H ${logfile5} ${in5} out || fail=1
 cmp ${in} out || fail=1
 printf .

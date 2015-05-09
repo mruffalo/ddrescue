@@ -31,8 +31,96 @@
 #include <sys/stat.h>
 
 #include "block.h"
-#include "ddrescue.h"
+#include "logbook.h"
 #include "loggers.h"
+#include "rescuebook.h"
+
+
+namespace {
+
+// Round "size" to the next multiple of sector size (hardbs).
+//
+int round_up( int size, const int hardbs )
+  {
+  if( size % hardbs )
+    {
+    size -= size % hardbs;
+    if( INT_MAX - size >= hardbs ) size += hardbs;
+    }
+  return size;
+  }
+
+} // end namespace
+
+
+bool Rescuebook::extend_outfile_size()
+  {
+  if( min_outfile_size > 0 || sparse_size > 0 )
+    {
+    const long long min_size = std::max( min_outfile_size, sparse_size );
+    const long long size = lseek( odes_, 0, SEEK_END );
+    if( size < 0 ) return false;
+    if( min_size > size )
+      {
+      const uint8_t zero = 0;
+      if( writeblock( odes_, &zero, 1, min_size - 1 ) != 1 ) return false;
+      fsync( odes_ );
+      }
+    }
+  return true;
+  }
+
+
+// Return values: 1 write error, 0 OK.
+// If !OK, copied_size and error_size are set to 0.
+// If OK && copied_size + error_size < b.size(), it means EOF has been reached.
+//
+int Rescuebook::copy_block( const Block & b, int & copied_size, int & error_size )
+  {
+  if( b.size() <= 0 ) internal_error( "bad size copying a Block." );
+  if( !test_domain || test_domain->includes( b ) )
+    {
+    copied_size = readblock( ides_, iobuf(), b.size(), b.pos() );
+    error_size = errno ? b.size() - copied_size : 0;
+    }
+  else { copied_size = 0; error_size = b.size(); }
+
+  if( copied_size > 0 )
+    {
+    iobuf_ipos = b.pos();
+    const long long pos = b.pos() + offset();
+    if( sparse_size >= 0 && block_is_zero( iobuf(), copied_size ) )
+      {
+      const long long end = pos + copied_size;
+      if( end > sparse_size ) sparse_size = end;
+      }
+    else if( writeblock( odes_, iobuf(), copied_size, pos ) != copied_size ||
+             ( synchronous_ && fsync( odes_ ) < 0 && errno != EINVAL ) )
+      {
+      copied_size = 0; error_size = 0;
+      final_msg( "Write error", errno );
+      return 1;
+      }
+    }
+  else iobuf_ipos = -1;
+
+  read_logger.print_line( b.pos(), b.size(), copied_size, error_size );
+
+  if( verify_on_error )
+    {
+    if( copied_size >= hardbs() && b.pos() % hardbs() == 0 )
+      { voe_ipos = b.pos(); std::memcpy( voe_buf, iobuf(), hardbs() ); }
+    else if( copied_size <= 0 && error_size > 0 && voe_ipos >= 0 )
+      {
+      const int size = readblock( ides_, iobuf(), hardbs(), voe_ipos );
+      if( size != hardbs() )
+        { final_msg( "Input file no longer returns data", errno ); return 2; }
+      if( std::memcmp( voe_buf, iobuf(), hardbs() ) != 0 )
+        { final_msg( "Input file returns inconsistent data" ); return 2; }
+      }
+    }
+  return 0;
+  }
 
 
 void Rescuebook::count_errors()
@@ -40,7 +128,7 @@ void Rescuebook::count_errors()
   bool good = true;
   errors = 0;
 
-  for( int i = 0; i < sblocks(); ++i )
+  for( long i = 0; i < sblocks(); ++i )
     {
     const Sblock & sb = sblock( i );
     if( !domain().includes( sb ) )
@@ -64,9 +152,17 @@ int Rescuebook::copy_and_update( const Block & b, int & copied_size,
                                  const Status curr_st, const bool forward,
                                  const Sblock::Status st )
   {
-  just_paused = false;
   if( first_post )
     {
+    if( first_read ) first_read = false;
+    else if( pause > 0 )
+      {
+      show_status( -1, "Paused", true );
+      sleep( pause );
+      const long t2 = std::time( 0 );
+      if( t1 < t2 ) t1 = t2;			// clock may have jumped back
+      ts = std::min( ts + pause, t2 );		// avoid spurious timeout
+      }
     current_status( curr_st, msg );
     read_logger.print_msg( t1 - t0, msg );
     }
@@ -108,19 +204,6 @@ int Rescuebook::copy_and_update( const Block & b, int & copied_size,
   }
 
 
-bool Rescuebook::update_and_pause()
-  {
-  if( pause <= 0 || just_paused ) return true;
-  if( !update_logfile( odes_, true ) ) return false;
-  show_status( -1, "Paused", true );
-  sleep( pause );
-  just_paused = true;
-  const long t2 = std::time( 0 );
-  ts = std::min( ts + pause, t2 );		// avoid spurious timeout
-  return true;
-  }
-
-
 // Return values: 1 I/O error, 0 OK, -1 interrupted, -2 logfile error.
 // Read the non-tried part of the domain, skipping over the damaged areas.
 //
@@ -135,7 +218,6 @@ int Rescuebook::copy_non_tried()
     if( cpass_bitset & ( 1 << ( pass - 1 ) ) )
       {
       first_post = true;
-      update_and_pause();
       snprintf( msgbuf + msglen, ( sizeof msgbuf ) - msglen, "%d %s",
                 pass, forward ? "(forwards)" : "(backwards)" );
       int retval = forward ? fcopy_non_tried( msgbuf, pass ) :
@@ -261,9 +343,8 @@ int Rescuebook::trim_errors()
   const char * const msg = reverse ? "Trimming failed blocks... (backwards)" :
                                      "Trimming failed blocks... (forwards)";
   first_post = true;
-  update_and_pause();
 
-  for( int i = 0; i < sblocks(); )
+  for( long i = 0; i < sblocks(); )
     {
     const Sblock sb = sblock( reverse ? sblocks() - i - 1 : i );
     if( !domain().includes( sb ) )
@@ -301,7 +382,7 @@ int Rescuebook::trim_errors()
       if( error_size > 0 ) error_found = true;
       if( error_size > 0 && end > pos )
         {
-        const int index = find_index( end - 1 );
+        const long index = find_index( end - 1 );
         if( index >= 0 && domain().includes( sblock( index ) ) &&
             sblock( index ).status() == Sblock::non_trimmed )
           errors += change_chunk_status( sblock( index ), Sblock::non_scraped,
@@ -323,9 +404,8 @@ int Rescuebook::scrape_errors()
   const char * const msg = reverse ? "Scraping failed blocks... (backwards)" :
                                      "Scraping failed blocks... (forwards)";
   first_post = true;
-  update_and_pause();
 
-  for( int i = 0; i < sblocks(); )
+  for( long i = 0; i < sblocks(); )
     {
     const Sblock sb = sblock( reverse ? sblocks() - i - 1 : i );
     if( !domain().includes( sb ) )
@@ -364,7 +444,6 @@ int Rescuebook::copy_errors()
   for( int retry = 1; max_retries < 0 || retry <= max_retries; ++retry )
     {
     first_post = true;
-    update_and_pause();
     snprintf( msgbuf + msglen, ( sizeof msgbuf ) - msglen, "%d %s",
               retry, forward ? "(forwards)" : "(backwards)" );
     int retval = forward ? fcopy_errors( msgbuf, retry ) :
@@ -530,24 +609,24 @@ void Rescuebook::show_status( const long long ipos, const char * const msg,
           }
         std::fputc( '\n', stdout );
         }
-      std::printf( "rescued: %10sB,   errsize: %9sB,  current rate: %9sB/s\n",
+      std::printf( "rescued: %10sB,   errsize:  %9sB,    current rate: %8sB/s\n",
                    format_num( recsize ), format_num( errsize, 99999 ),
                    format_num( c_rate, 99999 ) );
-      std::printf( "   ipos: %10sB,    errors:  %7u,    average rate: %9sB/s\n",
+      std::printf( "   ipos: %10sB,    errors:   %7ld,      average rate: %8sB/s\n",
                    format_num( last_ipos ), errors,
                    format_num( a_rate, 99999 ) );
       if( first_post ) sliding_avg.reset();
-      sliding_avg.add_term( c_rate );
+      else sliding_avg.add_term( c_rate );
       const long long s_rate = domain().full() ? 0 : sliding_avg();
       const long remaining_time = ( s_rate <= 0 ) ? -1 :
-        std::min( (long long)INT_MAX,
+        std::min( std::min( (long long)LONG_MAX, 315359999968464000LL ),
                   ( domain().in_size() - recsize -
                     ( max_retries ? 0 : errsize ) + s_rate - 1 ) / s_rate );
-      std::printf( "   opos: %10sB,  run time: %10s,  remaining time: %10s\n",
+      std::printf( "   opos: %10sB,  run time: %11s,  remaining time: %11s\n",
                    format_num( last_ipos + offset() ),
                    format_time( t1 - t0 ),
                    format_time( remaining_time, remaining_time >= 180 ) );
-      std::printf( "time since last successful read: %10s\n",
+      std::printf( "time since last successful read: %11s\n",
                    format_time( t1 - ts ) );
       if( msg && msg[0] && !errors_or_timeout() )
         {
@@ -580,10 +659,11 @@ Rescuebook::Rescuebook( const long long offset, const long long isize,
     iname_( iname ),
     e_code( 0 ),
     synchronous_( synchronous ),
+    voe_ipos( -1 ), voe_buf( new uint8_t[hardbs] ),
     a_rate( 0 ), c_rate( 0 ), first_size( 0 ), last_size( 0 ),
     iobuf_ipos( -1 ), last_ipos( 0 ), t0( 0 ), t1( 0 ), ts( 0 ), oldlen( 0 ),
     rates_updated( false ), sliding_avg( 30 ), first_post( false ),
-    just_paused( true )
+    first_read( true )
   {
   if( preview_lines > softbs() / 16 ) preview_lines = softbs() / 16;
   const long long csize = isize / 100;
@@ -594,7 +674,7 @@ Rescuebook::Rescuebook( const long long offset, const long long isize,
   max_skipbs = round_up( max_skipbs, hardbs );
 
   if( retrim )
-    for( int index = 0; index < sblocks(); ++index )
+    for( long index = 0; index < sblocks(); ++index )
       {
       const Sblock & sb = sblock( index );
       if( !domain().includes( sb ) )
@@ -604,7 +684,7 @@ Rescuebook::Rescuebook( const long long offset, const long long isize,
         change_sblock_status( index, Sblock::non_trimmed );
       }
   if( try_again )
-    for( int index = 0; index < sblocks(); ++index )
+    for( long index = 0; index < sblocks(); ++index )
       {
       const Sblock & sb = sblock( index );
       if( !domain().includes( sb ) )
@@ -625,7 +705,7 @@ int Rescuebook::do_rescue( const int ides, const int odes )
   bool copy_pending = false, trim_pending = false, scrape_pending = false;
   ides_ = ides; odes_ = odes;
 
-  for( int i = 0; i < sblocks(); ++i )
+  for( long i = 0; i < sblocks(); ++i )
     {
     const Sblock & sb = sblock( i );
     if( !domain().includes( sb ) ) { if( domain() < sb ) break; else continue; }
@@ -656,7 +736,7 @@ int Rescuebook::do_rescue( const int ides, const int odes )
       if( domain().pos() > 0 || domain().end() < logfile_isize() )
         std::printf( "(sizes below are limited to the domain %sB to %sB)\n",
                      format_num( domain().pos() ), format_num( domain().end() ) );
-      std::printf( "rescued: %10sB,  errsize:%9sB,  errors: %7u\n",
+      std::printf( "rescued: %10sB,  errsize:%9sB,  errors: %7ld\n",
                    format_num( recsize ), format_num( errsize, 99999 ), errors );
       std::printf( "\nCurrent status\n" );
       }

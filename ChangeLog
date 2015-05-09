@@ -1,3 +1,10 @@
+2015-05-09  Antonio Diaz Diaz  <antonio@gnu.org>
+
+	* Version 1.20-pre2 released.
+	* Added new option '-J, --verify-on-error'.
+	* Changed long name of option '-d' to '--idirect'.
+	* File 'ddrescue.h' renamed to 'logbook.h'.
+
 2015-03-25  Antonio Diaz Diaz  <antonio@gnu.org>
 
 	* Version 1.20-pre1 released.
@@ -155,7 +162,7 @@
 2010-08-27  Antonio Diaz Diaz  <ant_diaz@teleline.es>
 
 	* Version 1.13 released.
-	* Non-regular output files are no more overwritten by default.
+	* Non-regular output files are no longer overwritten by default.
 	* Added new option '-f, --force'.
 	* Added new option '-p, --preallocate'.
 	* main.cc (write_logfile_header): Write command line to logfile.
@@ -198,7 +205,7 @@
 	* rescuebook.cc: 'skip_size' has been made independent of 'softbs'.
 	* 'change_chunk_status' is now faster for large logfiles.
 	* Fixed overflow when reading from devices of undefined size.
-	* Block does no more admit negative sizes.
+	* Block does no longer admit negative sizes.
 	* 'make install-info' should now work on Debian and OS X.
 	* New file testsuite/check.sh.
 

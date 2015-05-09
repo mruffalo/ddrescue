@@ -29,7 +29,7 @@
 #include <unistd.h>
 
 #include "block.h"
-#include "ddrescue.h"
+#include "logbook.h"
 
 
 namespace {
@@ -89,7 +89,7 @@ Logbook::Logbook( const long long offset, const long long isize, Domain & dom,
 bool Logbook::update_logfile( const int odes, const bool force )
   {
   if( !filename() ) return true;
-  const int interval = 30 + std::min( 270, sblocks() / 38 );	// 30s to 5m
+  const int interval = 30 + std::min( 270L, sblocks() / 38 );	// 30s to 5m
   const long t2 = std::time( 0 );
   if( ul_t1 == 0 ) ul_t1 = t2;				// initialize
   if( !force && t2 - ul_t1 < interval ) return true;

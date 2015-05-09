@@ -18,6 +18,7 @@
 #define _FILE_OFFSET_BITS 64
 
 #include <algorithm>
+#include <cerrno>
 #include <climits>
 #include <cstdio>
 #include <cstring>
@@ -25,19 +26,51 @@
 #include <string>
 #include <vector>
 #include <stdint.h>
+#include <unistd.h>
 
 #include "block.h"
-#include "ddrescue.h"
+#include "logbook.h"
+
+
+// Return values: 1 write error, 0 OK.
+//
+int Fillbook::fill_block( const Sblock & sb )
+  {
+  if( sb.size() <= 0 || sb.size() > softbs() )
+    internal_error( "bad size filling a Block." );
+  const int size = sb.size();
+
+  if( write_location_data )	// write location data into each sector
+    for( long long pos = sb.pos(); pos < sb.end(); pos += hardbs() )
+      {
+      char * const buf = (char *)iobuf() + ( pos - sb.pos() );
+      const int bufsize = std::min( 80LL, sb.end() - pos );
+      const int len = snprintf( buf, bufsize,
+                                "\n# position      sector  status\n"
+                                "0x%08llX  0x%08llX  %c\n",
+                                pos, pos / hardbs(), sb.status() );
+      if( len > 0 && len < bufsize )
+        std::memset( buf + len, ' ', bufsize - len );
+      }
+  if( writeblock( odes_, iobuf(), size, sb.pos() + offset() ) != size ||
+      ( synchronous_ && fsync( odes_ ) < 0 && errno != EINVAL ) )
+    {
+    if( !ignore_write_errors ) final_msg( "Write error", errno );
+    return 1;
+    }
+  filled_size += size; remaining_size -= size;
+  return 0;
+  }
 
 
 // Return values: 1 write error, 0 OK, -1 interrupted, -2 logfile error.
 //
-int Fillbook::fill_areas( const std::string & filltypes )
+int Fillbook::fill_areas()
   {
   const char * const msg = "Filling blocks...";
   bool first_post = true;
 
-  for( int index = 0; index < sblocks(); ++index )
+  for( long index = 0; index < sblocks(); ++index )
     {
     const Sblock & sb = sblock( index );
     if( !domain().includes( sb ) ) { if( domain() < sb ) break; else continue; }
@@ -99,13 +132,13 @@ void Fillbook::show_status( const long long ipos, const char * const msg,
       last_size = filled_size;
       }
     std::printf( "\r%s%s%s", up, up, up );
-    std::printf( "filled size: %10sB,  filled areas: %6u,  current rate: %9sB/s\n",
+    std::printf( "filled size: %10sB,  filled areas: %6ld,  current rate: %8sB/s\n",
                  format_num( filled_size ), filled_areas,
                  format_num( c_rate, 99999 ) );
-    std::printf( "remain size: %10sB,  remain areas: %6u,  average rate: %9sB/s\n",
+    std::printf( "remain size: %10sB,  remain areas: %6ld,  average rate: %8sB/s\n",
                  format_num( remaining_size ), remaining_areas,
                  format_num( a_rate, 99999 ) );
-    std::printf( "current pos: %10sB,  run time: %10s\n",
+    std::printf( "current pos: %10sB,  run time: %11s\n",
                  format_num( last_ipos + offset() ), format_time( t1 - t0 ) );
     if( msg && msg[0] )
       {
@@ -120,7 +153,7 @@ void Fillbook::show_status( const long long ipos, const char * const msg,
 
 // Return values: 1 write error, 0 OK.
 //
-int Fillbook::do_fill( const int odes, const std::string & filltypes )
+int Fillbook::do_fill( const int odes )
   {
   filled_size = 0, remaining_size = 0;
   filled_areas = 0, remaining_areas = 0;
@@ -128,7 +161,7 @@ int Fillbook::do_fill( const int odes, const std::string & filltypes )
   if( current_status() != filling || !domain().includes( current_pos() ) )
     current_pos( 0 );
 
-  for( int i = 0; i < sblocks(); ++i )
+  for( long i = 0; i < sblocks(); ++i )
     {
     const Sblock & sb = sblock( i );
     if( !domain().includes( sb ) ) { if( domain() < sb ) break; else continue; }
@@ -148,14 +181,14 @@ int Fillbook::do_fill( const int odes, const std::string & filltypes )
     if( logfile_exists() )
       {
       std::printf( "Initial status (read from logfile)\n" );
-      std::printf( "filled size:    %10sB,  filled areas:    %7u\n",
+      std::printf( "filled size:    %10sB,  filled areas:    %7ld\n",
                    format_num( filled_size ), filled_areas );
-      std::printf( "remaining size: %10sB,  remaining areas: %7u\n",
+      std::printf( "remaining size: %10sB,  remaining areas: %7ld\n",
                    format_num( remaining_size ), remaining_areas );
       std::printf( "Current status\n" );
       }
     }
-  int retval = fill_areas( filltypes );
+  int retval = fill_areas();
   const bool signaled = ( retval == -1 );
   if( signaled ) retval = 0;
   if( verbosity >= 0 )
@@ -176,4 +209,17 @@ int Fillbook::do_fill( const int odes, const std::string & filltypes )
   if( retval ) return retval;		// errors have priority over signals
   if( signaled ) return signaled_exit();
   return 0;
+  }
+
+
+bool Fillbook::read_buffer( const int ides )
+  {
+  const int rd = readblock( ides, iobuf(), softbs(), 0 );
+  if( rd <= 0 ) return false;
+  for( int i = rd; i < softbs(); i *= 2 )
+    {
+    const int size = std::min( i, softbs() - i );
+    std::memcpy( iobuf() + i, iobuf(), size );
+    }
+  return true;
   }

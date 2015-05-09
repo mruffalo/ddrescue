@@ -78,11 +78,11 @@ void show_logfile_error( const char * const logname, const int linenum )
 void Logfile::compact_sblock_vector()
   {
   std::vector< Sblock > new_vector;
-  unsigned l = 0;
+  unsigned long l = 0;
   while( l < sblock_vector.size() )
     {
     Sblock run = sblock_vector[l];
-    unsigned r = l + 1;
+    unsigned long r = l + 1;
     while( r < sblock_vector.size() &&
            sblock_vector[r].status() == run.status() ) ++r;
     if( r > l + 1 ) run.size( sblock_vector[r-1].end() - run.pos() );
@@ -142,10 +142,10 @@ void Logfile::extend_sblock_vector( const long long isize )
 //
 bool Logfile::truncate_vector( const long long end, const bool force )
   {
-  unsigned i = sblock_vector.size();
+  unsigned long i = sblock_vector.size();
   while( i > 0 && sblock_vector[i-1].pos() >= end ) --i;
   if( !force )
-    for( unsigned j = i; j < sblock_vector.size(); ++j )
+    for( unsigned long j = i; j < sblock_vector.size(); ++j )
       if( sblock_vector[j].status() == Sblock::finished ) return false;
   if( i == 0 )
     {
@@ -240,7 +240,7 @@ int Logfile::write_logfile( FILE * f, const bool timestamp ) const
   std::fprintf( f, "# current_pos  current_status\n" );
   std::fprintf( f, "0x%08llX     %c\n", current_pos_, current_status_ );
   std::fprintf( f, "#      pos        size  status\n" );
-  for( unsigned i = 0; i < sblock_vector.size(); ++i )
+  for( unsigned long i = 0; i < sblock_vector.size(); ++i )
     {
     const Sblock & sb = sblock_vector[i];
     std::fprintf( f, "0x%08llX  0x%08llX  %c\n", sb.pos(), sb.size(), sb.status() );
@@ -251,7 +251,7 @@ int Logfile::write_logfile( FILE * f, const bool timestamp ) const
 
 bool Logfile::blank() const
   {
-  for( unsigned i = 0; i < sblock_vector.size(); ++i )
+  for( unsigned long i = 0; i < sblock_vector.size(); ++i )
     if( sblock_vector[i].status() != Sblock::non_tried )
       return false;
   return true;
@@ -263,7 +263,7 @@ void Logfile::split_by_domain_borders( const Domain & domain )
   if( domain.blocks() == 1 )
     {
     const Block & db = domain.block( 0 );
-    unsigned i = 0;
+    unsigned long i = 0;
     while( i < sblock_vector.size() && sblock_vector[i] < db ) ++i;
     if( i < sblock_vector.size() ) try_split_sblock_by( db.pos(), i );
     i = sblock_vector.size();
@@ -273,8 +273,8 @@ void Logfile::split_by_domain_borders( const Domain & domain )
   else
     {
     std::vector< Sblock > new_vector;
-    int j = 0;
-    for( unsigned i = 0; i < sblock_vector.size(); )
+    long j = 0;
+    for( unsigned long i = 0; i < sblock_vector.size(); )
       {
       Sblock & sb = sblock_vector[i];
       while( j < domain.blocks() && domain.block( j ) < sb ) ++j;
@@ -297,8 +297,8 @@ void Logfile::split_by_domain_borders( const Domain & domain )
 void Logfile::split_by_logfile_borders( const Logfile & logfile )
   {
   std::vector< Sblock > new_vector;
-  int j = 0;
-  for( unsigned i = 0; i < sblock_vector.size(); )
+  long j = 0;
+  for( unsigned long i = 0; i < sblock_vector.size(); )
     {
     Sblock & sb = sblock_vector[i];
     while( j < logfile.sblocks() && logfile.sblock( j ) < sb ) ++j;
@@ -317,7 +317,7 @@ void Logfile::split_by_logfile_borders( const Logfile & logfile )
   }
 
 
-int Logfile::find_index( const long long pos ) const
+long Logfile::find_index( const long long pos ) const
   {
   if( index_ < 0 || index_ >= sblocks() ) index_ = sblocks() / 2;
   while( index_ + 1 < sblocks() && pos >= sblock_vector[index_+1].pos() )
@@ -339,7 +339,7 @@ void Logfile::find_chunk( Block & b, const Sblock::Status st,
   if( b.pos() < sblock_vector.front().pos() )
     b.pos( sblock_vector.front().pos() );
   if( find_index( b.pos() ) < 0 ) { b.size( 0 ); return; }
-  int i;
+  long i;
   for( i = index_; i < sblocks(); ++i )
     if( sblock_vector[i].status() == st && domain.includes( sblock_vector[i] ) )
       { index_ = i; break; }
@@ -363,7 +363,7 @@ void Logfile::rfind_chunk( Block & b, const Sblock::Status st,
   if( sblock_vector.back().end() < b.end() )
     b.end( sblock_vector.back().end() );
   if( find_index( b.end() - 1 ) < 0 ) { b.size( 0 ); return; }
-  int i;
+  long i;
   for( i = index_; i >= 0; --i )
     if( sblock_vector[i].status() == st && domain.includes( sblock_vector[i] ) )
       { index_ = i; break; }

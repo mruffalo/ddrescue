@@ -38,7 +38,7 @@ public:
   bool open_file();
   bool print_line( const long time, const long long ipos,
                    const long long a_rate, const long long c_rate,
-                   const int errors, const long long errsize );
+                   const long errors, const long long errsize );
   };
 
 extern Rate_logger rate_logger;

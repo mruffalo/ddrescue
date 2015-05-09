@@ -41,9 +41,10 @@
 #include "arg_parser.h"
 #include "rational.h"
 #include "block.h"
-#include "ddrescue.h"
+#include "logbook.h"
 #include "loggers.h"
 #include "non_posix.h"
+#include "rescuebook.h"
 
 #ifndef O_BINARY
 #define O_BINARY 0
@@ -82,7 +83,7 @@ void show_help( const int cluster, const int hardbs, const int skipbs )
   std::printf( "  -B, --binary-prefixes          show binary multipliers in numbers [SI]\n"
                "  -c, --cluster-size=<sectors>   sectors to copy at a time [%d]\n", cluster );
   std::printf( "  -C, --complete-only            do not read new data beyond logfile limits\n"
-               "  -d, --direct                   use direct disc access for input file\n"
+               "  -d, --idirect                  use direct disc access for input file\n"
                "  -D, --odirect                  use direct disc access for output file\n"
                "  -e, --max-errors=[+]<n>        maximum number of [new] error areas allowed\n"
                "  -E, --max-error-rate=<bytes>   maximum allowed rate of read errors per second\n"
@@ -92,6 +93,7 @@ void show_help( const int cluster, const int hardbs, const int skipbs )
                "  -H, --test-mode=<file>         set map of good/bad blocks from given logile\n"
                "  -i, --input-position=<bytes>   starting position of domain in input file [0]\n"
                "  -I, --verify-input-size        verify input file size with size in logfile\n"
+               "  -J, --verify-on-error          reread latest good sector after every error\n"
                "  -K, --skip-size=<min>[,<max>]  initial size to skip on read error [%sB]\n",
                format_num( skipbs, 9999, -1 ) );
   std::printf( "  -L, --loose-domain             accept an incomplete domain logfile\n"
@@ -238,7 +240,7 @@ int do_fill( const long long offset, Domain & domain,
              const char * const iname, const char * const oname,
              const char * const logname,
              const int cluster, const int hardbs,
-             const std::string & filltypes, const Fb_options & fb_opts,
+             const Fb_options & fb_opts,
              const bool synchronous )
   {
   if( !logname )
@@ -270,7 +272,7 @@ int do_fill( const long long offset, Domain & domain,
   if( verbosity >= 1 )
     {
     std::printf( "About to fill with data from %s blocks of %s marked %s\n",
-                 iname, oname, filltypes.c_str() );
+                 iname, oname, fb_opts.filltypes.c_str() );
     std::printf( "    Maximum size to fill: %sBytes\n",
                  format_num( fillbook.domain().in_size() ) );
     std::printf( "    Starting positions: infile = %sB,  outfile = %sB\n",
@@ -280,7 +282,7 @@ int do_fill( const long long offset, Domain & domain,
     std::printf( "Sector size: %sBytes\n\n", format_num( hardbs, 99999 ) );
     }
 
-  return fillbook.do_fill( odes, filltypes );
+  return fillbook.do_fill( odes );
   }
 
 
@@ -482,7 +484,7 @@ int do_rescue( const long long offset, Domain & domain,
       if( rescuebook.max_errors >= 0 )
         {
         nl = true;
-        std::printf( "Max %serrors: %d    ", rescuebook.new_errors_only ?
+        std::printf( "Max %serrors: %ld    ", rescuebook.new_errors_only ?
                      "new " : "", rescuebook.max_errors );
         }
       if( nl ) { nl = false; std::fputc( '\n', stdout ); }
@@ -622,7 +624,6 @@ int main( const int argc, const char * const argv[] )
   bool preallocate = false;
   bool synchronous = false;
   bool verify_input_size = false;
-  std::string filltypes;
   invocation_name = argv[0];
   command_line = argv[0];
   for( int i = 1; i < argc; ++i )
@@ -639,6 +640,7 @@ int main( const int argc, const char * const argv[] )
     { 'c', "cluster-size",        Arg_parser::yes },
     { 'C', "complete-only",       Arg_parser::no  },
     { 'd', "direct",              Arg_parser::no  },
+    { 'd', "idirect",             Arg_parser::no  },
     { 'D', "odirect",             Arg_parser::no  },
     { 'e', "max-errors",          Arg_parser::yes },
     { 'E', "max-error-rate",      Arg_parser::yes },
@@ -649,6 +651,7 @@ int main( const int argc, const char * const argv[] )
     { 'H', "test-mode",           Arg_parser::yes },
     { 'i', "input-position",      Arg_parser::yes },
     { 'I', "verify-input-size",   Arg_parser::no  },
+    { 'J', "verify-on-error",     Arg_parser::no  },
     { 'K', "skip-size",           Arg_parser::yes },
     { 'L', "loose-domain",        Arg_parser::no  },
     { 'm', "domain-logfile",      Arg_parser::yes },
@@ -705,9 +708,9 @@ int main( const int argc, const char * const argv[] )
                 rb_opts.max_errors = getnum( arg, 0, 0, INT_MAX ); break;
       case 'E': rb_opts.max_error_rate = getnum( arg, hardbs, 0 ); break;
       case 'f': force = true; break;
-      case 'F': set_mode( program_mode, m_fill ); filltypes = arg;
+      case 'F': set_mode( program_mode, m_fill ); fb_opts.filltypes = arg;
                 fb_opts.write_location_data =
-                  check_types( filltypes, "fill-mode", true ); break;
+                  check_types( fb_opts.filltypes, "fill-mode", true ); break;
       case 'G': set_mode( program_mode, m_generate ); break;
       case 'h': show_help( cluster_bytes / default_hardbs, default_hardbs,
                            Rb_options::default_skipbs );
@@ -715,6 +718,7 @@ int main( const int argc, const char * const argv[] )
       case 'H': set_name( &test_mode_logfile_name, arg, code ); break;
       case 'i': ipos = getnum( arg, hardbs, 0 ); break;
       case 'I': verify_input_size = true; break;
+      case 'J': rb_opts.verify_on_error = true; break;
       case 'K': parse_skipbs( arg, rb_opts, hardbs ); break;
       case 'L': loose = true; break;
       case 'm': set_name( &domain_logfile_name, arg, code ); break;
@@ -777,16 +781,16 @@ int main( const int argc, const char * const argv[] )
           return 1; }
       if( rb_opts != Rb_options() || test_mode_logfile_name ||
           verify_input_size || preallocate || o_trunc )
-        show_error( "warning: Options -aACdeEHIKlMnOpPrRStTuxX are ignored in fill mode." );
+        show_error( "warning: Options -aACdeEHIJKlMnOpPrRStTuxX are ignored in fill mode." );
       return do_fill( opos - ipos, domain, iname, oname, logname, cluster,
-                      hardbs, filltypes, fb_opts, synchronous );
+                      hardbs, fb_opts, synchronous );
     case m_generate:
       if( ask )
         { show_error( "Option '--ask' is incompatible with generate mode.", 0, true );
           return 1; }
       if( fb_opts != Fb_options() || rb_opts != Rb_options() || synchronous ||
           test_mode_logfile_name || verify_input_size || preallocate || o_trunc )
-        show_error( "warning: Options -aACdDeEHIKlMnOpPrRStTuwxXy are ignored in generate mode." );
+        show_error( "warning: Options -aACdDeEHIJKlMnOpPrRStTuwxXy are ignored in generate mode." );
       return do_generate( opos - ipos, domain, iname, oname, logname,
                           cluster, hardbs );
     case m_none:

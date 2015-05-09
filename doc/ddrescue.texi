@@ -6,8 +6,8 @@
 @finalout
 @c %**end of header
 
-@set UPDATED 25 March 2015
-@set VERSION 1.20-pre1
+@set UPDATED 9 May 2015
+@set VERSION 1.20-pre2
 
 @dircategory GNU Packages
 @direntry
@@ -180,7 +180,8 @@ Always use a logfile unless you know you won't need it. Without a
 logfile, ddrescue can't resume a rescue, only reinitiate it.
 
 Never try to rescue a r/w mounted partition. The resulting copy may be
-useless.
+useless. It is best that the device or partition to be rescued is not
+mounted at all, not even read-only.
 
 Never try to repair a file system on a drive with I/O errors; you will
 probably lose even more data.
@@ -325,9 +326,13 @@ The format for running ddrescue is:
 ddrescue [@var{options}] @var{infile} @var{outfile} [@var{logfile}]
 @end example
 
+@var{infile} and @var{outfile} may be files, devices or partitions.
+@var{logfile} is a regular file and must be placed in an existing
+directory. If @var{logfile} does not exist, ddrescue will create it.
+
 ddrescue supports the following options:
 
-@table @samp
+@table @code
 @item -h
 @itemx --help
 Print an informative help message describing the options and exit.
@@ -384,9 +389,9 @@ only be used after a first rescue attempt, possibly limited with the
 @samp{--size} option, has produced a complete @var{logfile}.
 
 @item -d
-@itemx --direct
+@itemx --idirect
 Use direct disc access (@pxref{Direct disc access}) to read from
-@var{infile}, bypassing the kernel cache. (Open the file with the
+@var{infile}, bypassing the kernel cache. (Opens the file with the
 O_DIRECT flag). Use it only on devices or partitions, not on regular
 files. Sector size must be correctly set for this to work. Not all
 systems support this.
@@ -398,7 +403,7 @@ errors and no data will be rescued.
 @item -D
 @itemx --odirect
 Use direct disc access to write to @var{outfile}, bypassing the kernel
-cache. (Open the file with the O_DIRECT flag). Sector size must be
+cache. (Opens the file with the O_DIRECT flag). Sector size must be
 correctly set for this to work. Not all systems support this.
 
 If your system does not support direct disc access, ddrescue will warn
@@ -475,6 +480,15 @@ differ. This is not enabled by default because the size of some devices
 can't be known in advance and because the size derived from the
 @var{logfile} may be incomplete, for example after doing a partial
 rescue.
+
+@item -J
+@itemx --verify-on-error
+After every read error, read again the last good sector found and verify
+that it returns the same data. Exit with status 2 if the read fails or
+returns inconsistent data. This option performs one extra read after
+each error, wearing the drive faster. Use it only on drives that stop
+responding or return garbage data after finding errors. You may need to
+power cycle the drive before restarting ddrescue.
 
 @item -K [@var{initial}][,@var{max}]
 @itemx --skip-size=[@var{initial}][,@var{max}]
@@ -696,9 +710,10 @@ entirely. To run only the given pass(es), specify also @samp{--no-trim}
 and @samp{--no-scrape}.
 
 @item --max-read-rate=@var{bytes}
-Maximum read rate, in bytes per second. @var{bytes} is rounded up to the
-equivalent of a whole number of cluster reads per second. Use this
-option to limit the bandwidth used by ddrescue.
+Maximum read rate, in bytes per second. If @var{bytes} is too small, the
+actual read rate is rounded up to the equivalent of a whole number of
+cluster reads per second. Use this option to limit the bandwidth used by
+ddrescue, for example when recovering over a network.
 
 @item --pause=@var{interval}
 Time to wait between passes. Defaults to 0. @var{interval} is formatted
@@ -917,6 +932,9 @@ mount -t iso9660 -o loop,ro cdimage2 /mnt/cdimage
 cp /mnt/cdimage/backup.tar.lz rescued2.tar.lz
 umount /mnt/cdimage
 lziprecover -m -v -o backup.tar.lz rescued1.tar.lz rescued2.tar.lz
+  Input files merged successfully.
+lziprecover -tv backup.tar.lz
+  ok
 @end example
 
 
@@ -1042,7 +1060,7 @@ option for direct disc access to work. Only whole sectors can be read or
 written; both @samp{--input-position} (or @samp{--output-position} for
 direct writes) and @samp{--size} must be a multiple of sector size.
 
-Try the @samp{--direct} option first. If direct disc access is not
+Try the @samp{--idirect} option first. If direct disc access is not
 available in your system, try raw devices. Read your system
 documentation to find how to bind a raw device to a regular block
 device. Some OSs provide raw access through special device names, like
@@ -1344,7 +1362,7 @@ ddrescuelog [@var{options}] @var{logfile}
 
 Ddrescuelog supports the following options:
 
-@table @samp
+@table @code
 @item -h
 @itemx --help
 Print an informative help message describing the options and exit.

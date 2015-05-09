@@ -2,9 +2,15 @@ Changes in version 1.20:
 
 The short name of option "--synchronous" has been changed to "-y".
 
+The long name of option "-d" has been changed to "--idirect".
+
 The new option "-D, --odirect" has been added. This introduces a subtle
 backward incompatibility because "-D" was the short name of option
 "--synchronous".
+
+The new option "-J, --verify-on-error" has been added. It verifies,
+after each read error, that the input device is still returning
+consistent data.
 
 The new option "--max-read-rate" has been added.
 

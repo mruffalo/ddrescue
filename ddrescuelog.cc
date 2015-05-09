@@ -166,7 +166,7 @@ int do_logic_ops( Domain & domain, const char * const logname,
   logfile.split_by_logfile_borders( logfile2 );
   logfile2.split_by_logfile_borders( logfile );
 
-  for( int i = 0, j = 0; ; ++i, ++j )
+  for( long i = 0, j = 0; ; ++i, ++j )
     {
     while( i < logfile.sblocks() && !domain.includes( logfile.sblock( i ) ) )
       ++i;
@@ -188,7 +188,7 @@ int do_logic_ops( Domain & domain, const char * const logname,
         if( !f1 && f2 ) logfile.change_sblock_status( i, Sblock::finished );
         break;
       case m_xor:
-        if( f1 != ( ( f1 || f2 ) && !( f1 && f2 ) ) )
+        if( f2 )
           logfile.change_sblock_status( i, f1 ? Sblock::bad_sector : Sblock::finished );
         break;
       default: internal_error( "invalid program_mode." );
@@ -211,7 +211,7 @@ int change_types( Domain & domain, const char * const logname,
   if( domain.empty() ) return empty_domain();
   logfile.split_by_domain_borders( domain );
 
-  for( int i = 0; i < logfile.sblocks(); ++i )
+  for( long i = 0; i < logfile.sblocks(); ++i )
     {
     const Sblock & sb = logfile.sblock( i );
     if( !domain.includes( sb ) )
@@ -257,7 +257,7 @@ int compare_logfiles( Domain & domain, const char * const logname,
   if( !as_domain && domain != domain2 ) retval = 1;
   else
     {
-    int i = 0, j = 0;
+    long i = 0, j = 0;
     while( true )
       {
       while( i < logfile.sblocks() &&
@@ -303,6 +303,7 @@ int create_logfile( Domain & domain, const char * const logname,
                     const int hardbs, const Sblock::Status type1,
                     const Sblock::Status type2, const bool force )
   {
+  if( domain.empty() ) return empty_domain();
   char buf[80];
   Logfile logfile( logname );
   if( !force && logfile.read_logfile() )
@@ -312,12 +313,8 @@ int create_logfile( Domain & domain, const char * const logname,
     show_error( buf );
     return 1;
     }
-  if( domain.empty() ) return empty_domain();
-  logfile.make_blank();
+  logfile.set_to_status( type2 );		// mark all logfile as type2
   logfile.split_by_domain_borders( domain );
-
-  for( int i = 0; i < logfile.sblocks(); ++i )	// mark all logfile as type2
-    logfile.change_sblock_status( i, type2 );
 
   // mark every block read from stdin and in domain as type1
   for( int linenum = 1; ; ++linenum )
@@ -351,7 +348,7 @@ int test_if_done( Domain & domain, const char * const logname, const bool del )
   if( domain.empty() ) return empty_domain();
   logfile.split_by_domain_borders( domain );
 
-  for( int i = 0; i < logfile.sblocks(); ++i )
+  for( long i = 0; i < logfile.sblocks(); ++i )
     {
     const Sblock & sb = logfile.sblock( i );
     if( !domain.includes( sb ) )
@@ -393,7 +390,7 @@ int to_badblocks( const long long offset, Domain & domain,
   if( domain.empty() ) return empty_domain();
   logfile.split_by_domain_borders( domain );
 
-  for( int i = 0; i < logfile.sblocks(); ++i )
+  for( long i = 0; i < logfile.sblocks(); ++i )
     {
     const Sblock & sb = logfile.sblock( i );
     if( !domain.includes( sb ) )
@@ -461,18 +458,18 @@ int do_show_status( Domain & domain, const char * const logname )
   {
   long long size_non_tried = 0, size_non_trimmed = 0, size_non_scraped = 0;
   long long size_bad_sector = 0, size_finished = 0;
-  int areas_non_tried = 0, areas_non_trimmed = 0, areas_non_scraped = 0;
-  int areas_bad_sector = 0, areas_finished = 0;
+  long areas_non_tried = 0, areas_non_trimmed = 0, areas_non_scraped = 0;
+  long areas_bad_sector = 0, areas_finished = 0;
   Logfile logfile( logname );
   if( !logfile.read_logfile() ) return not_readable( logname );
   logfile.compact_sblock_vector();
   const Block extent = logfile.extent();
   domain.crop( extent );
   if( domain.empty() ) return empty_domain();
-  const int true_sblocks = logfile.sblocks();
+  const long true_sblocks = logfile.sblocks();
   logfile.split_by_domain_borders( domain );
 
-  for( int i = 0; i < logfile.sblocks(); ++i )
+  for( long i = 0; i < logfile.sblocks(); ++i )
     {
     const Sblock & sb = logfile.sblock( i );
     if( !domain.includes( sb ) )
@@ -497,28 +494,28 @@ int do_show_status( Domain & domain, const char * const logname )
   std::printf( "\n   current pos: %10sB,  current status: %s\n",
                format_num( logfile.current_pos() ),
                logfile.status_name( logfile.current_status() ) );
-  std::printf( "logfile extent: %10sB,  in %6d area(s)\n",
+  std::printf( "logfile extent: %10sB,  in %6ld area(s)\n",
                format_num( extent.size() ), true_sblocks );
   if( domain.pos() > 0 || domain.end() < extent.end() || domain.blocks() > 1 )
     {
     std::printf( "  domain begin: %10sB,  domain end: %10sB\n",
                  format_num( domain.pos() ), format_num( domain.end() ) );
-    std::printf( "   domain size: %10sB,  in %6d area(s)\n",
+    std::printf( "   domain size: %10sB,  in %6ld area(s)\n",
                  format_num( domain_size ), domain.blocks() );
     }
-  std::printf( "       rescued: %10sB,  in %6d area(s)  (%s)\n",
+  std::printf( "\n       rescued: %10sB,  in %6ld area(s)  (%s)\n",
                format_num( size_finished ), areas_finished,
                format_percentage( size_finished, domain_size ) );
-  std::printf( "     non-tried: %10sB,  in %6d area(s)  (%s)\n",
+  std::printf( "     non-tried: %10sB,  in %6ld area(s)  (%s)\n",
                format_num( size_non_tried ), areas_non_tried,
                format_percentage( size_non_tried, domain_size ) );
-  std::printf( "   non-trimmed: %10sB,  in %6d area(s)  (%s)\n",
+  std::printf( "   non-trimmed: %10sB,  in %6ld area(s)  (%s)\n",
                format_num( size_non_trimmed ), areas_non_trimmed,
                format_percentage( size_non_trimmed, domain_size ) );
-  std::printf( "   non-scraped: %10sB,  in %6d area(s)  (%s)\n",
+  std::printf( "   non-scraped: %10sB,  in %6ld area(s)  (%s)\n",
                format_num( size_non_scraped ), areas_non_scraped,
                format_percentage( size_non_scraped, domain_size ) );
-  std::printf( "       errsize: %10sB,  errors:  %8u  (%s)\n",
+  std::printf( "       errsize: %10sB,  errors:  %8ld  (%s)\n",
                format_num( size_bad_sector ), areas_bad_sector,
                format_percentage( size_bad_sector, domain_size ) );
   return 0;

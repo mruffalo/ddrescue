@@ -12,7 +12,7 @@ File: ddrescue.info,  Node: Top,  Next: Introduction,  Up: (dir)
 GNU ddrescue Manual
 *******************
 
-This manual is for GNU ddrescue (version 1.20-pre1, 25 March 2015).
+This manual is for GNU ddrescue (version 1.20-pre2, 9 May 2015).
 
 * Menu:
 
@@ -162,7 +162,8 @@ those things to, in order to use it safely.
 logfile, ddrescue can't resume a rescue, only reinitiate it.
 
    Never try to rescue a r/w mounted partition. The resulting copy may
-be useless.
+be useless. It is best that the device or partition to be rescued is not
+mounted at all, not even read-only.
 
    Never try to repair a file system on a drive with I/O errors; you
 will probably lose even more data.
@@ -297,6 +298,10 @@ The format for running ddrescue is:
 
      ddrescue [OPTIONS] INFILE OUTFILE [LOGFILE]
 
+   INFILE and OUTFILE may be files, devices or partitions.  LOGFILE is
+a regular file and must be placed in an existing directory. If LOGFILE
+does not exist, ddrescue will create it.
+
    ddrescue supports the following options:
 
 '-h'
@@ -357,9 +362,9 @@ The format for running ddrescue is:
      with the '--size' option, has produced a complete LOGFILE.
 
 '-d'
-'--direct'
+'--idirect'
      Use direct disc access (*note Direct disc access::) to read from
-     INFILE, bypassing the kernel cache. (Open the file with the
+     INFILE, bypassing the kernel cache. (Opens the file with the
      O_DIRECT flag). Use it only on devices or partitions, not on
      regular files. Sector size must be correctly set for this to work.
      Not all systems support this.
@@ -371,7 +376,7 @@ The format for running ddrescue is:
 '-D'
 '--odirect'
      Use direct disc access to write to OUTFILE, bypassing the kernel
-     cache. (Open the file with the O_DIRECT flag). Sector size must be
+     cache. (Opens the file with the O_DIRECT flag). Sector size must be
      correctly set for this to work. Not all systems support this.
 
      If your system does not support direct disc access, ddrescue will
@@ -448,6 +453,16 @@ The format for running ddrescue is:
      devices can't be known in advance and because the size derived
      from the LOGFILE may be incomplete, for example after doing a
      partial rescue.
+
+'-J'
+'--verify-on-error'
+     After every read error, read again the last good sector found and
+     verify that it returns the same data. Exit with status 2 if the
+     read fails or returns inconsistent data. This option performs one
+     extra read after each error, wearing the drive faster. Use it only
+     on drives that stop responding or return garbage data after
+     finding errors. You may need to power cycle the drive before
+     restarting ddrescue.
 
 '-K [INITIAL][,MAX]'
 '--skip-size=[INITIAL][,MAX]'
@@ -673,9 +688,11 @@ The format for running ddrescue is:
      and '--no-scrape'.
 
 '--max-read-rate=BYTES'
-     Maximum read rate, in bytes per second. BYTES is rounded up to the
-     equivalent of a whole number of cluster reads per second. Use this
-     option to limit the bandwidth used by ddrescue.
+     Maximum read rate, in bytes per second. If BYTES is too small, the
+     actual read rate is rounded up to the equivalent of a whole number
+     of cluster reads per second. Use this option to limit the
+     bandwidth used by ddrescue, for example when recovering over a
+     network.
 
 '--pause=INTERVAL'
      Time to wait between passes. Defaults to 0. INTERVAL is formatted
@@ -760,7 +777,7 @@ Character   Meaning
 
 And here is an example logfile:
 
-     # Rescue Logfile. Created by GNU ddrescue version 1.20-pre1
+     # Rescue Logfile. Created by GNU ddrescue version 1.20-pre2
      # Command line: ddrescue -d -c18 /dev/fd0 fdimage logfile
      # Start time:   2014-05-03 09:37:44
      # Current time: 2014-05-03 09:38:19
@@ -864,6 +881,9 @@ with error-checked merging of copies (*Note lziprecover manual:
      cp /mnt/cdimage/backup.tar.lz rescued2.tar.lz
      umount /mnt/cdimage
      lziprecover -m -v -o backup.tar.lz rescued1.tar.lz rescued2.tar.lz
+       Input files merged successfully.
+     lziprecover -tv backup.tar.lz
+       ok
 
 
 File: ddrescue.info,  Node: Examples,  Next: Direct disc access,  Prev: Optical media,  Up: Top
@@ -975,7 +995,7 @@ option for direct disc access to work. Only whole sectors can be read or
 written; both '--input-position' (or '--output-position' for direct
 writes) and '--size' must be a multiple of sector size.
 
-   Try the '--direct' option first. If direct disc access is not
+   Try the '--idirect' option first. If direct disc access is not
 available in your system, try raw devices. Read your system
 documentation to find how to bind a raw device to a regular block
 device. Some OSs provide raw access through special device names, like
@@ -1467,22 +1487,22 @@ Concept index
 
 Tag Table:
 Node: Top201
-Node: Introduction1375
-Node: Basic concepts4114
-Node: Important advice6124
-Node: Algorithm7233
-Node: Invoking ddrescue12662
-Node: Logfile structure30372
-Node: Optical media33199
-Ref: lziprecover-example36159
-Node: Examples36836
-Node: Direct disc access40565
-Node: Fill mode42729
-Node: Generate mode47790
-Node: Ddrescuelog49768
-Node: Invoking ddrescuelog52058
-Node: Problems59081
-Node: Concept index59638
+Node: Introduction1372
+Node: Basic concepts4111
+Node: Important advice6121
+Node: Algorithm7327
+Node: Invoking ddrescue12756
+Node: Logfile structure31211
+Node: Optical media34038
+Ref: lziprecover-example36998
+Node: Examples37760
+Node: Direct disc access41489
+Node: Fill mode43654
+Node: Generate mode48715
+Node: Ddrescuelog50693
+Node: Invoking ddrescuelog52983
+Node: Problems60006
+Node: Concept index60563
 
 End Tag Table
 

@@ -1,7 +1,7 @@
 Requirements
 ------------
 You will need a C++ compiler.
-I use gcc 4.9.1 and 3.3.6, but the code should compile with any
+I use gcc 4.9.1 and 4.1.2, but the code should compile with any
 standards compliant compiler.
 Gcc is available at http://gcc.gnu.org.
 
