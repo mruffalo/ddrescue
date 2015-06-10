@@ -26,6 +26,7 @@
 #include <string>
 #include <vector>
 #include <stdint.h>
+#include <termios.h>
 #include <unistd.h>
 
 #include "block.h"
@@ -46,18 +47,55 @@ void input_pos_error( const long long pos, const long long isize )
 } // end namespace
 
 
+bool Logbook::save_logfile( const char * const name )
+  {
+  std::remove( name );
+  FILE * const f = std::fopen( name, "w" );
+  if( f && write_logfile( f, true ) && std::fclose( f ) == 0 )
+    {
+    char buf[80];
+    snprintf( buf, sizeof buf, "Logfile saved in '%s'\n", name );
+    final_msg( buf );
+    return true;
+    }
+  return false;
+  }
+
+
+bool Logbook::emergency_save()
+  {
+  static bool first_time = true;
+  static std::string home_name;
+  const std::string dead_name( "ddrescue.log" );
+
+  if( filename() != dead_name && save_logfile( dead_name.c_str() ) )
+    return true;
+  if( first_time )
+    {
+    first_time = false;
+    const char * const p = std::getenv( "HOME" );
+    if( p ) { home_name = p; home_name += '/'; home_name += dead_name; }
+    }
+  if( home_name.size() &&
+      filename() != home_name && save_logfile( home_name.c_str() ) )
+    return true;
+  show_error( "Emergency save failed." );
+  return false;
+  }
+
+
 Logbook::Logbook( const long long offset, const long long isize, Domain & dom,
                   const char * const logname, const int cluster,
                   const int hardbs, const bool complete_only )
   : Logfile( logname ), offset_( offset ), logfile_isize_( 0 ),
-    domain_( dom ), hardbs_( hardbs ), softbs_( cluster * hardbs ),
-    final_msg_( 0 ), final_errno_( 0 ),
-    ul_t1( 0 ), logfile_exists_( false )
+    domain_( dom ), hardbs_( hardbs ), softbs_( cluster * hardbs_ ),
+    iobuf_size_( hardbs_ + softbs_ ),
+    final_errno_( 0 ), ul_t1( 0 ), logfile_exists_( false )
   {
   int alignment = sysconf( _SC_PAGESIZE );
   if( alignment < hardbs_ || alignment % hardbs_ ) alignment = hardbs_;
   if( alignment < 2 || alignment > 65536 ) alignment = 0;
-  iobuf_ = iobuf_base = new uint8_t[ softbs_ + alignment ];
+  iobuf_ = iobuf_base = new uint8_t[ iobuf_size_ + alignment ];
   if( alignment > 1 )		// align iobuf for use with raw devices
     {
     const int disp = alignment - ( reinterpret_cast<long> (iobuf_) % alignment );
@@ -102,19 +140,26 @@ bool Logbook::update_logfile( const int odes, const bool force )
     if( write_logfile( 0, true ) ) return true;
     if( verbosity < 0 ) return false;
     const int saved_errno = errno;
-    std::fprintf( stderr, "\n" );
+    std::fputc( '\n', stderr );
     char buf[80];
     snprintf( buf, sizeof buf, "Error writing logfile '%s'", filename() );
     show_error( buf, saved_errno );
-    std::fprintf( stderr, "Fix the problem and press ENTER to retry, "
-                          "or Q+ENTER to abort. " );
+    std::fputs( "Fix the problem and press ENTER to retry,\n"
+                "                     or E+ENTER for an emergency save and exit,\n"
+                "                     or Q+ENTER to abort.\n", stderr );
     std::fflush( stderr );
     while( true )
       {
-      const char c = std::tolower( std::fgetc( stdin ) );
-      if( c == '\r' || c == '\n' || c == 'q' )
-        { std::fprintf( stderr, "\n\n\n\n" );
-          if( c == 'q' ) return false; else break; }
+      tcflush( STDIN_FILENO, TCIFLUSH );
+      const int c = std::tolower( std::fgetc( stdin ) );
+      int tmp = c;
+      while( tmp != '\n' && tmp != EOF ) tmp = std::fgetc( stdin );
+      if( c == '\r' || c == '\n' || c == 'e' || c == 'q' )
+        {
+        if( c == 'q' || ( c == 'e' && emergency_save() ) )
+          { if( !force ) std::fputs( "\n\n\n\n", stdout ); return false; }
+        break;
+        }
       }
     }
   }

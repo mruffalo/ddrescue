@@ -80,7 +80,21 @@ int Rescuebook::copy_block( const Block & b, int & copied_size, int & error_size
   if( b.size() <= 0 ) internal_error( "bad size copying a Block." );
   if( !test_domain || test_domain->includes( b ) )
     {
-    copied_size = readblock( ides_, iobuf(), b.size(), b.pos() );
+    if( o_direct_in )
+      {
+      const int pre = b.pos() % hardbs();
+      const int disp = b.end() % hardbs();
+      const int post = ( disp > 0 ) ? hardbs() - disp : 0;
+      const int size = pre + b.size() + post;
+      if( size > iobuf_size() )
+        internal_error( "(size > iobuf_size) copying a Block." );
+      copied_size = readblock( ides_, iobuf(), size, b.pos() - pre );
+      copied_size -= std::min( pre, copied_size );
+      if( copied_size > b.size() ) copied_size = b.size();
+      if( pre > 0 && copied_size > 0 )
+        std::memmove( iobuf(), iobuf() + pre, copied_size );
+      }
+    else copied_size = readblock( ides_, iobuf(), b.size(), b.pos() );
     error_size = errno ? b.size() - copied_size : 0;
     }
   else { copied_size = 0; error_size = b.size(); }
@@ -535,7 +549,7 @@ void Rescuebook::update_rates( const bool force )
     rates_updated = true;
     if( verbosity >= 0 )
       {
-      std::printf( "\n\n\n\n" );
+      std::fputs( "\n\n\n\n", stdout );
       if( preview_lines > 0 )
         for( int i = -2; i < preview_lines; ++i ) std::fputc( '\n', stdout );
       }
@@ -586,8 +600,8 @@ void Rescuebook::show_status( const long long ipos, const char * const msg,
       std::printf( "\r%s%s%s%s", up, up, up, up );
       if( preview_lines > 0 )
         {
-        for( int i = -2; i < preview_lines; ++i ) std::printf( up );
-        std::printf( "Data preview:\n" );
+        for( int i = -2; i < preview_lines; ++i ) std::fputs( up, stdout );
+        std::fputs( "Data preview:\n", stdout );
         for( int i = 0; i < preview_lines; ++i )
           {
           if( iobuf_ipos >= 0 )
@@ -597,15 +611,15 @@ void Rescuebook::show_status( const long long ipos, const char * const msg,
             for( int j = 0; j < 16; ++j )
               { std::printf( " %02X", p[j] );
                 if( j == 7 ) std::fputc( ' ', stdout ); }
-            std::printf( "  " );
+            std::fputs( "  ", stdout );
             for( int j = 0; j < 16; ++j )
               std::fputc( std::isprint( p[j] ) ? p[j] : '.', stdout );
             std::fputc( '\n', stdout );
             }
           else if( i == ( preview_lines - 1 ) / 2 )
-            std::printf( "                            No data available                                 \n" );
+            std::fputs( "                            No data available                                 \n", stdout );
           else
-            std::printf( "                                                                              \n" );
+            std::fputs( "                                                                              \n", stdout );
           }
         std::fputc( '\n', stdout );
         }
@@ -721,10 +735,10 @@ int Rescuebook::do_rescue( const int ides, const int odes )
   set_signals();
   if( verbosity >= 0 )
     {
-    std::printf( "Press Ctrl-C to interrupt\n" );
+    std::fputs( "Press Ctrl-C to interrupt\n", stdout );
     if( logfile_exists() )
       {
-      std::printf( "Initial status (read from logfile)\n" );
+      std::fputs( "Initial status (read from logfile)\n", stdout );
       if( verbosity >= 3 )
         {
         std::printf( "current position: %10sB,     current sector: %7lld\n",
@@ -738,7 +752,7 @@ int Rescuebook::do_rescue( const int ides, const int odes )
                      format_num( domain().pos() ), format_num( domain().end() ) );
       std::printf( "rescued: %10sB,  errsize:%9sB,  errors: %7ld\n",
                    format_num( recsize ), format_num( errsize, 99999 ), errors );
-      std::printf( "\nCurrent status\n" );
+      std::fputs( "\nCurrent status\n", stdout );
       }
     }
   int retval = 0;
@@ -759,17 +773,19 @@ int Rescuebook::do_rescue( const int ides, const int odes )
   if( retval == 0 && errors_or_timeout() ) retval = 1;
   if( verbosity >= 0 )
     {
-    if( retval == -2 ) std::printf( "\nLogfile error" );
-    else if( retval == 0 && signaled ) std::printf( "\nInterrupted by user" );
+    if( retval == -2 ) std::fputs( "\nLogfile error", stdout );
+    else if( retval == 0 && signaled )
+      std::fputs( "\nInterrupted by user", stdout );
     else
       {
       if( e_code & 1 )
         std::printf( "\nToo high error rate reading input file (%sB/s)",
                      format_num( error_rate ) );
-      if( e_code & 2 ) std::printf( "\nToo many errors in input file" );
-      if( e_code & 4 ) std::printf( "\nTimeout expired" );
+      if( e_code & 2 ) std::fputs( "\nToo many errors in input file", stdout );
+      if( e_code & 4 ) std::fputs( "\nTimeout expired", stdout );
       }
     std::fputc( '\n', stdout );
+    std::fflush( stdout );
     }
   if( retval == -2 ) retval = 1;		// logfile error
   else
@@ -790,7 +806,7 @@ int Rescuebook::do_rescue( const int ides, const int odes )
     show_error( "warning: Error closing the rates logging file." );
   if( !read_logger.close_file() )
     show_error( "warning: Error closing the reads logging file." );
-  if( final_msg() ) show_error( final_msg(), final_errno() );
+  if( final_msg().size() ) show_error( final_msg().c_str(), final_errno() );
   if( retval ) return retval;		// errors have priority over signals
   if( signaled ) return signaled_exit();
   return 0;

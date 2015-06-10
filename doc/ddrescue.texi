@@ -6,8 +6,8 @@
 @finalout
 @c %**end of header
 
-@set UPDATED 9 May 2015
-@set VERSION 1.20-pre2
+@set UPDATED 7 June 2015
+@set VERSION 1.20-rc1
 
 @dircategory GNU Packages
 @direntry
@@ -41,6 +41,7 @@ This manual is for GNU ddrescue (version @value{VERSION}, @value{UPDATED}).
 * Algorithm::             How ddrescue recovers the data
 * Invoking ddrescue::     Command line interface
 * Logfile structure::     Detailed format of the logfile
+* Emergency save::        Saving the logfile in case of trouble
 * Optical media::         Copying CD-ROMs and DVDs
 * Examples::              A small tutorial with examples
 * Direct disc access::    Bypassing the kernel cache
@@ -154,8 +155,13 @@ http://en.wikipedia.org/wiki/Video_CD
 Block or set of blocks to be acted upon (rescued, listed, etc). You can
 define it with the options @samp{--input-position}, @samp{--size} and
 @samp{--domain-logfile}. The rescue domain defaults to the whole input
-file or logfile. Ddrescue will never try to read any data outside of the
-rescue domain. If it does, please, report it as a bug.
+file or logfile. If ddrescue can't determine the size of the input file,
+the rescue domain defaults to the maximum size of a block (at least
+@w{2^63 - 1} bytes, or 8 EiB minus 1 byte).
+
+Ddrescue will never try to read any data outside of the rescue domain
+except when unaligned direct disc access is requested (@pxref{Direct
+disc access}). If it does, please, report it as a bug.
 
 The amount of data rescued, number of errors, etc, shown by ddrescue may
 vary or even become zero if you limit the rescue domain. Don't worry,
@@ -392,9 +398,8 @@ only be used after a first rescue attempt, possibly limited with the
 @itemx --idirect
 Use direct disc access (@pxref{Direct disc access}) to read from
 @var{infile}, bypassing the kernel cache. (Opens the file with the
-O_DIRECT flag). Use it only on devices or partitions, not on regular
-files. Sector size must be correctly set for this to work. Not all
-systems support this.
+O_DIRECT flag). Sector size must be correctly set for this to work. Not
+all systems support this.
 
 If your system does not support direct disc access, ddrescue will warn
 you. If the sector size is not correctly set, all reads will result in
@@ -601,10 +606,10 @@ tried.
 @itemx --size=@var{bytes}
 Maximum size of the rescue domain, in bytes. It limits the amount of
 input data to be copied. If ddrescue can't determine the size of the
-input device, you may need to specify it with this option. Note that
-this option does not specify the size of the resulting @var{outfile}.
-For example, the following command creates an @var{outfile} 300 bytes
-long, but only writes data on the last 200 bytes:
+input file, you may need to specify it with this option. Note that this
+option does not specify the size of the resulting @var{outfile}. For
+example, the following command creates an @var{outfile} 300 bytes long,
+but only writes data on the last 200 bytes:
 
 @example
 ddrescue -i 100 -s 200 infile outfile logfile
@@ -828,6 +833,40 @@ NOTE: Logfiles created by a version of ddrescue prior to 1.6 lack the
 status line. If you want to use an old logfile with ddrescue 1.6 or
 later, you will have to insert a line like @samp{0 +} at the beginning
 of the logfile.
+
+
+@node Emergency save
+@chapter Saving the logfile in case of trouble
+@cindex emergency save
+
+The logfile is an essential part of ddrescue's effectiveness. Without a
+logfile, ddrescue can't resume a rescue, only reinitiate it. Given that
+a difficult rescue may take days to complete, it would be a serious
+drawback if the logfile were lost because of a solvable problem like a
+lack of space on the device the logfile is written to.
+
+In case of trouble writing the logfile, ddrescue will print a message
+like this:
+
+@example
+Error writing logfile '@var{logfile}': No space left on device.
+Fix the problem and press ENTER to retry,
+                     or E+ENTER for an emergency save and exit,
+                     or Q+ENTER to abort.
+@end example
+
+You may try to fix the problem, for example deleting some files to make
+room for the logfile, and press @key{Return} to retry.
+
+If the problem can't be fixed, you may press @key{e} followed by
+@key{Return} to try an emergency save and exit. Ddrescue will try to
+write the logfile to the file @file{ddrescue.log} in the current
+directory or, if this fails, to @file{$HOME/ddrescue.log}. If the
+logfile is written succesfully, ddrescue will exit with status 1. Else
+it will print the above message again.
+
+Or you may press @key{q} followed by @key{Return} to quit and exit with
+status 1. In this case the contents of the logfile will be lost.
 
 
 @node Optical media
@@ -1056,9 +1095,11 @@ access for @var{infile}, or read from a raw device, to bypass the kernel
 cache and rescue more of your data.
 
 NOTE! Sector size must be correctly set with the @samp{--sector-size}
-option for direct disc access to work. Only whole sectors can be read or
-written; both @samp{--input-position} (or @samp{--output-position} for
-direct writes) and @samp{--size} must be a multiple of sector size.
+option for direct disc access to work.
+
+NOTE: Direct disc access can copy arbitrary domains by reading whole
+sectors and then writing only the requested part. This is the only case
+where ddrescue will try to read data outside of the rescue domain.
 
 Try the @samp{--idirect} option first. If direct disc access is not
 available in your system, try raw devices. Read your system

@@ -19,6 +19,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cerrno>
 #include <cstdio>
 #include <cstdlib>
 #include <string>
@@ -171,11 +172,13 @@ bool Logfile::truncate_vector( const long long end, const bool force )
 //
 bool Logfile::read_logfile( const int default_sblock_status )
   {
-  FILE * const f = std::fopen( filename_, "r" );
+  read_only_ = false;
+  FILE * f = std::fopen( filename_, "r+" );
+  if( !f && errno != ENOENT )
+    { f = std::fopen( filename_, "r" ); read_only_ = true; }
   if( !f ) return false;
   int linenum = 0;
   const bool loose = Sblock::isstatus( default_sblock_status );
-  read_only_ = false;
   sblock_vector.clear();
 
   const char * line = my_fgets( f, linenum );
@@ -220,10 +223,8 @@ bool Logfile::read_logfile( const int default_sblock_status )
         { show_logfile_error( filename_, linenum ); std::exit( 2 ); }
       }
     }
-  if( std::ferror( f ) )
+  if( std::ferror( f ) || !std::feof( f ) || std::fclose( f ) != 0 )
     { show_logfile_error( filename_, linenum ); std::exit( 2 ); }
-  if( std::freopen( filename_, "r+", f ) ) std::fclose( f );
-  else read_only_ = true;
   return true;
   }
 
@@ -237,9 +238,10 @@ int Logfile::write_logfile( FILE * f, const bool timestamp ) const
   write_logfile_header( f, "Rescue" );
   if( timestamp ) write_timestamp( f );
   if( current_msg.size() ) std::fprintf( f, "# %s\n", current_msg.c_str() );
-  std::fprintf( f, "# current_pos  current_status\n" );
-  std::fprintf( f, "0x%08llX     %c\n", current_pos_, current_status_ );
-  std::fprintf( f, "#      pos        size  status\n" );
+  std::fprintf( f, "# current_pos  current_status\n"
+                   "0x%08llX     %c\n"
+                   "#      pos        size  status\n",
+                current_pos_, current_status_ );
   for( unsigned long i = 0; i < sblock_vector.size(); ++i )
     {
     const Sblock & sb = sblock_vector[i];

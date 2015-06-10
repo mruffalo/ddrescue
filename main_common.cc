@@ -163,7 +163,7 @@ void show_error( const char * const msg, const int errcode, const bool help )
       std::fprintf( stderr, "%s: %s", program_name, msg );
       if( errcode > 0 )
         std::fprintf( stderr, ": %s", std::strerror( errcode ) );
-      std::fprintf( stderr, "\n" );
+      std::fputc( '\n', stderr );
       }
     if( help )
       std::fprintf( stderr, "Try '%s --help' for more information.\n",

@@ -22,10 +22,14 @@ class Logbook : public Logfile
   Domain & domain_;			// rescue domain
   uint8_t *iobuf_base, *iobuf_;		// iobuf is aligned to page and hardbs
   const int hardbs_, softbs_;
-  const char * final_msg_;
+  const int iobuf_size_;
+  std::string final_msg_;
   int final_errno_;
   long ul_t1;				// variable for update_logfile
   bool logfile_exists_;
+
+  bool save_logfile( const char * const name );
+  bool emergency_save();
 
   Logbook( const Logbook & );		// declared as private
   void operator=( const Logbook & );	// declared as private
@@ -40,15 +44,16 @@ public:
 
   const Domain & domain() const { return domain_; }
   uint8_t * iobuf() const { return iobuf_; }
+  int iobuf_size() const { return iobuf_size_; }
   int hardbs() const { return hardbs_; }
   int softbs() const { return softbs_; }
   long long offset() const { return offset_; }
-  const char * final_msg() const { return final_msg_; }
+  const std::string & final_msg() const { return final_msg_; }
   int final_errno() const { return final_errno_; }
   bool logfile_exists() const { return logfile_exists_; }
   long long logfile_isize() const { return logfile_isize_; }
 
-  void final_msg( const char * const msg, const int e = 0 )
+  void final_msg( const std::string & msg, const int e = 0 )
     { final_msg_ = msg; final_errno_ = e; }
 
   void truncate_domain( const long long end )

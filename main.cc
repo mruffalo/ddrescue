@@ -213,6 +213,15 @@ bool check_files( const char * const iname, const char * const oname,
     return false;
     }
   if( check_identical( iname, oname, logname ) ) return false;
+  if( logname )
+    {
+    struct stat st;
+    if( stat( logname, &st ) == 0 && !S_ISREG( st.st_mode ) )
+      {
+      show_error( "Logfile exists and is not a regular file." );
+      return false;
+      }
+    }
   if( !generate && ( min_outfile_size > 0 || !force || preallocate || sparse ) )
     {
     struct stat st;
@@ -382,7 +391,7 @@ bool user_agrees_ids( const Rescuebook & rescuebook, const char * const iname,
                       const char * const oname, const int ides )
   {
   about_to_copy( rescuebook, iname, oname, ides, true );
-  std::printf( "Proceed (y/N)? " );
+  std::fputs( "Proceed (y/N)? ", stdout );
   std::fflush( stdout );
   return ( std::tolower( std::fgetc( stdin ) ) == 'y' );
   }
@@ -457,6 +466,11 @@ int do_rescue( const long long offset, Domain & domain,
     show_error( "warning: Preallocation not available." );
 #endif
     }
+
+  if( rescuebook.filename() && !rescuebook.logfile_exists() &&
+      !rescuebook.write_logfile( 0, true ) )
+    { show_error( "Can't create logfile", errno ); return 1; }
+
   if( !rate_logger.open_file() )
     { show_error( "Can't open file for logging rates", errno ); return 1; }
   if( !read_logger.open_file() )
@@ -473,7 +487,7 @@ int do_rescue( const long long offset, Domain & domain,
       std::printf( "       Initial skip size: %d sectors\n",
                    rescuebook.skipbs / hardbs );
     else
-      std::printf( "       Skipping disabled\n" );
+      std::fputs( "       Skipping disabled\n", stdout );
     std::printf( "Sector size: %sBytes\n", format_num( hardbs, 99999 ) );
     if( verbosity >= 2 )
       {
@@ -493,7 +507,7 @@ int do_rescue( const long long offset, Domain & domain,
         { nl = true; std::printf( "Max read rate:  %6sB/s    ",
                                   format_num( rescuebook.max_read_rate, 99999 ) ); }
       if( rescuebook.min_read_rate == 0 )
-        { nl = true; std::printf( "Min read rate: auto    " ); }
+        { nl = true; std::fputs( "Min read rate: auto    ", stdout ); }
       else if( rescuebook.min_read_rate > 0 )
         { nl = true; std::printf( "Min read rate:  %6sB/s    ",
                                   format_num( rescuebook.min_read_rate, 99999 ) ); }
@@ -518,8 +532,9 @@ int do_rescue( const long long offset, Domain & domain,
           std::printf( "Max retry passes: %d", rescuebook.max_retries );
       std::fputc( '\n', stdout );
       if( rescuebook.complete_only )
-        { nl = true; std::printf( "Complete only    " ); }
-      if( rescuebook.reverse ) { nl = true; std::printf( "Reverse mode" ); }
+        { nl = true; std::fputs( "Complete only    ", stdout ); }
+      if( rescuebook.reverse )
+        { nl = true; std::fputs( "Reverse mode", stdout ); }
       if( nl ) { nl = false; std::fputc( '\n', stdout ); }
       }
     std::fputc( '\n', stdout );

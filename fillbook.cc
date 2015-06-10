@@ -112,7 +112,7 @@ void Fillbook::show_status( const long long ipos, const char * const msg,
     t0 = t1 = initial_time();
     first_size = last_size = filled_size;
     force = true;
-    std::printf( "\n\n\n" );
+    std::fputs( "\n\n\n", stdout );
     }
 
   if( ipos >= 0 ) last_ipos = ipos;
@@ -177,15 +177,15 @@ int Fillbook::do_fill( const int odes )
   set_signals();
   if( verbosity >= 0 )
     {
-    std::printf( "Press Ctrl-C to interrupt\n" );
+    std::fputs( "Press Ctrl-C to interrupt\n", stdout );
     if( logfile_exists() )
       {
-      std::printf( "Initial status (read from logfile)\n" );
+      std::fputs( "Initial status (read from logfile)\n", stdout );
       std::printf( "filled size:    %10sB,  filled areas:    %7ld\n",
                    format_num( filled_size ), filled_areas );
       std::printf( "remaining size: %10sB,  remaining areas: %7ld\n",
                    format_num( remaining_size ), remaining_areas );
-      std::printf( "Current status\n" );
+      std::fputs( "Current status\n", stdout );
       }
     }
   int retval = fill_areas();
@@ -194,9 +194,10 @@ int Fillbook::do_fill( const int odes )
   if( verbosity >= 0 )
     {
     show_status( -1, ( retval || signaled ) ? 0 : "Finished", true );
-    if( retval == -2 ) std::printf( "\nLogfile error" );
-    else if( signaled ) std::printf( "\nInterrupted by user" );
+    if( retval == -2 ) std::fputs( "\nLogfile error", stdout );
+    else if( signaled ) std::fputs( "\nInterrupted by user", stdout );
     std::fputc( '\n', stdout );
+    std::fflush( stdout );
     }
   if( retval == -2 ) retval = 1;		// logfile error
   else
@@ -205,7 +206,10 @@ int Fillbook::do_fill( const int odes )
     compact_sblock_vector();
     if( !update_logfile( odes_, true ) && retval == 0 ) retval = 1;
     }
-  if( final_msg() ) show_error( final_msg(), final_errno() );
+  if( close( odes_ ) != 0 )
+    { show_error( "Can't close outfile", errno );
+      if( retval == 0 ) retval = 1; }
+  if( final_msg().size() ) show_error( final_msg().c_str(), final_errno() );
   if( retval ) return retval;		// errors have priority over signals
   if( signaled ) return signaled_exit();
   return 0;
