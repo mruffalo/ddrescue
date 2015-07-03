@@ -6,8 +6,8 @@
 @finalout
 @c %**end of header
 
-@set UPDATED 7 June 2015
-@set VERSION 1.20-rc1
+@set UPDATED 3 July 2015
+@set VERSION 1.20-rc2
 
 @dircategory GNU Packages
 @direntry
@@ -40,14 +40,14 @@ This manual is for GNU ddrescue (version @value{VERSION}, @value{UPDATED}).
 * Important advice::      Read this or risk losing your data
 * Algorithm::             How ddrescue recovers the data
 * Invoking ddrescue::     Command line interface
-* Logfile structure::     Detailed format of the logfile
-* Emergency save::        Saving the logfile in case of trouble
+* Blockfile structure::   Detailed format of the blockfile
+* Emergency save::        Saving the blockfile in case of trouble
 * Optical media::         Copying CD-ROMs and DVDs
 * Examples::              A small tutorial with examples
 * Direct disc access::    Bypassing the kernel cache
 * Fill mode::             Selectively overwriting the output file
-* Generate mode::         Generating an approximate logfile
-* Ddrescuelog::           Tool for ddrescue logfiles
+* Generate mode::         Generating an approximate blockfile
+* Ddrescuelog::           Tool for ddrescue blockfiles
 * Invoking ddrescuelog::  Command line interface
 * Problems::              Reporting bugs
 * Concept index::         Index of concepts
@@ -72,11 +72,11 @@ The basic operation of ddrescue is fully automatic. That is, you don't
 have to wait for an error, stop the program, read the log, restart it
 from a new position, etc.
 
-If you use the logfile feature of ddrescue, the data is rescued very
+If you use the blockfile feature of ddrescue, the data is rescued very
 efficiently, (only the needed blocks are read). Also you can interrupt
 the rescue at any time and resume it later at the same point. The
-logfile is an essential part of ddrescue's effectiveness. Use it unless
-you know what you are doing.
+blockfile is an essential part of ddrescue's effectiveness. Use it
+unless you know what you are doing.
 
 Ddrescue does not write zeros to the output when it finds bad sectors in
 the input, and does not truncate the output file if not asked to. So,
@@ -88,8 +88,8 @@ a file, cdrom, etc, and run ddrescue on all of them, one at a time, with
 the same output file, you will probably obtain a complete and error-free
 file. This is so because the probability of having the same area damaged
 in all copies is low (if the errors are randomly located). Using the
-logfile, only the needed blocks are read from the second and successive
-copies.
+blockfile, only the needed blocks are read from the second and
+successive copies.
 
 Ddrescue recommends lzip for compression of backups because the lzip
 format is designed for long-term data archiving and provides data
@@ -154,10 +154,10 @@ http://en.wikipedia.org/wiki/Video_CD
 @item Rescue domain
 Block or set of blocks to be acted upon (rescued, listed, etc). You can
 define it with the options @samp{--input-position}, @samp{--size} and
-@samp{--domain-logfile}. The rescue domain defaults to the whole input
-file or logfile. If ddrescue can't determine the size of the input file,
-the rescue domain defaults to the maximum size of a block (at least
-@w{2^63 - 1} bytes, or 8 EiB minus 1 byte).
+@samp{--domain-blockfile}. The rescue domain defaults to the whole input
+file or blockfile. If ddrescue can't determine the size of the input
+file, the rescue domain defaults to the maximum size of a block (at
+least @w{2^63 - 1} bytes, or 8 EiB minus 1 byte).
 
 Ddrescue will never try to read any data outside of the rescue domain
 except when unaligned direct disc access is requested (@pxref{Direct
@@ -182,8 +182,8 @@ Ddrescue is like any other power tool. You need to understand what it
 does, and you need to understand some things about the machines it does
 those things to, in order to use it safely.
 
-Always use a logfile unless you know you won't need it. Without a
-logfile, ddrescue can't resume a rescue, only reinitiate it.
+Always use a blockfile unless you know you won't need it. Without a
+blockfile, ddrescue can't resume a rescue, only reinitiate it.
 
 Never try to rescue a r/w mounted partition. The resulting copy may be
 useless. It is best that the device or partition to be rescued is not
@@ -233,9 +233,9 @@ The algorithm of ddrescue is as follows (the user may interrupt the
 process at any point, but be aware that a bad drive can block ddrescue
 for a long time until the kernel gives up):
 
-1) Optionally read a logfile describing the status of a multi-part or
-previously interrupted rescue. If no logfile is specified or is empty or
-does not exist, mark all the rescue domain as non-tried.
+1) Optionally read a blockfile describing the status of a multi-part or
+previously interrupted rescue. If no blockfile is specified or is empty
+or does not exist, mark all the rescue domain as non-tried.
 
 2) (First phase; Copying) Read the non-tried parts of the input file,
 marking the failed blocks as non-trimmed and skipping beyond them. Skip
@@ -243,7 +243,7 @@ also beyond slow areas. The skipped areas are tried later in two
 additional passes (before trimming), reversing the direction after each
 pass until all the rescue domain is tried. The third pass is a sweeping
 pass, with skipping disabled. (The purpose is to delimit large errors
-fast, keep the logfile small, and produce good starting points for
+fast, keep the blockfile small, and produce good starting points for
 trimming). Only non-tried areas are read in large blocks. Trimming,
 scraping and retrying are done sector by sector. Each sector is tried at
 most two times; the first in this step as part of a large block read,
@@ -267,7 +267,7 @@ reversed after each pass. Every bad sector is tried only once in each
 pass. Ddrescue can't know if a bad sector is unrecoverable or if it will
 be eventually read after some retries.
 
-6) Optionally write a logfile for later use.
+6) Optionally write a blockfile for later use.
 
 @sp 1
 The total error size (errsize) is the sum of the sizes of all the
@@ -287,35 +287,35 @@ of the first pass, just to grow to hours or days in the following
 passes. Such is the nature of ddrescue; the good parts are usually
 recovered fast, while the rest may take a long time.
 
-The logfile is periodically saved to disc, as well as when ddrescue
+The blockfile is periodically saved to disc, as well as when ddrescue
 finishes or is interrupted. So in case of a crash you can resume the
 rescue with little recopying. The interval between saves varies from 30
-seconds to 5 minutes depending on logfile size (larger logfiles are
+seconds to 5 minutes depending on blockfile size (larger blockfiles are
 saved at longer intervals).
 
-Also, the same logfile can be used for multiple commands that copy
+Also, the same blockfile can be used for multiple commands that copy
 different areas of the input file, and for multiple recovery attempts
 over different subsets. See this example:
 
 @noindent
 Rescue the most important part of the disc first.
 @example
-ddrescue -i0 -s50MiB /dev/hdc hdimage logfile
-ddrescue -i0 -s1MiB -d -r3 /dev/hdc hdimage logfile
+ddrescue -i0 -s50MiB /dev/hdc hdimage blockfile
+ddrescue -i0 -s1MiB -d -r3 /dev/hdc hdimage blockfile
 @end example
 
 @noindent
 Then rescue some key disc areas.
 @example
-ddrescue -i30GiB -s10GiB /dev/hdc hdimage logfile
-ddrescue -i230GiB -s5GiB /dev/hdc hdimage logfile
+ddrescue -i30GiB -s10GiB /dev/hdc hdimage blockfile
+ddrescue -i230GiB -s5GiB /dev/hdc hdimage blockfile
 @end example
 
 @noindent
 Now rescue the rest (does not recopy what is already done).
 @example
-ddrescue /dev/hdc hdimage logfile
-ddrescue -d -r3 /dev/hdc hdimage logfile
+ddrescue /dev/hdc hdimage blockfile
+ddrescue -d -r3 /dev/hdc hdimage blockfile
 @end example
 
 
@@ -329,12 +329,12 @@ ddrescue -d -r3 /dev/hdc hdimage logfile
 The format for running ddrescue is:
 
 @example
-ddrescue [@var{options}] @var{infile} @var{outfile} [@var{logfile}]
+ddrescue [@var{options}] @var{infile} @var{outfile} [@var{blockfile}]
 @end example
 
 @var{infile} and @var{outfile} may be files, devices or partitions.
-@var{logfile} is a regular file and must be placed in an existing
-directory. If @var{logfile} does not exist, ddrescue will create it.
+@var{blockfile} is a regular file and must be placed in an existing
+directory. If @var{blockfile} does not exist, ddrescue will create it.
 
 ddrescue supports the following options:
 
@@ -387,12 +387,12 @@ or 9) is a good value for floppies.
 
 @item -C
 @itemx --complete-only
-Limit rescue domain to the blocks listed in the @var{logfile}. Do not
-read new data beyond @var{logfile} limits. This is useful when reading
+Limit rescue domain to the blocks listed in the @var{blockfile}. Do not
+read new data beyond @var{blockfile} limits. This is useful when reading
 from devices of undefined size (like raw devices), when the drive
 returns an incorrect size, or when reading from a partial copy. It can
 only be used after a first rescue attempt, possibly limited with the
-@samp{--size} option, has produced a complete @var{logfile}.
+@samp{--size} option, has produced a complete @var{blockfile}.
 
 @item -d
 @itemx --idirect
@@ -421,8 +421,8 @@ disc access is not used for @var{outfile}.
 @itemx --max-errors=[+]@var{n}
 Maximum number of error areas allowed before giving up. Defaults to
 infinity. If @var{n} is preceded by @samp{+} the number refers to new
-error areas found in this run, not counting those already annotated in
-the @var{logfile}.
+error areas found in this run, not counting those already present in the
+@var{blockfile}.
 
 @item -E @var{bytes}
 @itemx --max-error-rate=@var{bytes}
@@ -443,15 +443,15 @@ regular files.
 @item -F @var{types}
 @itemx --fill-mode=@var{types}
 Fill the blocks in @var{outfile} specified as any of @var{types} in
-@var{logfile}, with data read from @var{infile}. @var{types} contains
-one or more of the status characters defined in the chapter Logfile
-structure (@pxref{Logfile structure}) and an optional @samp{l} for
+@var{blockfile}, with data read from @var{infile}. @var{types} contains
+one or more of the status characters defined in the chapter Blockfile
+structure (@pxref{Blockfile structure}) and an optional @samp{l} for
 sector location data. See the chapter Fill mode (@pxref{Fill mode}) for
 a complete description of the fill mode.
 
 @item -G
 @itemx --generate-mode
-Generate an approximate @var{logfile} from the @var{infile} and
+Generate an approximate @var{blockfile} from the @var{infile} and
 @var{outfile} of the original rescue run. Note that you must keep the
 original offset between @samp{--input-position} and
 @samp{--output-position} of the original rescue run. See the chapter
@@ -460,10 +460,10 @@ generate mode.
 
 @item -H @var{file}
 @itemx --test-mode=@var{file}
-Builds a map of good/bad blocks using the logfile @var{file} and uses it
-to simulate read errors in @var{infile}. The blocks marked as finished
-in @var{file} will be read normally. All other block types will be
-considered read errors without even trying to read them from
+Builds a map of good/bad blocks using the blockfile @var{file} and uses
+it to simulate read errors in @var{infile}. The blocks marked as
+finished in @var{file} will be read normally. All other block types will
+be considered read errors without even trying to read them from
 @var{infile}. This mode is an aid in improving the algorithm of ddrescue
 and is also useful to verify that ddrescue produces accurate results in
 presence of read errors.
@@ -480,10 +480,10 @@ the chapter Fill mode (@pxref{Fill mode}) for details.
 @item -I
 @itemx --verify-input-size
 Compare the size of @var{infile} with the size calculated from the list
-of blocks contained in the @var{logfile}, and exit with status 1 if they
-differ. This is not enabled by default because the size of some devices
-can't be known in advance and because the size derived from the
-@var{logfile} may be incomplete, for example after doing a partial
+of blocks contained in the @var{blockfile}, and exit with status 1 if
+they differ. This is not enabled by default because the size of some
+devices can't be known in advance and because the size derived from the
+@var{blockfile} may be incomplete, for example after doing a partial
 rescue.
 
 @item -J
@@ -521,17 +521,17 @@ to skip is calculated from the end of the block that just failed.
 
 @item -L
 @itemx --loose-domain
-Accept an incomplete synthetic (user fabricated) domain logfile or
-test-mode logfile and fill the gaps in the list of data blocks with
-non-tried blocks. The blocks in the logfile must be strictly ascending
+Accept an incomplete synthetic (user fabricated) domain blockfile or
+test-mode blockfile and fill the gaps in the list of data blocks with
+non-tried blocks. The blocks in the blockfile must be strictly ascending
 and non-overlapping, but they do not need to be contiguous. This option
-allows making quick edits to a logfile without all the size calculations
-involved in making all data blocks contiguous again.
+allows making quick edits to a blockfile without all the size
+calculations involved in making all data blocks contiguous again.
 
 @item -m @var{file}
-@itemx --domain-logfile=@var{file}
+@itemx --domain-blockfile=@var{file}
 Restrict the rescue domain to the blocks marked as finished in the
-logfile @var{file}. This is useful for merging partially recovered
+blockfile @var{file}. This is useful for merging partially recovered
 images of backups, or if the destination drive fails during the rescue.
 
 @item -M
@@ -575,7 +575,7 @@ files can be preallocated. If preallocation succeeds, rescue will not
 fail due to lack of free space on disc. If ddrescue can't determine the
 size to preallocate, you may need to specify it with some combination of
 the @samp{--input-position}, @samp{--output-position}, @samp{--size},
-and @samp{--domain-logfile} options.
+and @samp{--domain-blockfile} options.
 
 @item -P[@var{lines}]
 @itemx --data-preview[=@var{lines}]
@@ -612,7 +612,7 @@ example, the following command creates an @var{outfile} 300 bytes long,
 but only writes data on the last 200 bytes:
 
 @example
-ddrescue -i 100 -s 200 infile outfile logfile
+ddrescue -i 100 -s 200 infile outfile blockfile
 @end example
 
 @item -S
@@ -752,22 +752,25 @@ found, invalid flags, I/O errors, etc), 2 to indicate a corrupt or
 invalid input file, 3 for an internal consistency error (eg, bug) which
 caused ddrescue to panic.
 
-If ddrescue is interrupted by a signal, it updates @var{logfile} and
+If ddrescue is interrupted by a signal, it updates @var{blockfile} and
 then terminates by raising the signal received.
 
 
-@node Logfile structure
-@chapter Logfile structure
-@cindex logfile structure
+@node Blockfile structure
+@chapter Blockfile structure
+@cindex blockfile structure
 
-The logfile is a text file easy to read and edit. It is formed by three
-parts, the heading comments, the status line, and the list of data
+NOTE: In versions of ddrescue prior to 1.20 the blockfile was called
+@samp{logfile}. The format is the same; only the name has changed.
+
+The blockfile is a text file easy to read and edit. It is formed by
+three parts, the heading comments, the status line, and the list of data
 blocks. Any line beginning with @samp{#} is a comment line.
 
 The heading comments contain the version of ddrescue or ddrescuelog that
-created the logfile, the command line used, and the time when the
-program started. If the logfile was created by ddrescue it will also
-contain the current time when the logfile was saved and a copy of the
+created the blockfile, the command line used, and the time when the
+program started. If the blockfile was created by ddrescue it will also
+contain the current time when the blockfile was saved and a copy of the
 status message from the screen describing the operation being performed
 (copying, trimming, finished, etc). They are intended as information for
 the user.
@@ -778,14 +781,14 @@ being tried in the input file. (The beginning of the block being tried
 in a forward pass or the end of the block in a backward pass). The
 status character is one of these:
 
-@multitable {Character} {generating approximate logfile}
+@multitable {Character} {generating approximate blockfile}
 @item Character @tab Meaning
 @item '?'       @tab copying non-tried blocks
 @item '*'       @tab trimming non-trimmed blocks
 @item '/'       @tab scraping non-scraped blocks
 @item '-'       @tab retrying bad sectors
 @item 'F'       @tab filling specified blocks
-@item 'G'       @tab generating approximate logfile
+@item 'G'       @tab generating approximate blockfile
 @item '+'       @tab finished
 @end multitable
 
@@ -808,11 +811,11 @@ is one of these:
 @end multitable
 
 @noindent
-And here is an example logfile:
+And here is an example blockfile:
 
 @example
-# Rescue Logfile. Created by GNU ddrescue version @value{VERSION}
-# Command line: ddrescue -d -c18 /dev/fd0 fdimage logfile
+# Blockfile. Created by GNU ddrescue version @value{VERSION}
+# Command line: ddrescue -d -c18 /dev/fd0 fdimage blockfile
 # Start time:   2014-05-03 09:37:44
 # Current time: 2014-05-03 09:38:19
 # Copying non-tried blocks... Pass 1 (forwards)
@@ -829,44 +832,39 @@ And here is an example logfile:
 If you edit the file, you may use decimal, hexadecimal or octal values,
 using the same syntax as integer constants in C++.
 
-NOTE: Logfiles created by a version of ddrescue prior to 1.6 lack the
-status line. If you want to use an old logfile with ddrescue 1.6 or
-later, you will have to insert a line like @samp{0 +} at the beginning
-of the logfile.
-
 
 @node Emergency save
-@chapter Saving the logfile in case of trouble
+@chapter Saving the blockfile in case of trouble
 @cindex emergency save
 
-The logfile is an essential part of ddrescue's effectiveness. Without a
-logfile, ddrescue can't resume a rescue, only reinitiate it. Given that
-a difficult rescue may take days to complete, it would be a serious
-drawback if the logfile were lost because of a solvable problem like a
-lack of space on the device the logfile is written to.
+The blockfile is an essential part of ddrescue's effectiveness. Without
+a blockfile, ddrescue can't resume a rescue, only reinitiate it. Given
+that a difficult rescue may take days to complete, it would be a serious
+drawback if the blockfile were lost because of a solvable problem like a
+lack of space on the device the blockfile is written to.
 
-In case of trouble writing the logfile, ddrescue will print a message
+In case of trouble writing the blockfile, ddrescue will print a message
 like this:
 
 @example
-Error writing logfile '@var{logfile}': No space left on device.
+Error writing blockfile '@var{blockfile}': No space left on device.
 Fix the problem and press ENTER to retry,
                      or E+ENTER for an emergency save and exit,
                      or Q+ENTER to abort.
 @end example
 
 You may try to fix the problem, for example deleting some files to make
-room for the logfile, and press @key{Return} to retry.
+room for the blockfile, and press @key{Return} to retry.
 
 If the problem can't be fixed, you may press @key{e} followed by
 @key{Return} to try an emergency save and exit. Ddrescue will try to
-write the logfile to the file @file{ddrescue.log} in the current
-directory or, if this fails, to @file{$HOME/ddrescue.log}. If the
-logfile is written succesfully, ddrescue will exit with status 1. Else
+write the blockfile to the file @file{ddrescue.bf} in the current
+directory or, if this fails, to @file{$HOME/ddrescue.bf}. If the
+blockfile is written succesfully, ddrescue will exit with status 1. Else
 it will print the above message again.
 
 Or you may press @key{q} followed by @key{Return} to quit and exit with
-status 1. In this case the contents of the logfile will be lost.
+status 1. In this case the contents of the blockfile will be lost.
 
 
 @node Optical media
@@ -898,8 +896,8 @@ sensitivity of the laser-sensor that reads the reflected laser light.
 Example 1: Rescue a CD-ROM in /dev/cdrom.
 
 @example
-ddrescue -n -b2048 /dev/cdrom cdimage logfile
-ddrescue -d -r1 -b2048 /dev/cdrom cdimage logfile
+ddrescue -n -b2048 /dev/cdrom cdimage blockfile
+ddrescue -d -r1 -b2048 /dev/cdrom cdimage blockfile
   (if errsize is zero, cdimage now contains a complete image of the
    CD-ROM and you can write it to a blank CD-ROM)
 @end example
@@ -909,10 +907,10 @@ ddrescue -d -r1 -b2048 /dev/cdrom cdimage logfile
 Example 2: Rescue a CD-ROM in /dev/cdrom from two copies.
 
 @example
-ddrescue -n -b2048 /dev/cdrom cdimage logfile
-ddrescue -d -b2048 /dev/cdrom cdimage logfile
+ddrescue -n -b2048 /dev/cdrom cdimage blockfile
+ddrescue -d -b2048 /dev/cdrom cdimage blockfile
   (insert second copy in the CD drive)
-ddrescue -d -r1 -b2048 /dev/cdrom cdimage logfile
+ddrescue -d -r1 -b2048 /dev/cdrom cdimage blockfile
   (if errsize is zero, cdimage now contains a complete image of the
    CD-ROM and you can write it to a blank CD-ROM)
 @end example
@@ -921,36 +919,36 @@ ddrescue -d -r1 -b2048 /dev/cdrom cdimage logfile
 @noindent
 Example 3: Rescue a CD-ROM in /dev/cdrom using two CD drives from two
 different computers, writing the image into an USB drive nounted on
-/mnt/memory.
+/mnt/mem.
 
 @example
-ddrescue -n -b2048 /dev/cdrom /mnt/memory/cdimage /mnt/memory/logfile
-ddrescue -d -r1 -b2048 /dev/cdrom /mnt/memory/cdimage /mnt/memory/logfile
+ddrescue -n -b2048 /dev/cdrom /mnt/mem/cdimage /mnt/mem/blockfile
+ddrescue -d -r1 -b2048 /dev/cdrom /mnt/mem/cdimage /mnt/mem/blockfile
   (umount the USB drive and move both USB drive and CD-ROM to second
    computer)
-ddrescue -d -r1 -b2048 /dev/cdrom /mnt/memory/cdimage /mnt/memory/logfile
-  (if errsize is zero, /mnt/memory/cdimage now contains a complete image
+ddrescue -d -r1 -b2048 /dev/cdrom /mnt/mem/cdimage /mnt/mem/blockfile
+  (if errsize is zero, /mnt/mem/cdimage now contains a complete image
    of the CD-ROM and you can write it to a blank CD-ROM)
 @end example
 
 @sp 1
 @noindent
 Example 4: Merge the partially recovered images of 3 identical DVDs
-using their logfiles as domain logfiles.
+using their blockfiles as domain blockfiles.
 
 @example
-ddrescue -m logfile1 dvdimage1 dvdimage logfile
-ddrescue -m logfile2 dvdimage2 dvdimage logfile
-ddrescue -m logfile3 dvdimage3 dvdimage logfile
-  (if errsize is zero, dvdimage now contains a complete image of the DVD
-   and you can write it to a blank DVD)
+ddrescue -m blockfile1 dvdimage1 dvdimage blockfile
+ddrescue -m blockfile2 dvdimage2 dvdimage blockfile
+ddrescue -m blockfile3 dvdimage3 dvdimage blockfile
+  (if errsize is zero, dvdimage now contains a complete image of the
+   DVD and you can write it to a blank DVD)
 @end example
 
 @sp 1
 @anchor{lziprecover-example}
 @noindent
 Example 5: Rescue a lzip compressed backup from two copies on CD-ROM
-with error-checked merging of copies
+with error-checked merging of copies.
 @ifnothtml
 (@xref{Top,lziprecover manual,,lziprecover},
 @end ifnothtml
@@ -961,12 +959,12 @@ with error-checked merging of copies
 for details about lziprecover).
 
 @example
-ddrescue -d -r1 -b2048 /dev/cdrom cdimage1 logfile1
+ddrescue -d -r1 -b2048 /dev/cdrom cdimage1 blockfile1
 mount -t iso9660 -o loop,ro cdimage1 /mnt/cdimage
 cp /mnt/cdimage/backup.tar.lz rescued1.tar.lz
 umount /mnt/cdimage
   (insert second copy in the CD drive)
-ddrescue -d -r1 -b2048 /dev/cdrom cdimage2 logfile2
+ddrescue -d -r1 -b2048 /dev/cdrom cdimage2 blockfile2
 mount -t iso9660 -o loop,ro cdimage2 /mnt/cdimage
 cp /mnt/cdimage/backup.tar.lz rescued2.tar.lz
 umount /mnt/cdimage
@@ -1023,8 +1021,8 @@ partition table on /dev/hda is damaged, you'll need to recreate it
 somehow on /dev/hdb.
 
 @example
-ddrescue -f -n /dev/hda /dev/hdb logfile
-ddrescue -d -f -r3 /dev/hda /dev/hdb logfile
+ddrescue -f -n /dev/hda /dev/hdb blockfile
+ddrescue -d -f -r3 /dev/hda /dev/hdb blockfile
 fdisk /dev/hdb
 e2fsck -v -f /dev/hdb1
 e2fsck -v -f /dev/hdb2
@@ -1037,8 +1035,8 @@ Note: you need to create the hdb2 partition with fdisk first. hdb2
 should be of appropriate type and size.
 
 @example
-ddrescue -f -n /dev/hda2 /dev/hdb2 logfile
-ddrescue -d -f -r3 /dev/hda2 /dev/hdb2 logfile
+ddrescue -f -n /dev/hda2 /dev/hdb2 blockfile
+ddrescue -d -f -r3 /dev/hda2 /dev/hdb2 blockfile
 e2fsck -v -f /dev/hdb2
 mount -t ext2 -o ro /dev/hdb2 /mnt
   (read rescued files from /mnt)
@@ -1050,12 +1048,12 @@ Example 3: While rescuing the whole drive /dev/hda to /dev/hdb, /dev/hda
 freezes up at position 12345678.
 
 @example
-ddrescue -f /dev/hda /dev/hdb logfile       <-- /dev/hda freezes here
+ddrescue -f /dev/hda /dev/hdb blockfile     <-- /dev/hda freezes here
   (restart /dev/hda or reboot computer)
   (restart copy at a safe distance from the troubled sector)
-ddrescue -f -i 12350000 /dev/hda /dev/hdb logfile
+ddrescue -f -i 12350000 /dev/hda /dev/hdb blockfile
   (then copy backwards down to the troubled sector)
-ddrescue -f -R /dev/hda /dev/hdb logfile
+ddrescue -f -R /dev/hda /dev/hdb blockfile
 @end example
 
 @sp 1
@@ -1064,10 +1062,10 @@ Example 4: While rescuing the whole drive /dev/hda to /dev/hdb, /dev/hdb
 fails and you have to rescue data to a third drive, /dev/hdc.
 
 @example
-ddrescue -f -n /dev/hda /dev/hdb logfile1     <-- /dev/hdb fails here
-ddrescue -f -m logfile1 /dev/hdb /dev/hdc logfile2
-ddrescue -f -n /dev/hda /dev/hdc logfile2
-ddrescue -d -f -r3 /dev/hda /dev/hdc logfile2
+ddrescue -f -n /dev/hda /dev/hdb blockfile1   <-- /dev/hdb fails here
+ddrescue -f -m blockfile1 /dev/hdb /dev/hdc blockfile2
+ddrescue -f -n /dev/hda /dev/hdc blockfile2
+ddrescue -d -f -r3 /dev/hda /dev/hdc blockfile2
 @end example
 
 @sp 1
@@ -1076,10 +1074,10 @@ Example 5: While rescuing the whole drive /dev/hda to /dev/hdb, /dev/hda
 stops responding and disappears from /dev.
 
 @example
-ddrescue -f -n /dev/hda /dev/hdb logfile      <-- /dev/hda fails here
+ddrescue -f -n /dev/hda /dev/hdb blockfile    <-- /dev/hda fails here
   (restart /dev/hda or reboot computer as many times as needed)
-ddrescue -f -n -A /dev/hda /dev/hdb logfile
-ddrescue -d -f -r3 /dev/hda /dev/hdb logfile
+ddrescue -f -n -A /dev/hda /dev/hdb blockfile
+ddrescue -d -f -r3 /dev/hda /dev/hdb blockfile
 @end example
 
 
@@ -1088,7 +1086,7 @@ ddrescue -d -f -r3 /dev/hda /dev/hdb logfile
 @cindex direct disc access
 @cindex raw devices
 
-If you notice that the positions and sizes in @var{logfile} are always
+If you notice that the positions and sizes in @var{blockfile} are always
 multiples of the sector size, maybe your kernel is caching the disc
 accesses and grouping them. In this case you may want to use direct disc
 access for @var{infile}, or read from a raw device, to bypass the kernel
@@ -1125,8 +1123,8 @@ good sectors inside the failed blocks.
 Example 1: using direct disc access.
 
 @example
-ddrescue -f -n /dev/hdb1 /dev/hdc1 logfile
-ddrescue -d -f -r3 /dev/hdb1 /dev/hdc1 logfile
+ddrescue -f -n /dev/hdb1 /dev/hdc1 blockfile
+ddrescue -d -f -r3 /dev/hdb1 /dev/hdc1 blockfile
 e2fsck -v -f /dev/hdc1
 mount -t ext2 -o ro /dev/hdc1 /mnt
 @end example
@@ -1137,8 +1135,8 @@ Example 2: using a raw device.
 
 @example
 raw /dev/raw/raw1 /dev/hdb1
-ddrescue -f -n /dev/hdb1 /dev/hdc1 logfile
-ddrescue -C -f -r3 /dev/raw/raw1 /dev/hdc1 logfile
+ddrescue -f -n /dev/hdb1 /dev/hdc1 blockfile
+ddrescue -C -f -r3 /dev/raw/raw1 /dev/hdc1 blockfile
 raw /dev/raw/raw1 0 0
 e2fsck -v -f /dev/hdc1
 mount -t ext2 -o ro /dev/hdc1 /mnt
@@ -1153,7 +1151,7 @@ When ddrescue is invoked with the @samp{--fill-mode} option it operates
 in "fill mode", which is different from the default "rescue mode". That
 is, if you use the @samp{--fill-mode} option, ddrescue does not rescue
 anything. It only fills with data read from @var{infile} the blocks of
-@var{outfile} whose status character from @var{logfile} coincides with
+@var{outfile} whose status character from @var{blockfile} coincides with
 one of the type characters specified as argument to the
 @samp{--fill-mode} option.
 
@@ -1171,7 +1169,7 @@ sector to be filled.
 
 Note that in fill mode @var{infile} is always read from position 0. If
 you specify a @samp{--input-position}, it refers to the original
-@var{infile} from which @var{logfile} was built, and is only used to
+@var{infile} from which @var{blockfile} was built, and is only used to
 calculate the offset between input and output positions.
 
 Note also that when filling the @var{infile} of the original rescue run
@@ -1181,10 +1179,10 @@ offset between @samp{--input-position} and @samp{--output-position}.
 
 The @samp{--fill-mode} option implies the @samp{--complete-only} option.
 
-In fill mode @var{logfile} is updated to allow resumability when
+In fill mode @var{blockfile} is updated to allow resumability when
 interrupted or in case of a crash, but as nothing is being rescued
-@var{logfile} is not destroyed. The status line is the only part of
-@var{logfile} that is modified.
+@var{blockfile} is not destroyed. The status line is the only part of
+@var{blockfile} that is modified.
 
 @sp 1
 @noindent
@@ -1198,7 +1196,7 @@ all blocks marked as @samp{-} (bad-sector) with copies of the string
 
 @example
 printf "BAD SECTOR " > tmpfile
-ddrescue --fill-mode=- tmpfile outfile logfile
+ddrescue --fill-mode=- tmpfile outfile blockfile
 @end example
 
 @noindent
@@ -1209,7 +1207,7 @@ useful when sending the drive back to the manufacturer for warranty
 replacement.
 
 @example
-ddrescue --fill-mode=+ --force /dev/zero bad_drive logfile
+ddrescue --fill-mode=+ --force /dev/zero bad_drive blockfile
 @end example
 
 @noindent
@@ -1220,7 +1218,7 @@ will reallocate them automatically to new "spare" sectors that it keeps
 for just this purpose. WARNING! This may not work on your drive.
 
 @example
-ddrescue --fill-mode=- --force --synchronous /dev/zero bad_drive logfile
+ddrescue --fill-mode=- -f --synchronous /dev/zero bad_drive blockfile
 @end example
 
 @sp 1
@@ -1230,7 +1228,7 @@ system used, what files are partially or entirely in the bad areas of
 the disc. Just follow these steps:
 
 1) Copy the damaged drive with ddrescue until finished. Do not use
-sparse writes. This yields a logfile with only finished (@samp{+}) and
+sparse writes. This yields a blockfile with only finished (@samp{+}) and
 bad-sector (@samp{-}) blocks.
 
 2) Fill the bad-sector blocks of the copied drive or image file with a
@@ -1260,16 +1258,16 @@ file with zeros to restore the disc image.
 Example 4: Figure out what files are in the bad areas of the disc.
 
 @example
-ddrescue -b2048 /dev/cdrom cdimage logfile
+ddrescue -b2048 /dev/cdrom cdimage blockfile
 printf "DEADBEEF" > tmpfile
-ddrescue --fill-mode=l- tmpfile cdimage logfile
+ddrescue --fill-mode=l- tmpfile cdimage blockfile
 rm tmpfile
 mount -t iso9660 -o loop,ro cdimage /mnt/cdimage
 find /mnt/cdimage -type f -exec grep -l "DEADBEEF" '@{@}' ';'
   (note that my_thesis.txt has a bad sector at pos 0x12345000)
 umount /mnt/cdimage
-ddrescue -b2048 -i0x12345000 -s2048 -r10 -d /dev/cdrom cdimage logfile
-ddrescue --fill-mode=- /dev/zero cdimage logfile
+ddrescue -b2048 -i0x12345000 -s2048 -dr9 /dev/cdrom cdimage blockfile
+ddrescue --fill-mode=- /dev/zero cdimage blockfile
 mount -t iso9660 -o loop,ro cdimage /mnt/cdimage
 cp -a /mnt/cdimage/my_thesis.txt /safe/place/my_thesis.txt
 @end example
@@ -1282,11 +1280,11 @@ cp -a /mnt/cdimage/my_thesis.txt /safe/place/my_thesis.txt
 When ddrescue is invoked with the @samp{--generate-mode} option it
 operates in "generate mode", which is different from the default "rescue
 mode". That is, if you use the @samp{--generate-mode} option, ddrescue
-does not rescue anything. It only tries to generate a @var{logfile} for
-later use.
+does not rescue anything. It only tries to generate a @var{blockfile}
+for later use.
 
 So you didn't read the important advice (@pxref{Important advice}) and
-started ddrescue without a @var{logfile}. Now, two days later, your
+started ddrescue without a @var{blockfile}. Now, two days later, your
 computer crashed and you can't know how much data ddrescue managed to
 save. And even worse, you can't resume the rescue; you have to restart
 it from the very beginning.
@@ -1297,17 +1295,17 @@ In this case, note that you can't use a copy made by dd unless it was
 invoked with the @samp{sync} conversion argument.
 
 Don't despair (yet). Ddrescue can in some cases generate an approximate
-@var{logfile}, from @var{infile} and the (partial) copy in
-@var{outfile}, that is almost as good as an exact @var{logfile}. It
+@var{blockfile}, from @var{infile} and the (partial) copy in
+@var{outfile}, that is almost as good as an exact @var{blockfile}. It
 makes this by simply assuming that sectors containing all zeros were not
 rescued.
 
 However, if the destination of the copy was a drive or a partition, (or
 an existing regular file and truncation was not requested), most
 probably you will need to restart ddrescue from the very beginning.
-(This time with a @var{logfile}, of course). The reason is that old data
-may be present in the drive that have not been overwritten yet, and may
-be thus non-tried but non-zero.
+(This time with a @var{blockfile}, of course). The reason is that old
+data may be present in the drive that have not been overwritten yet, and
+may be thus non-tried but non-zero.
 
 For example, if you first tried one of these commands:
 @example
@@ -1316,9 +1314,9 @@ or
 dd if=infile of=outfile conv=noerror,sync
 @end example
 
-then you can generate an approximate logfile with this command:
+then you can generate an approximate blockfile with this command:
 @example
-ddrescue --generate-mode infile outfile logfile
+ddrescue --generate-mode infile outfile blockfile
 @end example
 
 @noindent
@@ -1331,26 +1329,27 @@ rescue run.
 @chapter Ddrescuelog
 @cindex ddrescuelog
 
-Ddrescuelog is a tool that manipulates ddrescue logfiles, shows logfile
-contents, converts logfiles to/from other formats, compares logfiles,
-tests rescue status, and can delete a logfile if the rescue is done.
-Ddrescuelog operations can be restricted to one or several parts of the
-logfile if the domain setting options are used.
+Ddrescuelog is a tool that manipulates ddrescue blockfiles, shows
+blockfile contents, converts blockfiles to/from other formats, compares
+blockfiles, tests rescue status, and can delete a blockfile if the
+rescue is done. Ddrescuelog operations can be restricted to one or
+several parts of the blockfile if the domain setting options are used.
 
-When performing logic operations (AND, OR, XOR) on logfiles of different
-extension, only the blocks present in both files are processed.
+When performing logic operations (AND, OR, XOR) on blockfiles of
+different extension, only the blocks present in both files are
+processed.
 
 Here are some examples of how to use ddrescuelog, alone or in
 combination with other tools.
 
 @sp 1
 @noindent
-Example 1: Delete the logfile if the rescue is finished (all data is
-recovered without errors left).
+Example 1: Delete the blockfile if the rescue is finished (all data has
+been recovered without errors left).
 
 @example
-ddrescue -f /dev/hda /dev/hdb logfile
-ddrescuelog -d logfile
+ddrescue -f /dev/hda /dev/hdb blockfile
+ddrescuelog -d blockfile
 @end example
 
 @sp 1
@@ -1362,10 +1361,10 @@ Note: you do need to partition /dev/hdb beforehand.
 
 @example
 fdisk /dev/hdb                                <-- partition /deb/hdb
-ddrescue -f /dev/hda1 /dev/hdb1 logfile1
-ddrescue -f /dev/hda2 /dev/hdb2 logfile2
-ddrescuelog -l- -b4096 logfile1 > badblocks1
-ddrescuelog -l- -b4096 logfile2 > badblocks2
+ddrescue -f /dev/hda1 /dev/hdb1 blockfile1
+ddrescue -f /dev/hda2 /dev/hdb2 blockfile2
+ddrescuelog -l- -b4096 blockfile1 > badblocks1
+ddrescuelog -l- -b4096 blockfile2 > badblocks2
 e2fsck -v -f -L badblocks1 /dev/hdb1
 e2fsck -v -f -L badblocks2 /dev/hdb2
 @end example
@@ -1382,10 +1381,10 @@ partition table on /dev/hda is damaged, you'll need to recreate it
 somehow on /dev/hdb.
 
 @example
-ddrescue -f /dev/hda /dev/hdb logfile
+ddrescue -f /dev/hda /dev/hdb blockfile
 fdisk /dev/hdb                                <-- get partition sizes
-ddrescuelog -l- -b512 -i63s -o0 -s9767457s -b4096 logfile > badblocks1
-ddrescuelog -l- -b512 -i9767520s -o0 -s128520s -b4096 logfile > badblocks2
+ddrescuelog -l- -b512 -i63s -o0 -s767457s -b4096 blockfile > badblocks1
+ddrescuelog -l- -b512 -i767520s -o0 -s96520s -b4096 blockfile > badblocks2
 e2fsck -v -f -L badblocks1 /dev/hdb1
 e2fsck -v -f -L badblocks2 /dev/hdb2
 @end example
@@ -1398,7 +1397,7 @@ e2fsck -v -f -L badblocks2 /dev/hdb2
 The format for running ddrescuelog is:
 
 @example
-ddrescuelog [@var{options}] @var{logfile}
+ddrescuelog [@var{options}] @var{blockfile}
 @end example
 
 Ddrescuelog supports the following options:
@@ -1416,12 +1415,13 @@ Print the version number of ddrescuelog on the standard output and exit.
 @itemx --change-types=@var{old_types},@var{new_types}
 Change the status of every block in the rescue domain from one type in
 @var{old_types} to the corresponding type in @var{new_types}, much like
-the @samp{tr} command does, and write the resulting logfile to standard
-output. @var{old_types} and @var{new_types} are strings of block status
-characters as defined in the chapter Logfile structure (@pxref{Logfile
-structure}). Blocks whose status is not in @var{old_types} are left
-unchanged. If @var{new_types} is shorter than @var{old_types} the last
-type of @var{new_types} is repeated as many times as necessary.
+the @samp{tr} command does, and write the resulting blockfile to
+standard output. @var{old_types} and @var{new_types} are strings of
+block status characters as defined in the chapter Blockfile structure
+(@pxref{Blockfile structure}). Blocks whose status is not in
+@var{old_types} are left unchanged. If @var{new_types} is shorter than
+@var{old_types} the last type of @var{new_types} is repeated as many
+times as necessary.
 
 @item -b @var{bytes}
 @itemx --block-size=@var{bytes}
@@ -1436,30 +1436,32 @@ SI prefixes (powers of 1000) are used by default. (See table above,
 @ref{Invoking ddrescue}).
 
 @item -c[@var{type1}@var{type2}]
-@itemx --create-logfile[=@var{type1}@var{type2}]
-Create a @var{logfile} from a list of block numbers read from standard
+@itemx --create-blockfile[=@var{type1}@var{type2}]
+Create a @var{blockfile} from a list of block numbers read from standard
 input. Only blocks included in the rescue domain will be added to
-@var{logfile}.
+@var{blockfile}.
 
 @var{type1} and @var{type2} are block status characters as defined in
-the chapter Logfile structure (@pxref{Logfile structure}). @var{type1}
-sets the type for blocks included in the list, while @var{type2} sets
-the type for the rest of @var{logfile}. If not specified, @var{type1}
-defaults to @samp{+} and @var{type2} defaults to @samp{-}.
+the chapter Blockfile structure (@pxref{Blockfile structure}).
+@var{type1} sets the type for blocks included in the list, while
+@var{type2} sets the type for the rest of @var{blockfile}. If not
+specified, @var{type1} defaults to @samp{+} and @var{type2} defaults to
+@samp{-}.
 
 @item -C[@var{type}]
-@itemx --complete-logfile[=@var{type}]
-Complete a synthetic (user fabricated) @var{logfile} by filling the gaps
-with blocks of type @var{type}, and write the completed logfile to
-standard output. @var{type} is one of the block status characters
-defined in the chapter Logfile structure (@pxref{Logfile structure}). If
-@var{type} is not specified, the gaps are filled with non-tried blocks.
-All gaps in @var{logfile} are filled. Domain options are ignored.
+@itemx --complete-blockfile[=@var{type}]
+Complete a synthetic (user fabricated) @var{blockfile} by filling the
+gaps with blocks of type @var{type}, and write the completed blockfile
+to standard output. @var{type} is one of the block status characters
+defined in the chapter Blockfile structure (@pxref{Blockfile
+structure}). If @var{type} is not specified, the gaps are filled with
+non-tried blocks. All gaps in @var{blockfile} are filled. Domain options
+are ignored.
 
 @item -d
 @itemx --delete-if-done
-Delete the given @var{logfile} if all the blocks in the rescue domain
-have been successfuly recovered. The exit status is 0 if @var{logfile}
+Delete the given @var{blockfile} if all the blocks in the rescue domain
+have been successfuly recovered. The exit status is 0 if @var{blockfile}
 could be deleted, 1 otherwise.
 
 @item -D
@@ -1470,7 +1472,7 @@ otherwise.
 
 @item -f
 @itemx --force
-Force overwrite of @var{logfile}.
+Force overwrite of @var{blockfile}.
 
 @item -i @var{bytes}
 @itemx --input-position=@var{bytes}
@@ -1480,9 +1482,9 @@ refers to a position in the original @var{infile}.
 @item -l @var{types}
 @itemx --list-blocks=@var{types}
 Print on standard output the block numbers of the blocks specified as
-any of @var{types} in @var{logfile} and included in the rescue domain.
+any of @var{types} in @var{blockfile} and included in the rescue domain.
 @var{types} contains one or more of the block status characters defined
-in the chapter Logfile structure (@pxref{Logfile structure}).
+in the chapter Blockfile structure (@pxref{Blockfile structure}).
 
 The list format is one block number per line in decimal, like the output
 of the badblocks program, so that it can be used as input for e2fsck or
@@ -1490,24 +1492,24 @@ other similar filesystem repairing tool.
 
 @item -L
 @itemx --loose-domain
-Accept an incomplete synthetic (user fabricated) domain logfile or
-compare-as-domain logfile and fill the gaps in the list of data blocks
-with non-tried blocks. The blocks in the logfile must be strictly
+Accept an incomplete synthetic (user fabricated) domain blockfile or
+compare-as-domain blockfile and fill the gaps in the list of data blocks
+with non-tried blocks. The blocks in the blockfile must be strictly
 ascending and non-overlapping, but they do not need to be contiguous.
-This option allows making quick edits to a logfile without all the size
-calculations involved in making all data blocks contiguous again.
+This option allows making quick edits to a blockfile without all the
+size calculations involved in making all data blocks contiguous again.
 
 @item -m @var{file}
-@itemx --domain-logfile=@var{file}
+@itemx --domain-blockfile=@var{file}
 Restrict the rescue domain to the blocks marked as finished in the
-logfile @var{file}.
+blockfile @var{file}.
 
 @item -n
-@itemx --invert-logfile
-Invert the types of the blocks in @var{logfile} which are included in
-the rescue domain, and write the resulting logfile to standard output.
+@itemx --invert-blockfile
+Invert the types of the blocks in @var{blockfile} which are included in
+the rescue domain, and write the resulting blockfile to standard output.
 Finished blocks (@samp{+}) are changed to bad-sector (@samp{-}), all
-other types are changed to finished. @samp{--invert-logfile} is
+other types are changed to finished. @samp{--invert-blockfile} is
 equivalent to @samp{--change-types=?*/-+,++++-}
 
 @item -o @var{bytes}
@@ -1517,17 +1519,17 @@ Starting position of the image of the rescue domain in the original
 Defaults to @samp{--input-position}.
 
 @item -p @var{file}
-@itemx --compare-logfile=@var{file}
+@itemx --compare-blockfile=@var{file}
 Compare the types of the blocks included in the rescue domain. The exit
 status is 0 if all tested blocks are the same in both @var{file} and
-@var{logfile}, 1 otherwise.
+@var{blockfile}, 1 otherwise.
 
 @item -P @var{file}
 @itemx --compare-as-domain=@var{file}
 Compare only the blocks marked as finished in the rescue domain. The
 exit status is 0 if all tested blocks are the same in both @var{file}
-and @var{logfile}, 1 otherwise. Two files comparing equal with this
-option are equivalent when used as domain logfiles.
+and @var{blockfile}, 1 otherwise. Two files comparing equal with this
+option are equivalent when used as domain blockfiles.
 
 @item -q
 @itemx --quiet
@@ -1540,36 +1542,38 @@ original @var{infile}.
 
 @item -t
 @itemx --show-status
-Print a summary of the contents of each @var{logfile} to the standard
-output. This option allows more than one @var{logfile}. If the domain
+Print a summary of the contents of each @var{blockfile} to the standard
+output. This option allows more than one @var{blockfile}. If the domain
 setting options are used, the summary can be restricted to one or
-several parts of @var{logfile}.
+several parts of @var{blockfile}.
 
 @item -v
 @itemx --verbose
 Verbose mode. Further -v's (up to 4) increase the verbosity level.
 
 @item -x @var{file}
-@itemx --xor-logfile=@var{file}
+@itemx --xor-blockfile=@var{file}
 Perform a logical XOR (exclusive OR) operation between the finished
-blocks in @var{file} and those in @var{logfile}, and write the resulting
-logfile to standard output. In other words, in the resulting logfile a
-block is only shown as finished if it was finished in either of the two
-input logfiles but not in both.
+blocks in @var{file} and those in @var{blockfile}, and write the
+resulting blockfile to standard output. In other words, in the resulting
+blockfile a block is only shown as finished if it was finished in either
+of the two input blockfiles but not in both.
 
 @item -y @var{file}
-@itemx --and-logfile=@var{file}
+@itemx --and-blockfile=@var{file}
 Perform a logical AND operation between the finished blocks in
-@var{file} and those in @var{logfile}, and write the resulting logfile
-to standard output. In other words, in the resulting logfile a block is
-only shown as finished if it was finished in both input logfiles.
+@var{file} and those in @var{blockfile}, and write the resulting
+blockfile to standard output. In other words, in the resulting blockfile
+a block is only shown as finished if it was finished in both input
+blockfiles.
 
 @item -z @var{file}
-@itemx --or-logfile=@var{file}
+@itemx --or-blockfile=@var{file}
 Perform a logical OR operation between the finished blocks in @var{file}
-and those in @var{logfile}, and write the resulting logfile to standard
-output. In other words, in the resulting logfile a block is shown as
-finished if it was finished in either of the two input logfiles.
+and those in @var{blockfile}, and write the resulting blockfile to
+standard output. In other words, in the resulting blockfile a block is
+shown as finished if it was finished in either of the two input
+blockfiles.
 
 @end table
 

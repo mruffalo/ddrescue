@@ -111,7 +111,7 @@ struct Rb_options
   };
 
 
-class Rescuebook : public Logbook, public Rb_options
+class Rescuebook : public Blockbook, public Rb_options
   {
   long long error_rate;
   long long sparse_size;		// end position of pending writes
@@ -169,7 +169,7 @@ public:
   Rescuebook( const long long offset, const long long isize,
               Domain & dom, const Domain * const test_dom,
               const Rb_options & rb_opts, const char * const iname,
-              const char * const logname, const int cluster,
+              const char * const bfname, const int cluster,
               const int hardbs, const bool synchronous );
 
   int do_rescue( const int ides, const int odes );

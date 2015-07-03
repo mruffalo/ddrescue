@@ -184,20 +184,20 @@ int empty_domain()
   { show_error( "Nothing to do; domain is empty." ); return 0; }
 
 
-int not_readable( const char * const logname )
+int not_readable( const char * const bfname )
   {
   char buf[80];
   snprintf( buf, sizeof buf,
-            "Logfile '%s' does not exist or is not readable.", logname );
+            "Blockfile '%s' does not exist or is not readable.", bfname );
   show_error( buf );
   return 1;
   }
 
 
-int not_writable( const char * const logname )
+int not_writable( const char * const bfname )
   {
   char buf[80];
-  snprintf( buf, sizeof buf, "Logfile '%s' is not writable.", logname );
+  snprintf( buf, sizeof buf, "Blockfile '%s' is not writable.", bfname );
   show_error( buf );
   return 1;
   }
@@ -212,15 +212,15 @@ long initial_time()
   }
 
 
-bool write_logfile_header( FILE * const f, const char * const logtype )
+bool write_file_header( FILE * const f, const char * const filetype )
   {
   static std::string timestamp;
 
   if( timestamp.empty() ) timestamp = get_timestamp( initial_time() );
-  return ( std::fprintf( f, "# %s Logfile. Created by %s version %s\n"
+  return ( std::fprintf( f, "# %s. Created by %s version %s\n"
                             "# Command line: %s\n"
                             "# Start time:   %s\n",
-           logtype, Program_name, PROGVERSION, command_line.c_str(),
+           filetype, Program_name, PROGVERSION, command_line.c_str(),
            timestamp.c_str() ) >= 0 );
   }
 

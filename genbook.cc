@@ -29,7 +29,7 @@
 #include <unistd.h>
 
 #include "block.h"
-#include "logbook.h"
+#include "blockbook.h"
 
 
 const char * format_time( const long t, const bool low_prec )
@@ -82,11 +82,11 @@ void Genbook::check_block( const Block & b, int & copied_size, int & error_size 
   }
 
 
-// Return values: 1 unexpected EOF, 0 OK, -1 interrupted, -2 logfile error.
+// Return values: 1 unexpected EOF, 0 OK, -1 interrupted, -2 blockfile error.
 //
 int Genbook::check_all()
   {
-  const char * const msg = "Generating logfile...";
+  const char * const msg = "Generating blockfile...";
   long long pos = ( offset() >= 0 ) ? 0 : -offset();
   if( current_status() == generating && domain().includes( current_pos() ) &&
       ( offset() >= 0 || current_pos() >= -offset() ) )
@@ -108,8 +108,8 @@ int Genbook::check_all()
     check_block( b, copied_size, error_size );
     if( copied_size + error_size < b.size() &&			// EOF
         !truncate_vector( b.pos() + copied_size + error_size ) )
-      { final_msg( "EOF found before end of logfile" ); return 1; }
-    if( !update_logfile() ) return -2;
+      { final_msg( "EOF found before end of blockfile" ); return 1; }
+    if( !update_blockfile() ) return -2;
     }
   return 0;
   }
@@ -180,9 +180,9 @@ int Genbook::do_generate( const int odes )
   if( verbosity >= 0 )
     {
     std::fputs( "Press Ctrl-C to interrupt\n", stdout );
-    if( logfile_exists() )
+    if( blockfile_exists() )
       {
-      std::fputs( "Initial status (read from logfile)\n", stdout );
+      std::fputs( "Initial status (read from blockfile)\n", stdout );
       std::printf( "rescued: %10sB,  generated:%10sB\n",
                    format_num( recsize ), format_num( gensize ) );
       std::fputs( "Current status\n", stdout );
@@ -194,17 +194,17 @@ int Genbook::do_generate( const int odes )
   if( verbosity >= 0 )
     {
     show_status( -1, ( retval || signaled ) ? 0 : "Finished", true );
-    if( retval == -2 ) std::fputs( "\nLogfile error", stdout );
+    if( retval == -2 ) std::fputs( "\nBlockfile error", stdout );
     else if( signaled ) std::fputs( "\nInterrupted by user", stdout );
     std::fputc( '\n', stdout );
     std::fflush( stdout );
     }
-  if( retval == -2 ) retval = 1;		// logfile error
+  if( retval == -2 ) retval = 1;		// blockfile error
   else
     {
     if( retval == 0 && !signaled ) current_status( finished );
     compact_sblock_vector();
-    if( !update_logfile( -1, true ) && retval == 0 ) retval = 1;
+    if( !update_blockfile( -1, true ) && retval == 0 ) retval = 1;
     }
   if( final_msg().size() ) show_error( final_msg().c_str(), final_errno() );
   if( retval ) return retval;		// errors have priority over signals

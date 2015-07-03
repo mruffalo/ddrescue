@@ -31,7 +31,7 @@
 #include <sys/stat.h>
 
 #include "block.h"
-#include "logbook.h"
+#include "blockbook.h"
 #include "loggers.h"
 #include "rescuebook.h"
 
@@ -191,7 +191,7 @@ int Rescuebook::copy_and_update( const Block & b, int & copied_size,
       {
       if( complete_only ) truncate_domain( b.pos() + copied_size + error_size );
       else if( !truncate_vector( b.pos() + copied_size + error_size ) )
-        { final_msg( "EOF found before end of logfile" ); retval = 1; }
+        { final_msg( "EOF found before end of blockfile" ); retval = 1; }
       }
     if( copied_size > 0 )
       {
@@ -218,7 +218,7 @@ int Rescuebook::copy_and_update( const Block & b, int & copied_size,
   }
 
 
-// Return values: 1 I/O error, 0 OK, -1 interrupted, -2 logfile error.
+// Return values: 1 I/O error, 0 OK, -1 interrupted, -2 blockfile error.
 // Read the non-tried part of the domain, skipping over the damaged areas.
 //
 int Rescuebook::copy_non_tried()
@@ -245,7 +245,7 @@ int Rescuebook::copy_non_tried()
   }
 
 
-// Return values: 1 I/O error, 0 OK, -1 interrupted, -2 logfile error.
+// Return values: 1 I/O error, 0 OK, -1 interrupted, -2 blockfile error.
 // Read forwards the non-tried part of the domain, skipping over the
 // damaged areas.
 //
@@ -290,14 +290,14 @@ int Rescuebook::fcopy_non_tried( const char * const msg, const int pass )
         }
       }
     else if( copied_size > 0 ) skip_size = skipbs;		// reset
-    if( !update_logfile( odes_ ) ) return -2;
+    if( !update_blockfile( odes_ ) ) return -2;
     }
   if( !block_found ) return 0;
   return -3;
   }
 
 
-// Return values: 1 I/O error, 0 OK, -1 interrupted, -2 logfile error.
+// Return values: 1 I/O error, 0 OK, -1 interrupted, -2 blockfile error.
 // Read backwards the non-tried part of the domain, skipping over the
 // damaged areas.
 //
@@ -342,14 +342,14 @@ int Rescuebook::rcopy_non_tried( const char * const msg, const int pass )
         }
       }
     else if( copied_size > 0 ) skip_size = skipbs;		// reset
-    if( !update_logfile( odes_ ) ) return -2;
+    if( !update_blockfile( odes_ ) ) return -2;
     }
   if( !block_found ) return 0;
   return -3;
   }
 
 
-// Return values: 1 I/O error, 0 OK, -1 interrupted, -2 logfile error.
+// Return values: 1 I/O error, 0 OK, -1 interrupted, -2 blockfile error.
 // Trim both edges of each damaged area sequentially.
 //
 int Rescuebook::trim_errors()
@@ -380,7 +380,7 @@ int Rescuebook::trim_errors()
       if( retval ) return retval;
       if( error_size > 0 ) error_found = true;
       update_rates();
-      if( !update_logfile( odes_ ) ) return -2;
+      if( !update_blockfile( odes_ ) ) return -2;
       }
     error_found = false;
     while( end > pos && !error_found )
@@ -403,14 +403,14 @@ int Rescuebook::trim_errors()
                                          domain() );
         }
       update_rates();
-      if( !update_logfile( odes_ ) ) return -2;
+      if( !update_blockfile( odes_ ) ) return -2;
       }
     }
   return 0;
   }
 
 
-// Return values: 1 I/O error, 0 OK, -1 interrupted, -2 logfile error.
+// Return values: 1 I/O error, 0 OK, -1 interrupted, -2 blockfile error.
 // Scrape the damaged areas sequentially.
 //
 int Rescuebook::scrape_errors()
@@ -439,14 +439,14 @@ int Rescuebook::scrape_errors()
                                           scraping, true );
       if( retval ) return retval;
       update_rates();
-      if( !update_logfile( odes_ ) ) return -2;
+      if( !update_blockfile( odes_ ) ) return -2;
       }
     }
   return 0;
   }
 
 
-// Return values: 1 I/O error, 0 OK, -1 interrupted, -2 logfile error.
+// Return values: 1 I/O error, 0 OK, -1 interrupted, -2 blockfile error.
 // Try to read the damaged areas, one sector at a time.
 //
 int Rescuebook::copy_errors()
@@ -470,7 +470,7 @@ int Rescuebook::copy_errors()
   }
 
 
-// Return values: 1 I/O error, 0 OK, -1 interrupted, -2 logfile error.
+// Return values: 1 I/O error, 0 OK, -1 interrupted, -2 blockfile error.
 // Try to read forwards the damaged areas, one sector at a time.
 //
 int Rescuebook::fcopy_errors( const char * const msg, const int retry )
@@ -498,14 +498,14 @@ int Rescuebook::fcopy_errors( const char * const msg, const int retry )
                                         retrying, true );
     if( retval ) return retval;
     update_rates();
-    if( !update_logfile( odes_ ) ) return -2;
+    if( !update_blockfile( odes_ ) ) return -2;
     }
   if( !block_found ) return 0;
   return -3;
   }
 
 
-// Return values: 1 I/O error, 0 OK, -1 interrupted, -2 logfile error.
+// Return values: 1 I/O error, 0 OK, -1 interrupted, -2 blockfile error.
 // Try to read backwards the damaged areas, one sector at a time.
 //
 int Rescuebook::rcopy_errors( const char * const msg, const int retry )
@@ -533,7 +533,7 @@ int Rescuebook::rcopy_errors( const char * const msg, const int retry )
                                         retrying, false );
     if( retval ) return retval;
     update_rates();
-    if( !update_logfile( odes_ ) ) return -2;
+    if( !update_blockfile( odes_ ) ) return -2;
     }
   if( !block_found ) return 0;
   return -3;
@@ -661,9 +661,9 @@ void Rescuebook::show_status( const long long ipos, const char * const msg,
 Rescuebook::Rescuebook( const long long offset, const long long isize,
                         Domain & dom, const Domain * const test_dom,
                         const Rb_options & rb_opts, const char * const iname,
-                        const char * const logname, const int cluster,
+                        const char * const bfname, const int cluster,
                         const int hardbs, const bool synchronous )
-  : Logbook( offset, isize, dom, logname, cluster, hardbs, rb_opts.complete_only ),
+  : Blockbook( offset, isize, dom, bfname, cluster, hardbs, rb_opts.complete_only ),
     Rb_options( rb_opts ),
     error_rate( 0 ),
     sparse_size( sparse ? 0 : -1 ),
@@ -736,9 +736,9 @@ int Rescuebook::do_rescue( const int ides, const int odes )
   if( verbosity >= 0 )
     {
     std::fputs( "Press Ctrl-C to interrupt\n", stdout );
-    if( logfile_exists() )
+    if( blockfile_exists() )
       {
-      std::fputs( "Initial status (read from logfile)\n", stdout );
+      std::fputs( "Initial status (read from blockfile)\n", stdout );
       if( verbosity >= 3 )
         {
         std::printf( "current position: %10sB,     current sector: %7lld\n",
@@ -747,7 +747,7 @@ int Rescuebook::do_rescue( const int ides, const int odes )
           std::printf( " last block size: %10sB\n",
                        format_num( sblock( sblocks() - 1 ).size() ) );
         }
-      if( domain().pos() > 0 || domain().end() < logfile_isize() )
+      if( domain().pos() > 0 || domain().end() < blockfile_isize() )
         std::printf( "(sizes below are limited to the domain %sB to %sB)\n",
                      format_num( domain().pos() ), format_num( domain().end() ) );
       std::printf( "rescued: %10sB,  errsize:%9sB,  errors: %7ld\n",
@@ -773,7 +773,7 @@ int Rescuebook::do_rescue( const int ides, const int odes )
   if( retval == 0 && errors_or_timeout() ) retval = 1;
   if( verbosity >= 0 )
     {
-    if( retval == -2 ) std::fputs( "\nLogfile error", stdout );
+    if( retval == -2 ) std::fputs( "\nBlockfile error", stdout );
     else if( retval == 0 && signaled )
       std::fputs( "\nInterrupted by user", stdout );
     else
@@ -787,7 +787,7 @@ int Rescuebook::do_rescue( const int ides, const int odes )
     std::fputc( '\n', stdout );
     std::fflush( stdout );
     }
-  if( retval == -2 ) retval = 1;		// logfile error
+  if( retval == -2 ) retval = 1;		// blockfile error
   else
     {
     if( retval == 0 && !signaled ) current_status( finished );
@@ -797,7 +797,7 @@ int Rescuebook::do_rescue( const int ides, const int odes )
       if( retval == 0 ) retval = 1;
       }
     compact_sblock_vector();
-    if( !update_logfile( odes_, true ) && retval == 0 ) retval = 1;
+    if( !update_blockfile( odes_, true ) && retval == 0 ) retval = 1;
     }
   if( close( odes_ ) != 0 )
     { show_error( "Can't close outfile", errno );

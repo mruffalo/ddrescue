@@ -28,22 +28,22 @@ in2="${testdir}"/test2.txt
 in3="${testdir}"/test3.txt
 in4="${testdir}"/test4.txt
 in5="${testdir}"/test5.txt
-blank="${testdir}"/logfile_blank
-logfile1="${testdir}"/logfile1
-logfile2="${testdir}"/logfile2
-logfile2i="${testdir}"/logfile2i
-logfile3="${testdir}"/logfile3
-logfile4="${testdir}"/logfile4
-logfile5="${testdir}"/logfile5
+blank="${testdir}"/blockfile_blank
+bf1="${testdir}"/blockfile1
+bf2="${testdir}"/blockfile2
+bf2i="${testdir}"/blockfile2i
+bf3="${testdir}"/blockfile3
+bf4="${testdir}"/blockfile4
+bf5="${testdir}"/blockfile5
 fail=0
 
 printf "testing ddrescue-%s..." "$2"
 
 "${DDRESCUE}" -q ${in}
 if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
-"${DDRESCUE}" -q ${in} out logfile extra
+"${DDRESCUE}" -q ${in} out blockfile extra
 if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
-"${DDRESCUE}" -q ${in} ${in} logfile
+"${DDRESCUE}" -q ${in} ${in} blockfile
 if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
 "${DDRESCUE}" -q ${in} out ${in}
 if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
@@ -51,17 +51,17 @@ if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
 if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
 "${DDRESCUE}" -q -F- ${in} out
 if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
-"${DDRESCUE}" -q -F ${in} out logfile
+"${DDRESCUE}" -q -F ${in} out blockfile
 if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
-"${DDRESCUE}" -q -F- --ask ${in} out logfile
+"${DDRESCUE}" -q -F- --ask ${in} out blockfile
 if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
-"${DDRESCUE}" -q -G --ask ${in} out logfile
+"${DDRESCUE}" -q -G --ask ${in} out blockfile
 if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
 "${DDRESCUE}" -q -G ${in} out
 if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
-"${DDRESCUE}" -q -F- -G ${in} out logfile
+"${DDRESCUE}" -q -F- -G ${in} out blockfile
 if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
-"${DDRESCUE}" -q -H ${logfile2i} ${in} out logfile
+"${DDRESCUE}" -q -H ${bf2i} ${in} out blockfile
 if [ $? = 2 ] ; then printf . ; else printf - ; fail=1 ; fi
 "${DDRESCUE}" -q -K ${in} out
 if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
@@ -75,32 +75,32 @@ if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
 if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
 "${DDRESCUE}" -q -i -1 ${in} out
 if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
-"${DDRESCUE}" -q -m ${logfile1} -m ${logfile2} ${in} out logfile
+"${DDRESCUE}" -q -m ${bf1} -m ${bf2} ${in} out blockfile
 if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
-"${DDRESCUE}" -q -m ${logfile2i} ${in} out logfile
+"${DDRESCUE}" -q -m ${bf2i} ${in} out blockfile
 if [ $? = 2 ] ; then printf . ; else printf - ; fail=1 ; fi
-"${DDRESCUE}" -q -w ${in} out logfile
+"${DDRESCUE}" -q -w ${in} out blockfile
 if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
 "${DDRESCUE}" -q --cpass=1, ${in} out
 if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
 "${DDRESCUE}" -q --cpass=4 ${in} out
 if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
 
-rm -f logfile
-"${DDRESCUE}" -q -t -p -i15000 ${in} out logfile || fail=1
-"${DDRESCUE}" -q -y -f -n -s15000 ${in} out logfile || fail=1
+rm -f blockfile
+"${DDRESCUE}" -q -t -p -i15000 ${in} out blockfile || fail=1
+"${DDRESCUE}" -q -y -f -n -s15000 ${in} out blockfile || fail=1
 cmp ${in} out || fail=1
 printf .
 
 rm -f out
-rm -f logfile
-"${DDRESCUE}" -q -R -i15000 ${in} out logfile || fail=1
-"${DDRESCUE}" -q -R -s15000 --cpass=3 ${in} out logfile || fail=1
+rm -f blockfile
+"${DDRESCUE}" -q -R -i15000 ${in} out blockfile || fail=1
+"${DDRESCUE}" -q -R -s15000 --cpass=3 ${in} out blockfile || fail=1
 cmp ${in} out || fail=1
 printf .
 
 rm -f out
-"${DDRESCUE}" -q -F+ -o15000 ${in} out2 logfile || fail=1
+"${DDRESCUE}" -q -F+ -o15000 ${in} out2 blockfile || fail=1
 "${DDRESCUE}" -q -R -S -i15000 -o0 --unidirectional out2 out || fail=1
 cmp ${in} out || fail=1
 printf .
@@ -111,199 +111,199 @@ cmp ${in} out || fail=1
 printf .
 
 rm -f out
-"${DDRESCUE}" -q -O -H ${logfile1} ${in} out || fail=1
+"${DDRESCUE}" -q -O -H ${bf1} ${in} out || fail=1
 cmp ${in1} out || fail=1
 printf .
-"${DDRESCUE}" -q -O -L -K0 -c1 -H ${logfile2i} ${in2} out || fail=1
+"${DDRESCUE}" -q -O -L -K0 -c1 -H ${bf2i} ${in2} out || fail=1
 cmp ${in} out || fail=1
 printf .
 
 rm -f out
-"${DDRESCUE}" -q -c1 -H ${logfile3} ${in3} out || fail=1
-"${DDRESCUE}" -q -c2 -H ${logfile4} ${in4} out || fail=1
-"${DDRESCUE}" -q -H ${logfile5} ${in5} out || fail=1
+"${DDRESCUE}" -q -c1 -H ${bf3} ${in3} out || fail=1
+"${DDRESCUE}" -q -c2 -H ${bf4} ${in4} out || fail=1
+"${DDRESCUE}" -q -H ${bf5} ${in5} out || fail=1
 cmp ${in} out || fail=1
 printf .
 
 rm -f out
-"${DDRESCUE}" -q -X -m ${logfile1} ${in} out || fail=1
+"${DDRESCUE}" -q -X -m ${bf1} ${in} out || fail=1
 cmp ${in1} out || fail=1
 printf .
-"${DDRESCUE}" -q -X -L -m ${logfile2i} ${in2} out || fail=1
+"${DDRESCUE}" -q -X -L -m ${bf2i} ${in2} out || fail=1
 cmp ${in} out || fail=1
 printf .
 
 rm -f out
-"${DDRESCUE}" -q -R -m ${logfile2} ${in} out || fail=1
+"${DDRESCUE}" -q -R -m ${bf2} ${in} out || fail=1
 cmp ${in2} out || fail=1
 printf .
-"${DDRESCUE}" -q -R -K,64KiB -m ${logfile1} ${in1} out || fail=1
+"${DDRESCUE}" -q -R -K,64KiB -m ${bf1} ${in1} out || fail=1
 cmp ${in} out || fail=1
 printf .
 
 rm -f out
-"${DDRESCUE}" -q -m ${logfile5} ${in5} out || fail=1
-"${DDRESCUE}" -q -m ${logfile4} ${in4} out || fail=1
-"${DDRESCUE}" -q -m ${logfile3} ${in3} out || fail=1
+"${DDRESCUE}" -q -m ${bf5} ${in5} out || fail=1
+"${DDRESCUE}" -q -m ${bf4} ${in4} out || fail=1
+"${DDRESCUE}" -q -m ${bf3} ${in3} out || fail=1
 cmp ${in} out || fail=1
 printf .
 
 rm -f out
-cat ${logfile1} > logfile || framework_failure
-"${DDRESCUE}" -q -I ${in2} out logfile || fail=1
-cat ${logfile2} > logfile || framework_failure
-"${DDRESCUE}" -q -I ${in} out logfile || fail=1
+cat ${bf1} > blockfile || framework_failure
+"${DDRESCUE}" -q -I ${in2} out blockfile || fail=1
+cat ${bf2} > blockfile || framework_failure
+"${DDRESCUE}" -q -I ${in} out blockfile || fail=1
 cmp ${in} out || fail=1
 printf .
 
 rm -f out
-cat ${logfile1} > logfile || framework_failure
-"${DDRESCUE}" -q -R ${in2} out logfile || fail=1
-cat ${logfile2} > logfile || framework_failure
-"${DDRESCUE}" -q -R -C ${in1} out logfile || fail=1
+cat ${bf1} > blockfile || framework_failure
+"${DDRESCUE}" -q -R ${in2} out blockfile || fail=1
+cat ${bf2} > blockfile || framework_failure
+"${DDRESCUE}" -q -R -C ${in1} out blockfile || fail=1
 cmp ${in} out || fail=1
 printf .
 
 rm -f out
 fail2=0
 for i in 0 8000 16000 24000 32000 ; do
-	"${DDRESCUE}" -q -i${i} -s4000 -m ${logfile1} ${in} out || fail2=1
+	"${DDRESCUE}" -q -i${i} -s4000 -m ${bf1} ${in} out || fail2=1
 done
 cmp -s ${in} out && fail2=1
 for i in 4000 12000 20000 28000 36000 ; do
-	"${DDRESCUE}" -q -i${i} -s4000 -m ${logfile1} ${in} out || fail2=1
+	"${DDRESCUE}" -q -i${i} -s4000 -m ${bf1} ${in} out || fail2=1
 done
 cmp ${in1} out || fail2=1
 for i in 0 8000 16000 24000 32000 ; do
-	"${DDRESCUE}" -q -i${i} -s4000 -m ${logfile2} ${in2} out || fail2=1
+	"${DDRESCUE}" -q -i${i} -s4000 -m ${bf2} ${in2} out || fail2=1
 done
 cmp -s ${in} out && fail2=1
 for i in 4000 12000 20000 28000 36000 ; do
-	"${DDRESCUE}" -q -i${i} -s4000 -m ${logfile2} ${in2} out || fail2=1
+	"${DDRESCUE}" -q -i${i} -s4000 -m ${bf2} ${in2} out || fail2=1
 done
 cmp ${in} out || fail2=1
 if [ ${fail2} = 0 ] ; then printf . ; else printf - ; fail=1 ; fi
 
-rm -f logfile
+rm -f blockfile
 cat ${in1} > out || framework_failure
-"${DDRESCUE}" -q -G ${in} out logfile || fail=1
-"${DDRESCUE}" -q ${in2} out logfile || fail=1
+"${DDRESCUE}" -q -G ${in} out blockfile || fail=1
+"${DDRESCUE}" -q ${in2} out blockfile || fail=1
 cmp ${in} out || fail=1
 printf .
 
-rm -f logfile
+rm -f blockfile
 cat ${in} > copy || framework_failure
 printf "garbage" >> copy || framework_failure
 cat ${in2} > out || framework_failure
 "${DDRESCUE}" -q -t -x 36388 ${in1} copy || fail=1
-"${DDRESCUE}" -q -G ${in} out logfile || fail=1
-"${DDRESCUE}" -q -R -T1.5d copy out logfile || fail=1
+"${DDRESCUE}" -q -G ${in} out blockfile || fail=1
+"${DDRESCUE}" -q -R -T1.5d copy out blockfile || fail=1
 cmp ${in} out || fail=1
 printf .
 
 printf "\ntesting ddrescuelog-%s..." "$2"
 
-"${DDRESCUELOG}" -q logfile
+"${DDRESCUELOG}" -q blockfile
 if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
 "${DDRESCUELOG}" -q -d
 if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
-"${DDRESCUELOG}" -q -l+l ${logfile1}
+"${DDRESCUELOG}" -q -l+l ${bf1}
 if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
-"${DDRESCUELOG}" -q -t -d logfile
+"${DDRESCUELOG}" -q -t -d blockfile
 if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
-"${DDRESCUELOG}" -q -m ${logfile2i} -t logfile
+"${DDRESCUELOG}" -q -m ${bf2i} -t blockfile
 if [ $? = 2 ] ; then printf . ; else printf - ; fail=1 ; fi
 
-"${DDRESCUELOG}" -a '?,+' -i3072 ${logfile1} > logfile
-"${DDRESCUELOG}" -D logfile
+"${DDRESCUELOG}" -a '?,+' -i3072 ${bf1} > blockfile
+"${DDRESCUELOG}" -D blockfile
 if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
-"${DDRESCUELOG}" -a '?,+' -i2048 -s1024 logfile > logfile2
-"${DDRESCUELOG}" -d logfile2
+"${DDRESCUELOG}" -a '?,+' -i2048 -s1024 blockfile > blockfile2
+"${DDRESCUELOG}" -d blockfile2
 if [ $? = 0 ] ; then printf . ; else printf - ; fail=1 ; fi
 
-"${DDRESCUELOG}" -b2048 -l+ ${logfile1} > out || fail=1
-"${DDRESCUELOG}" -b2048 -f -c logfile < out || fail=1
-"${DDRESCUELOG}" -b2048 -l+ logfile > copy || fail=1
+"${DDRESCUELOG}" -b2048 -l+ ${bf1} > out || fail=1
+"${DDRESCUELOG}" -b2048 -f -c blockfile < out || fail=1
+"${DDRESCUELOG}" -b2048 -l+ blockfile > copy || fail=1
 cmp out copy || fail=1
 printf .
-"${DDRESCUELOG}" -q -p ${logfile1} logfile
+"${DDRESCUELOG}" -q -p ${bf1} blockfile
 if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
-"${DDRESCUELOG}" -P ${logfile1} logfile || fail=1
+"${DDRESCUELOG}" -P ${bf1} blockfile || fail=1
 printf .
-"${DDRESCUELOG}" -b2048 -s36388 -f -c?+ logfile < out || fail=1
-"${DDRESCUELOG}" -p ${logfile2} logfile || fail=1
+"${DDRESCUELOG}" -b2048 -s36388 -f -c?+ blockfile < out || fail=1
+"${DDRESCUELOG}" -p ${bf2} blockfile || fail=1
 printf .
-"${DDRESCUELOG}" -b2048 -f -c?+ logfile < out || fail=1
-"${DDRESCUELOG}" -s36388 -p ${logfile2} logfile || fail=1
+"${DDRESCUELOG}" -b2048 -f -c?+ blockfile < out || fail=1
+"${DDRESCUELOG}" -s36388 -p ${bf2} blockfile || fail=1
 printf .
-"${DDRESCUELOG}" -q -s36389 -p ${logfile2} logfile
-if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
-
-printf "10\n12\n14\n16\n" | "${DDRESCUELOG}" -b2048 -f -c+? logfile || fail=1
-"${DDRESCUELOG}" -q -p logfile ${logfile1}
-if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
-"${DDRESCUELOG}" -q -i0x5000 -p logfile ${logfile1}
-if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
-"${DDRESCUELOG}" -i0x5000 -s0x3800 -p logfile ${logfile1} || fail=1
-printf .
-
-"${DDRESCUELOG}" -C ${logfile2i} > logfile || fail=1
-"${DDRESCUELOG}" -p ${logfile2} logfile || fail=1
-printf .
-
-cat ${logfile1} > logfile || framework_failure
-"${DDRESCUELOG}" -i1024 -s2048 -d logfile
-if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
-"${DDRESCUELOG}" -i1024 -s1024 -d logfile || fail=1
-printf .
-"${DDRESCUELOG}" -q -i1024 -s1024 -d logfile
+"${DDRESCUELOG}" -q -s36389 -p ${bf2} blockfile
 if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
 
-cat ${logfile2} > logfile || framework_failure
-"${DDRESCUELOG}" -m ${logfile1} -D logfile
+printf "10\n12\n14\n16\n" | "${DDRESCUELOG}" -b2048 -f -c+? blockfile || fail=1
+"${DDRESCUELOG}" -q -p blockfile ${bf1}
 if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
-"${DDRESCUELOG}" -L -m ${logfile2i} -D logfile || fail=1
-printf .
-"${DDRESCUELOG}" -i1024 -s2048 -d logfile
+"${DDRESCUELOG}" -q -i0x5000 -p blockfile ${bf1}
 if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
-"${DDRESCUELOG}" -i2048 -s2048 -d logfile || fail=1
+"${DDRESCUELOG}" -i0x5000 -s0x3800 -p blockfile ${bf1} || fail=1
 printf .
 
-"${DDRESCUELOG}" -b2048 -l+ ${logfile1} > out || fail=1
+"${DDRESCUELOG}" -C ${bf2i} > blockfile || fail=1
+"${DDRESCUELOG}" -p ${bf2} blockfile || fail=1
+printf .
+
+cat ${bf1} > blockfile || framework_failure
+"${DDRESCUELOG}" -i1024 -s2048 -d blockfile
+if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
+"${DDRESCUELOG}" -i1024 -s1024 -d blockfile || fail=1
+printf .
+"${DDRESCUELOG}" -q -i1024 -s1024 -d blockfile
+if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
+
+cat ${bf2} > blockfile || framework_failure
+"${DDRESCUELOG}" -m ${bf1} -D blockfile
+if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
+"${DDRESCUELOG}" -L -m ${bf2i} -D blockfile || fail=1
+printf .
+"${DDRESCUELOG}" -i1024 -s2048 -d blockfile
+if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
+"${DDRESCUELOG}" -i2048 -s2048 -d blockfile || fail=1
+printf .
+
+"${DDRESCUELOG}" -b2048 -l+ ${bf1} > out || fail=1
 printf "0\n2\n4\n6\n8\n10\n12\n14\n16\n" > copy || framework_failure
 cmp out copy || fail=1
 printf .
-"${DDRESCUELOG}" -b2048 -l?- ${logfile1} > out || fail=1
+"${DDRESCUELOG}" -b2048 -l?- ${bf1} > out || fail=1
 printf "1\n3\n5\n7\n9\n11\n13\n15\n17\n" > copy || framework_failure
 cmp out copy || fail=1
 printf .
-"${DDRESCUELOG}" -b2048 -l+ -i0x1800 -o0 -s0x4000 ${logfile1} > out || fail=1
+"${DDRESCUELOG}" -b2048 -l+ -i0x1800 -o0 -s0x4000 ${bf1} > out || fail=1
 printf "1\n3\n5\n7\n" > copy || framework_failure
 cmp out copy || fail=1
 printf .
 
-"${DDRESCUELOG}" -n ${logfile2} > logfile || framework_failure
-"${DDRESCUELOG}" -b2048 -l+ logfile > out || fail=1
+"${DDRESCUELOG}" -n ${bf2} > blockfile || framework_failure
+"${DDRESCUELOG}" -b2048 -l+ blockfile > out || fail=1
 printf "0\n2\n4\n6\n8\n10\n12\n14\n16\n" > copy || framework_failure
 cmp out copy || fail=1
 printf .
-"${DDRESCUELOG}" -b2048 -l?- logfile > out || fail=1
+"${DDRESCUELOG}" -b2048 -l?- blockfile > out || fail=1
 printf "1\n3\n5\n7\n9\n11\n13\n15\n17\n" > copy || framework_failure
 cmp out copy || fail=1
 printf .
-"${DDRESCUELOG}" -b2048 -l+ -i2048 -o0 -s0x4000 logfile > out || fail=1
+"${DDRESCUELOG}" -b2048 -l+ -i2048 -o0 -s0x4000 blockfile > out || fail=1
 printf "1\n3\n5\n7\n" > copy || framework_failure
 cmp out copy || fail=1
 printf .
 
-"${DDRESCUELOG}" -q -P ${logfile2i} ${logfile2}
+"${DDRESCUELOG}" -q -P ${bf2i} ${bf2}
 if [ $? = 2 ] ; then printf . ; else printf - ; fail=1 ; fi
-"${DDRESCUELOG}" -L -P ${logfile2i} ${logfile2} || fail=1
+"${DDRESCUELOG}" -L -P ${bf2i} ${bf2} || fail=1
 printf .
 
 fail2=0			# test XOR
-for i in ${logfile1} ${logfile2} ${logfile3} ${logfile4} ${logfile5} ; do
-	for j in ${logfile1} ${logfile2} ${logfile3} ${logfile4} ${logfile5} ; do
+for i in ${bf1} ${bf2} ${bf3} ${bf4} ${bf5} ; do
+	for j in ${bf1} ${bf2} ${bf3} ${bf4} ${bf5} ; do
 		"${DDRESCUELOG}" -x ${j} ${i} > out || fail2=1
 		"${DDRESCUELOG}" -x ${i} ${j} > copy || fail2=1
 		"${DDRESCUELOG}" -P out copy || fail2=1
@@ -314,76 +314,76 @@ done
 if [ ${fail2} = 0 ] ; then printf . ; else printf - ; fail=1 ; fi
 
 fail2=0
-"${DDRESCUELOG}" -x ${logfile1} ${logfile2} > out || fail2=1
-"${DDRESCUELOG}" -x ${logfile2} ${logfile1} > copy || fail2=1
+"${DDRESCUELOG}" -x ${bf1} ${bf2} > out || fail2=1
+"${DDRESCUELOG}" -x ${bf2} ${bf1} > copy || fail2=1
 "${DDRESCUELOG}" -p out copy || fail2=1
 "${DDRESCUELOG}" -d out || fail2=1
 "${DDRESCUELOG}" -d copy || fail2=1
-"${DDRESCUELOG}" -x ${logfile1} ${blank} > out || fail2=1
-"${DDRESCUELOG}" -x ${blank} ${logfile1} > copy || fail2=1
+"${DDRESCUELOG}" -x ${bf1} ${blank} > out || fail2=1
+"${DDRESCUELOG}" -x ${blank} ${bf1} > copy || fail2=1
 "${DDRESCUELOG}" -p out copy || fail2=1
-"${DDRESCUELOG}" -p out ${logfile1} || fail2=1
-"${DDRESCUELOG}" -p ${logfile1} copy || fail2=1
-"${DDRESCUELOG}" -x ${logfile2} ${logfile2} > logfile || fail2=1
-"${DDRESCUELOG}" -P ${blank} logfile || fail2=1
-"${DDRESCUELOG}" -x ${logfile1} ${logfile1} > logfile || fail2=1
-"${DDRESCUELOG}" -P ${blank} logfile || fail2=1
-"${DDRESCUELOG}" -b2048 -l+ ${logfile1} > out || fail2=1
-"${DDRESCUELOG}" -b2048 -l- logfile > copy || fail2=1
+"${DDRESCUELOG}" -p out ${bf1} || fail2=1
+"${DDRESCUELOG}" -p ${bf1} copy || fail2=1
+"${DDRESCUELOG}" -x ${bf2} ${bf2} > blockfile || fail2=1
+"${DDRESCUELOG}" -P ${blank} blockfile || fail2=1
+"${DDRESCUELOG}" -x ${bf1} ${bf1} > blockfile || fail2=1
+"${DDRESCUELOG}" -P ${blank} blockfile || fail2=1
+"${DDRESCUELOG}" -b2048 -l+ ${bf1} > out || fail2=1
+"${DDRESCUELOG}" -b2048 -l- blockfile > copy || fail2=1
 cmp out copy || fail2=1
-"${DDRESCUELOG}" -b2048 -i0x2000 -s0x2800 -l+ ${logfile1} > out || fail2=1
-"${DDRESCUELOG}" -i0x1800 -s0x3800 -x ${logfile1} ${logfile1} > logfile || fail2=1
-"${DDRESCUELOG}" -b2048 -l- logfile > copy || fail2=1
+"${DDRESCUELOG}" -b2048 -i0x2000 -s0x2800 -l+ ${bf1} > out || fail2=1
+"${DDRESCUELOG}" -i0x1800 -s0x3800 -x ${bf1} ${bf1} > blockfile || fail2=1
+"${DDRESCUELOG}" -b2048 -l- blockfile > copy || fail2=1
 cmp out copy || fail2=1
 if [ ${fail2} = 0 ] ; then printf . ; else printf - ; fail=1 ; fi
 
 fail2=0
-"${DDRESCUELOG}" -x ${logfile3} ${logfile4} > out || fail2=1
-"${DDRESCUELOG}" -x ${logfile4} ${logfile3} > copy || fail2=1
+"${DDRESCUELOG}" -x ${bf3} ${bf4} > out || fail2=1
+"${DDRESCUELOG}" -x ${bf4} ${bf3} > copy || fail2=1
 "${DDRESCUELOG}" -p out copy || fail2=1
-"${DDRESCUELOG}" -x ${logfile3} ${logfile5} > out || fail2=1
-"${DDRESCUELOG}" -x ${logfile5} ${logfile3} > copy || fail2=1
+"${DDRESCUELOG}" -x ${bf3} ${bf5} > out || fail2=1
+"${DDRESCUELOG}" -x ${bf5} ${bf3} > copy || fail2=1
 "${DDRESCUELOG}" -p out copy || fail2=1
-"${DDRESCUELOG}" -x ${logfile4} ${logfile5} > out || fail2=1
-"${DDRESCUELOG}" -x ${logfile5} ${logfile4} > copy || fail2=1
+"${DDRESCUELOG}" -x ${bf4} ${bf5} > out || fail2=1
+"${DDRESCUELOG}" -x ${bf5} ${bf4} > copy || fail2=1
 "${DDRESCUELOG}" -p out copy || fail2=1
 if [ ${fail2} = 0 ] ; then printf . ; else printf - ; fail=1 ; fi
 
 fail2=0
-"${DDRESCUELOG}" -x ${logfile3} ${logfile4} > out || fail2=1
+"${DDRESCUELOG}" -x ${bf3} ${bf4} > out || fail2=1
 "${DDRESCUELOG}" -D out && fail2=1
-"${DDRESCUELOG}" -x out ${logfile5} > logfile || fail2=1
-"${DDRESCUELOG}" -d logfile || fail2=1
+"${DDRESCUELOG}" -x out ${bf5} > blockfile || fail2=1
+"${DDRESCUELOG}" -d blockfile || fail2=1
 
-"${DDRESCUELOG}" -x ${logfile3} ${logfile5} > out || fail2=1
+"${DDRESCUELOG}" -x ${bf3} ${bf5} > out || fail2=1
 "${DDRESCUELOG}" -D out && fail2=1
-"${DDRESCUELOG}" -x out ${logfile4} > logfile || fail2=1
-"${DDRESCUELOG}" -d logfile || fail2=1
+"${DDRESCUELOG}" -x out ${bf4} > blockfile || fail2=1
+"${DDRESCUELOG}" -d blockfile || fail2=1
 
-"${DDRESCUELOG}" -x ${logfile4} ${logfile3} > out || fail2=1
+"${DDRESCUELOG}" -x ${bf4} ${bf3} > out || fail2=1
 "${DDRESCUELOG}" -D out && fail2=1
-"${DDRESCUELOG}" -x out ${logfile5} > logfile || fail2=1
-"${DDRESCUELOG}" -d logfile || fail2=1
+"${DDRESCUELOG}" -x out ${bf5} > blockfile || fail2=1
+"${DDRESCUELOG}" -d blockfile || fail2=1
 
-"${DDRESCUELOG}" -x ${logfile4} ${logfile5} > out || fail2=1
+"${DDRESCUELOG}" -x ${bf4} ${bf5} > out || fail2=1
 "${DDRESCUELOG}" -D out && fail2=1
-"${DDRESCUELOG}" -x out ${logfile3} > logfile || fail2=1
-"${DDRESCUELOG}" -d logfile || fail2=1
+"${DDRESCUELOG}" -x out ${bf3} > blockfile || fail2=1
+"${DDRESCUELOG}" -d blockfile || fail2=1
 
-"${DDRESCUELOG}" -x ${logfile5} ${logfile3} > out || fail2=1
+"${DDRESCUELOG}" -x ${bf5} ${bf3} > out || fail2=1
 "${DDRESCUELOG}" -D out && fail2=1
-"${DDRESCUELOG}" -x out ${logfile4} > logfile || fail2=1
-"${DDRESCUELOG}" -d logfile || fail2=1
+"${DDRESCUELOG}" -x out ${bf4} > blockfile || fail2=1
+"${DDRESCUELOG}" -d blockfile || fail2=1
 
-"${DDRESCUELOG}" -x ${logfile5} ${logfile4} > out || fail2=1
+"${DDRESCUELOG}" -x ${bf5} ${bf4} > out || fail2=1
 "${DDRESCUELOG}" -D out && fail2=1
-"${DDRESCUELOG}" -x out ${logfile3} > logfile || fail2=1
-"${DDRESCUELOG}" -d logfile || fail2=1
+"${DDRESCUELOG}" -x out ${bf3} > blockfile || fail2=1
+"${DDRESCUELOG}" -d blockfile || fail2=1
 if [ ${fail2} = 0 ] ; then printf . ; else printf - ; fail=1 ; fi
 
 fail2=0			# test AND
-for i in ${logfile1} ${logfile2} ${logfile3} ${logfile4} ${logfile5} ; do
-	for j in ${logfile1} ${logfile2} ${logfile3} ${logfile4} ${logfile5} ; do
+for i in ${bf1} ${bf2} ${bf3} ${bf4} ${bf5} ; do
+	for j in ${bf1} ${bf2} ${bf3} ${bf4} ${bf5} ; do
 		"${DDRESCUELOG}" -y ${j} ${i} > out || fail2=1
 		"${DDRESCUELOG}" -y ${i} ${j} > copy || fail2=1
 		"${DDRESCUELOG}" -P out copy || fail2=1
@@ -392,45 +392,45 @@ done
 if [ ${fail2} = 0 ] ; then printf . ; else printf - ; fail=1 ; fi
 
 fail2=0
-"${DDRESCUELOG}" -b2048 -l+ ${logfile1} > out || fail2=1
-"${DDRESCUELOG}" -y ${logfile1} ${logfile2} > logfile || fail2=1
-"${DDRESCUELOG}" -P ${blank} logfile || fail2=1
-"${DDRESCUELOG}" -b2048 -l? logfile > copy || fail2=1
+"${DDRESCUELOG}" -b2048 -l+ ${bf1} > out || fail2=1
+"${DDRESCUELOG}" -y ${bf1} ${bf2} > blockfile || fail2=1
+"${DDRESCUELOG}" -P ${blank} blockfile || fail2=1
+"${DDRESCUELOG}" -b2048 -l? blockfile > copy || fail2=1
 cmp out copy || fail2=1
-"${DDRESCUELOG}" -y ${logfile2} ${logfile1} > logfile || fail2=1
-"${DDRESCUELOG}" -P ${blank} logfile || fail2=1
-"${DDRESCUELOG}" -b2048 -l- logfile > copy || fail2=1
+"${DDRESCUELOG}" -y ${bf2} ${bf1} > blockfile || fail2=1
+"${DDRESCUELOG}" -P ${blank} blockfile || fail2=1
+"${DDRESCUELOG}" -b2048 -l- blockfile > copy || fail2=1
 cmp out copy || fail2=1
-"${DDRESCUELOG}" -b2048 -i0x2000 -s0x2800 -l+ ${logfile1} > out || fail2=1
-"${DDRESCUELOG}" -i0x1800 -s0x3800 -y ${logfile2} ${logfile1} > logfile || fail2=1
-"${DDRESCUELOG}" -b2048 -l- logfile > copy || fail2=1
+"${DDRESCUELOG}" -b2048 -i0x2000 -s0x2800 -l+ ${bf1} > out || fail2=1
+"${DDRESCUELOG}" -i0x1800 -s0x3800 -y ${bf2} ${bf1} > blockfile || fail2=1
+"${DDRESCUELOG}" -b2048 -l- blockfile > copy || fail2=1
 cmp out copy || fail2=1
 if [ ${fail2} = 0 ] ; then printf . ; else printf - ; fail=1 ; fi
 
 fail2=0
-"${DDRESCUELOG}" -y ${logfile3} ${logfile4} > out || fail2=1
+"${DDRESCUELOG}" -y ${bf3} ${bf4} > out || fail2=1
 "${DDRESCUELOG}" -P ${blank} out || fail2=1
-"${DDRESCUELOG}" -y ${logfile3} ${logfile5} > out || fail2=1
+"${DDRESCUELOG}" -y ${bf3} ${bf5} > out || fail2=1
 "${DDRESCUELOG}" -P ${blank} out || fail2=1
-"${DDRESCUELOG}" -y ${logfile4} ${logfile5} > out || fail2=1
+"${DDRESCUELOG}" -y ${bf4} ${bf5} > out || fail2=1
 "${DDRESCUELOG}" -P ${blank} out || fail2=1
 if [ ${fail2} = 0 ] ; then printf . ; else printf - ; fail=1 ; fi
 
 fail2=0
-"${DDRESCUELOG}" -i0x2000 -s0x2800 -z ${logfile2} ${logfile1} > logfile || fail2=1
-"${DDRESCUELOG}" -D logfile
+"${DDRESCUELOG}" -i0x2000 -s0x2800 -z ${bf2} ${bf1} > blockfile || fail2=1
+"${DDRESCUELOG}" -D blockfile
 if [ $? != 1 ] ; then fail2=1 ; fi
-"${DDRESCUELOG}" -i0x1C00 -s0x2C00 -D logfile
+"${DDRESCUELOG}" -i0x1C00 -s0x2C00 -D blockfile
 if [ $? != 1 ] ; then fail2=1 ; fi
-"${DDRESCUELOG}" -i0x2000 -s0x2C00 -D logfile
+"${DDRESCUELOG}" -i0x2000 -s0x2C00 -D blockfile
 if [ $? != 1 ] ; then fail2=1 ; fi
-"${DDRESCUELOG}" -i0x2000 -s0x2800 -d logfile
+"${DDRESCUELOG}" -i0x2000 -s0x2800 -d blockfile
 if [ $? != 0 ] ; then fail2=1 ; fi
 if [ ${fail2} = 0 ] ; then printf . ; else printf - ; fail=1 ; fi
 
 fail2=0			# test OR
-for i in ${logfile1} ${logfile2} ${logfile3} ${logfile4} ${logfile5} ; do
-	for j in ${logfile1} ${logfile2} ${logfile3} ${logfile4} ${logfile5} ; do
+for i in ${bf1} ${bf2} ${bf3} ${bf4} ${bf5} ; do
+	for j in ${bf1} ${bf2} ${bf3} ${bf4} ${bf5} ; do
 		"${DDRESCUELOG}" -z ${j} ${i} > out || fail2=1
 		"${DDRESCUELOG}" -z ${i} ${j} > copy || fail2=1
 		"${DDRESCUELOG}" -P out copy || fail2=1
@@ -439,62 +439,62 @@ done
 if [ ${fail2} = 0 ] ; then printf . ; else printf - ; fail=1 ; fi
 
 fail2=0
-"${DDRESCUELOG}" -z ${logfile1} ${logfile2} > out || fail2=1
-"${DDRESCUELOG}" -z ${logfile2} ${logfile1} > copy || fail2=1
+"${DDRESCUELOG}" -z ${bf1} ${bf2} > out || fail2=1
+"${DDRESCUELOG}" -z ${bf2} ${bf1} > copy || fail2=1
 "${DDRESCUELOG}" -p out copy || fail2=1
 "${DDRESCUELOG}" -d out || fail2=1
 "${DDRESCUELOG}" -d copy || fail2=1
-"${DDRESCUELOG}" -z ${logfile1} ${blank} > out || fail2=1
-"${DDRESCUELOG}" -z ${blank} ${logfile1} > copy || fail2=1
+"${DDRESCUELOG}" -z ${bf1} ${blank} > out || fail2=1
+"${DDRESCUELOG}" -z ${blank} ${bf1} > copy || fail2=1
 "${DDRESCUELOG}" -p out copy || fail2=1
-"${DDRESCUELOG}" -p out ${logfile1} || fail2=1
-"${DDRESCUELOG}" -p ${logfile1} copy || fail2=1
-"${DDRESCUELOG}" -z ${logfile3} ${logfile4} > out || fail2=1
-"${DDRESCUELOG}" -z ${logfile4} ${logfile3} > copy || fail2=1
+"${DDRESCUELOG}" -p out ${bf1} || fail2=1
+"${DDRESCUELOG}" -p ${bf1} copy || fail2=1
+"${DDRESCUELOG}" -z ${bf3} ${bf4} > out || fail2=1
+"${DDRESCUELOG}" -z ${bf4} ${bf3} > copy || fail2=1
 "${DDRESCUELOG}" -p out copy || fail2=1
-"${DDRESCUELOG}" -z ${logfile3} ${logfile5} > out || fail2=1
-"${DDRESCUELOG}" -z ${logfile5} ${logfile3} > copy || fail2=1
+"${DDRESCUELOG}" -z ${bf3} ${bf5} > out || fail2=1
+"${DDRESCUELOG}" -z ${bf5} ${bf3} > copy || fail2=1
 "${DDRESCUELOG}" -p out copy || fail2=1
-"${DDRESCUELOG}" -z ${logfile4} ${logfile5} > out || fail2=1
-"${DDRESCUELOG}" -z ${logfile5} ${logfile4} > copy || fail2=1
+"${DDRESCUELOG}" -z ${bf4} ${bf5} > out || fail2=1
+"${DDRESCUELOG}" -z ${bf5} ${bf4} > copy || fail2=1
 "${DDRESCUELOG}" -p out copy || fail2=1
 if [ ${fail2} = 0 ] ; then printf . ; else printf - ; fail=1 ; fi
 
 fail2=0
-"${DDRESCUELOG}" -z ${logfile3} ${logfile4} > out || fail2=1
+"${DDRESCUELOG}" -z ${bf3} ${bf4} > out || fail2=1
 "${DDRESCUELOG}" -D out && fail2=1
-"${DDRESCUELOG}" -z out ${logfile5} > logfile || fail2=1
-"${DDRESCUELOG}" -d logfile || fail2=1
+"${DDRESCUELOG}" -z out ${bf5} > blockfile || fail2=1
+"${DDRESCUELOG}" -d blockfile || fail2=1
 
-"${DDRESCUELOG}" -z ${logfile3} ${logfile5} > out || fail2=1
+"${DDRESCUELOG}" -z ${bf3} ${bf5} > out || fail2=1
 "${DDRESCUELOG}" -D out && fail2=1
-"${DDRESCUELOG}" -z out ${logfile4} > logfile || fail2=1
-"${DDRESCUELOG}" -d logfile || fail2=1
+"${DDRESCUELOG}" -z out ${bf4} > blockfile || fail2=1
+"${DDRESCUELOG}" -d blockfile || fail2=1
 
-"${DDRESCUELOG}" -z ${logfile4} ${logfile3} > out || fail2=1
+"${DDRESCUELOG}" -z ${bf4} ${bf3} > out || fail2=1
 "${DDRESCUELOG}" -D out && fail2=1
-"${DDRESCUELOG}" -z out ${logfile5} > logfile || fail2=1
-"${DDRESCUELOG}" -d logfile || fail2=1
+"${DDRESCUELOG}" -z out ${bf5} > blockfile || fail2=1
+"${DDRESCUELOG}" -d blockfile || fail2=1
 
-"${DDRESCUELOG}" -z ${logfile4} ${logfile5} > out || fail2=1
+"${DDRESCUELOG}" -z ${bf4} ${bf5} > out || fail2=1
 "${DDRESCUELOG}" -D out && fail2=1
-"${DDRESCUELOG}" -z out ${logfile3} > logfile || fail2=1
-"${DDRESCUELOG}" -d logfile || fail2=1
+"${DDRESCUELOG}" -z out ${bf3} > blockfile || fail2=1
+"${DDRESCUELOG}" -d blockfile || fail2=1
 
-"${DDRESCUELOG}" -z ${logfile5} ${logfile3} > out || fail2=1
+"${DDRESCUELOG}" -z ${bf5} ${bf3} > out || fail2=1
 "${DDRESCUELOG}" -D out && fail2=1
-"${DDRESCUELOG}" -z out ${logfile4} > logfile || fail2=1
-"${DDRESCUELOG}" -d logfile || fail2=1
+"${DDRESCUELOG}" -z out ${bf4} > blockfile || fail2=1
+"${DDRESCUELOG}" -d blockfile || fail2=1
 
-"${DDRESCUELOG}" -z ${logfile5} ${logfile4} > out || fail2=1
+"${DDRESCUELOG}" -z ${bf5} ${bf4} > out || fail2=1
 "${DDRESCUELOG}" -D out && fail2=1
-"${DDRESCUELOG}" -z out ${logfile3} > logfile || fail2=1
-"${DDRESCUELOG}" -d logfile || fail2=1
+"${DDRESCUELOG}" -z out ${bf3} > blockfile || fail2=1
+"${DDRESCUELOG}" -d blockfile || fail2=1
 if [ ${fail2} = 0 ] ; then printf . ; else printf - ; fail=1 ; fi
 
 fail2=0			# test ( a && b ) == !( !a || !b )
-for i in ${logfile1} ${logfile2} ${logfile3} ${logfile4} ${logfile5} ; do
-	for j in ${logfile1} ${logfile2} ${logfile3} ${logfile4} ${logfile5} ; do
+for i in ${bf1} ${bf2} ${bf3} ${bf4} ${bf5} ; do
+	for j in ${bf1} ${bf2} ${bf3} ${bf4} ${bf5} ; do
 		"${DDRESCUELOG}" -n ${i} > na || fail2=1
 		"${DDRESCUELOG}" -n ${j} > nb || fail2=1
 		"${DDRESCUELOG}" -z nb na > out || fail2=1

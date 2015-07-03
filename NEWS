@@ -1,5 +1,8 @@
 Changes in version 1.20:
 
+"logfile" has been renamed to "blockfile" everywhere, even in long
+option names. ("--domain-logfile" is now "--domain-blockfile", etc).
+
 The short name of option "--synchronous" has been changed to "-y".
 
 The long name of option "-d" has been changed to "--idirect".
@@ -26,12 +29,12 @@ fraction of the appropriate unit.
 
 Fill mode has been extended to write location data into each sector.
 
-An emergency save of the logfile has been added. It can be activated in
-case of ddrescue having trouble writing the logfile.
+An emergency save of the blockfile has been added. It can be activated
+in case of ddrescue having trouble writing the blockfile.
 
 Device name is now shown with "--ask" or "-vv" on Haiku.
 
-Ddrescuelog can now show the status of more than one logfile.
+Ddrescuelog can now show the status of more than one blockfile.
 
 The new chapter "Optical media" has been added to the manual.
 

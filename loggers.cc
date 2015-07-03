@@ -65,7 +65,7 @@ bool Rate_logger::open_file()
     {
     last_time = -1;
     f = std::fopen( filename_, "w" );
-    error = !f || !write_logfile_header( f, "Rates" ) ||
+    error = !f || !write_file_header( f, "Rates Logfile" ) ||
             std::fputs( "#Time  Ipos  Current_rate  Average_rate  Errors  Errsize\n", f ) == EOF;
     }
   return !error;
@@ -94,7 +94,7 @@ bool Read_logger::open_file()
     {
     prev_is_msg = true;
     f = std::fopen( filename_, "w" );
-    error = !f || !write_logfile_header( f, "Reads" ) ||
+    error = !f || !write_file_header( f, "Reads Logfile" ) ||
             std::fputs( "#  Ipos       Size  Copied_size  Error_size\n", f ) == EOF;
     }
   return !error;

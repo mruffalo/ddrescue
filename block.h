@@ -120,7 +120,7 @@ class Domain
 
 public:
   Domain( const long long p, const long long s,
-          const char * const logname = 0, const bool loose = false );
+          const char * const bfname = 0, const bool loose = false );
 
   long long pos() const { return block_vector.front().pos(); }
   long long end() const { return block_vector.back().end(); }
@@ -176,7 +176,7 @@ public:
   };
 
 
-class Logfile
+class Blockfile
   {
 public:
   enum Status
@@ -196,8 +196,8 @@ private:
     { sblock_vector.insert( sblock_vector.begin() + i, sb ); }
 
 public:
-  explicit Logfile( const char * const logname )
-    : current_pos_( 0 ), filename_( logname ), current_status_( copying ),
+  explicit Blockfile( const char * const bfname )
+    : current_pos_( 0 ), filename_( bfname ), current_status_( copying ),
       index_( 0 ), read_only_( false ) {}
 
   void compact_sblock_vector();
@@ -205,8 +205,8 @@ public:
   bool truncate_vector( const long long end, const bool force = false );
   void set_to_status( const Sblock::Status st )
     { sblock_vector.assign( 1, Sblock( 0, -1, st ) ); }
-  bool read_logfile( const int default_sblock_status = 0 );
-  int write_logfile( FILE * f = 0, const bool timestamp = false ) const;
+  bool read_blockfile( const int default_sblock_status = 0 );
+  int write_blockfile( FILE * f = 0, const bool timestamp = false ) const;
 
   bool blank() const;
   long long current_pos() const { return current_pos_; }
@@ -229,7 +229,7 @@ public:
     { sblock_vector[i].status( st ); }
 
   void split_by_domain_borders( const Domain & domain );
-  void split_by_logfile_borders( const Logfile & logfile );
+  void split_by_blockfile_borders( const Blockfile & blockfile );
   bool try_split_sblock_by( const long long pos, const long i )
     {
     if( sblock_vector[i].strictly_includes( pos ) )
@@ -260,10 +260,10 @@ void show_error( const char * const msg,
                  const int errcode = 0, const bool help = false );
 void internal_error( const char * const msg );
 int empty_domain();
-int not_readable( const char * const logname );
-int not_writable( const char * const logname );
+int not_readable( const char * const bfname );
+int not_writable( const char * const bfname );
 long initial_time();
-bool write_logfile_header( FILE * const f, const char * const logtype );
+bool write_file_header( FILE * const f, const char * const filetype );
 bool write_timestamp( FILE * const f );
 bool write_final_timestamp( FILE * const f );
 const char * format_num( long long num, long long limit = 999999,

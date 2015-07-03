@@ -26,7 +26,7 @@
 #include <unistd.h>
 
 #include "block.h"
-#include "logbook.h"
+#include "blockbook.h"
 
 
 namespace {

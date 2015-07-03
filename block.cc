@@ -95,23 +95,23 @@ Block Block::split( long long pos, const int hardbs )
 
 
 Domain::Domain( const long long p, const long long s,
-                const char * const logname, const bool loose )
+                const char * const bfname, const bool loose )
   {
   const Block b( p, s );
-  if( !logname || !logname[0] ) { block_vector.push_back( b ); return; }
-  Logfile logfile( logname );
-  if( !logfile.read_logfile( loose ? '?' : 0 ) )
+  if( !bfname || !bfname[0] ) { block_vector.push_back( b ); return; }
+  Blockfile blockfile( bfname );
+  if( !blockfile.read_blockfile( loose ? '?' : 0 ) )
     {
     char buf[80];
     snprintf( buf, sizeof buf,
-              "Logfile '%s' does not exist or is not readable.", logname );
+              "Blockfile '%s' does not exist or is not readable.", bfname );
     show_error( buf );
     std::exit( 1 );
     }
-  logfile.compact_sblock_vector();
-  for( long i = 0; i < logfile.sblocks(); ++i )
+  blockfile.compact_sblock_vector();
+  for( long i = 0; i < blockfile.sblocks(); ++i )
     {
-    const Sblock & sb = logfile.sblock( i );
+    const Sblock & sb = blockfile.sblock( i );
     if( sb.status() == Sblock::finished ) block_vector.push_back( sb );
     }
   if( block_vector.empty() ) block_vector.push_back( Block( 0, 0 ) );

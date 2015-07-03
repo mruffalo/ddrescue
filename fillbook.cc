@@ -29,7 +29,7 @@
 #include <unistd.h>
 
 #include "block.h"
-#include "logbook.h"
+#include "blockbook.h"
 
 
 // Return values: 1 write error, 0 OK.
@@ -63,7 +63,7 @@ int Fillbook::fill_block( const Sblock & sb )
   }
 
 
-// Return values: 1 write error, 0 OK, -1 interrupted, -2 logfile error.
+// Return values: 1 write error, 0 OK, -1 interrupted, -2 blockfile error.
 //
 int Fillbook::fill_areas()
   {
@@ -93,7 +93,7 @@ int Fillbook::fill_areas()
         if( b.size() > hardbs() )	// fill the area a hardbs at a time
           { b.size( hardbs() ); continue; }
         }
-      if( !update_logfile( odes_ ) ) return -2;
+      if( !update_blockfile( odes_ ) ) return -2;
       b.pos( b.end() );
       if( b.end() > sb.end() ) b.crop( sb );
       }
@@ -178,9 +178,9 @@ int Fillbook::do_fill( const int odes )
   if( verbosity >= 0 )
     {
     std::fputs( "Press Ctrl-C to interrupt\n", stdout );
-    if( logfile_exists() )
+    if( blockfile_exists() )
       {
-      std::fputs( "Initial status (read from logfile)\n", stdout );
+      std::fputs( "Initial status (read from blockfile)\n", stdout );
       std::printf( "filled size:    %10sB,  filled areas:    %7ld\n",
                    format_num( filled_size ), filled_areas );
       std::printf( "remaining size: %10sB,  remaining areas: %7ld\n",
@@ -194,17 +194,17 @@ int Fillbook::do_fill( const int odes )
   if( verbosity >= 0 )
     {
     show_status( -1, ( retval || signaled ) ? 0 : "Finished", true );
-    if( retval == -2 ) std::fputs( "\nLogfile error", stdout );
+    if( retval == -2 ) std::fputs( "\nBlockfile error", stdout );
     else if( signaled ) std::fputs( "\nInterrupted by user", stdout );
     std::fputc( '\n', stdout );
     std::fflush( stdout );
     }
-  if( retval == -2 ) retval = 1;		// logfile error
+  if( retval == -2 ) retval = 1;		// blockfile error
   else
     {
     if( retval == 0 && !signaled ) current_status( finished );
     compact_sblock_vector();
-    if( !update_logfile( odes_, true ) && retval == 0 ) retval = 1;
+    if( !update_blockfile( odes_, true ) && retval == 0 ) retval = 1;
     }
   if( close( odes_ ) != 0 )
     { show_error( "Can't close outfile", errno );
