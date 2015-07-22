@@ -95,23 +95,23 @@ Block Block::split( long long pos, const int hardbs )
 
 
 Domain::Domain( const long long p, const long long s,
-                const char * const bfname, const bool loose )
+                const char * const mapname, const bool loose )
   {
   const Block b( p, s );
-  if( !bfname || !bfname[0] ) { block_vector.push_back( b ); return; }
-  Blockfile blockfile( bfname );
-  if( !blockfile.read_blockfile( loose ? '?' : 0 ) )
+  if( !mapname || !mapname[0] ) { block_vector.push_back( b ); return; }
+  Mapfile mapfile( mapname );
+  if( !mapfile.read_mapfile( loose ? '?' : 0 ) )
     {
     char buf[80];
     snprintf( buf, sizeof buf,
-              "Blockfile '%s' does not exist or is not readable.", bfname );
+              "Mapfile '%s' does not exist or is not readable.", mapname );
     show_error( buf );
     std::exit( 1 );
     }
-  blockfile.compact_sblock_vector();
-  for( long i = 0; i < blockfile.sblocks(); ++i )
+  mapfile.compact_sblock_vector();
+  for( long i = 0; i < mapfile.sblocks(); ++i )
     {
-    const Sblock & sb = blockfile.sblock( i );
+    const Sblock & sb = mapfile.sblock( i );
     if( sb.status() == Sblock::finished ) block_vector.push_back( sb );
     }
   if( block_vector.empty() ) block_vector.push_back( Block( 0, 0 ) );

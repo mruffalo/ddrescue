@@ -6,9 +6,9 @@ INSTALL_DATA = $(INSTALL) -m 644
 INSTALL_DIR = $(INSTALL) -d -m 755
 SHELL = /bin/sh
 
-ddobjs = blockbook.o fillbook.o genbook.o io.o rescuebook.o main.o
-objs = arg_parser.o rational.o non_posix.o block.o blockfile.o loggers.o $(ddobjs)
-logobjs = arg_parser.o block.o blockfile.o ddrescuelog.o
+ddobjs = mapbook.o fillbook.o genbook.o io.o rescuebook.o main.o
+objs = arg_parser.o rational.o non_posix.o loggers.o block.o mapfile.o $(ddobjs)
+logobjs = arg_parser.o block.o mapfile.o ddrescuelog.o
 
 
 .PHONY : all install install-bin install-info install-man \
@@ -41,11 +41,11 @@ ddrescuelog.o : ddrescuelog.cc
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c -o $@ $<
 
 $(objs)       : Makefile
-$(ddobjs)     : block.h blockbook.h
+$(ddobjs)     : block.h mapbook.h
 arg_parser.o  : arg_parser.h
 block.o       : block.h
-blockfile.o   : block.h
 loggers.o     : block.h loggers.h
+mapfile.o     : block.h
 non_posix.o   : non_posix.h
 rational.o    : rational.h
 rescuebook.o  : loggers.h rescuebook.h
@@ -66,7 +66,7 @@ $(VPATH)/doc/$(progname).1 : $(progname)
 	help2man -n 'data recovery tool' -o $@ ./$(progname)
 
 $(VPATH)/doc/ddrescuelog.1 : ddrescuelog
-	help2man -n 'tool for ddrescue blockfiles' -o $@ --no-info ./ddrescuelog
+	help2man -n 'tool for ddrescue mapfiles' -o $@ --no-info ./ddrescuelog
 
 Makefile : $(VPATH)/configure $(VPATH)/Makefile.in
 	./config.status
@@ -137,9 +137,9 @@ dist : doc
 	  $(DISTNAME)/doc/$(pkgname).info \
 	  $(DISTNAME)/doc/$(pkgname).texi \
 	  $(DISTNAME)/testsuite/check.sh \
-	  $(DISTNAME)/testsuite/blockfile[1-5] \
-	  $(DISTNAME)/testsuite/blockfile2i \
-	  $(DISTNAME)/testsuite/blockfile_blank \
+	  $(DISTNAME)/testsuite/mapfile[1-5] \
+	  $(DISTNAME)/testsuite/mapfile2i \
+	  $(DISTNAME)/testsuite/mapfile_blank \
 	  $(DISTNAME)/testsuite/test.txt \
 	  $(DISTNAME)/testsuite/test[1-5].txt \
 	  $(DISTNAME)/*.h \

@@ -30,7 +30,7 @@
 #include <unistd.h>
 
 #include "block.h"
-#include "blockbook.h"
+#include "mapbook.h"
 
 
 namespace {
@@ -47,14 +47,14 @@ void input_pos_error( const long long pos, const long long isize )
 } // end namespace
 
 
-bool Blockbook::save_blockfile( const char * const name )
+bool Mapbook::save_mapfile( const char * const name )
   {
   std::remove( name );
   FILE * const f = std::fopen( name, "w" );
-  if( f && write_blockfile( f, true ) && std::fclose( f ) == 0 )
+  if( f && write_mapfile( f, true ) && std::fclose( f ) == 0 )
     {
     char buf[80];
-    snprintf( buf, sizeof buf, "Blockfile saved in '%s'\n", name );
+    snprintf( buf, sizeof buf, "Mapfile saved in '%s'\n", name );
     final_msg( buf );
     return true;
     }
@@ -62,13 +62,13 @@ bool Blockbook::save_blockfile( const char * const name )
   }
 
 
-bool Blockbook::emergency_save()
+bool Mapbook::emergency_save()
   {
   static bool first_time = true;
   static std::string home_name;
-  const std::string dead_name( "ddrescue.bf" );
+  const std::string dead_name( "ddrescue.map" );
 
-  if( filename() != dead_name && save_blockfile( dead_name.c_str() ) )
+  if( filename() != dead_name && save_mapfile( dead_name.c_str() ) )
     return true;
   if( first_time )
     {
@@ -77,21 +77,21 @@ bool Blockbook::emergency_save()
     if( p ) { home_name = p; home_name += '/'; home_name += dead_name; }
     }
   if( home_name.size() &&
-      filename() != home_name && save_blockfile( home_name.c_str() ) )
+      filename() != home_name && save_mapfile( home_name.c_str() ) )
     return true;
   show_error( "Emergency save failed." );
   return false;
   }
 
 
-Blockbook::Blockbook( const long long offset, const long long isize,
-                      Domain & dom, const char * const bfname,
-                      const int cluster, const int hardbs,
-                      const bool complete_only )
-  : Blockfile( bfname ), offset_( offset ), blockfile_isize_( 0 ),
+Mapbook::Mapbook( const long long offset, const long long isize,
+                  Domain & dom, const char * const mapname,
+                  const int cluster, const int hardbs,
+                  const bool complete_only )
+  : Mapfile( mapname ), offset_( offset ), mapfile_isize_( 0 ),
     domain_( dom ), hardbs_( hardbs ), softbs_( cluster * hardbs_ ),
     iobuf_size_( hardbs_ + softbs_ ),
-    final_errno_( 0 ), ul_t1( 0 ), blockfile_exists_( false )
+    final_errno_( 0 ), ul_t1( 0 ), mapfile_exists_( false )
   {
   int alignment = sysconf( _SC_PAGESIZE );
   if( alignment < hardbs_ || alignment % hardbs_ ) alignment = hardbs_;
@@ -111,21 +111,21 @@ Blockbook::Blockbook( const long long offset, const long long isize,
     }
   if( filename() )
     {
-    blockfile_exists_ = read_blockfile();
-    if( blockfile_exists_ ) blockfile_isize_ = extent().end();
+    mapfile_exists_ = read_mapfile( 0, false );
+    if( mapfile_exists_ ) mapfile_isize_ = extent().end();
     }
   if( !complete_only ) extend_sblock_vector( isize );
-  else domain_.crop( extent() );  // limit domain to blocks read from blockfile
+  else domain_.crop( extent() );  // limit domain to blocks read from mapfile
   compact_sblock_vector();
   split_by_domain_borders( domain_ );
   if( sblocks() == 0 ) domain_.clear();
   }
 
 
-// Writes periodically the blockfile to disc.
+// Writes periodically the mapfile to disc.
 // Returns false only if update is attempted and fails.
 //
-bool Blockbook::update_blockfile( const int odes, const bool force )
+bool Mapbook::update_mapfile( const int odes, const bool force )
   {
   if( !filename() ) return true;
   const int interval = 30 + std::min( 270L, sblocks() / 38 );	// 30s to 5m
@@ -138,12 +138,12 @@ bool Blockbook::update_blockfile( const int odes, const bool force )
   while( true )
     {
     errno = 0;
-    if( write_blockfile( 0, true ) ) return true;
+    if( write_mapfile( 0, true ) ) return true;
     if( verbosity < 0 ) return false;
     const int saved_errno = errno;
     std::fputc( '\n', stderr );
     char buf[80];
-    snprintf( buf, sizeof buf, "Error writing blockfile '%s'", filename() );
+    snprintf( buf, sizeof buf, "Error writing mapfile '%s'", filename() );
     show_error( buf, saved_errno );
     std::fputs( "Fix the problem and press ENTER to retry,\n"
                 "                     or E+ENTER for an emergency save and exit,\n"

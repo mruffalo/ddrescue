@@ -41,8 +41,8 @@
 #include "arg_parser.h"
 #include "rational.h"
 #include "block.h"
-#include "blockbook.h"
 #include "loggers.h"
+#include "mapbook.h"
 #include "non_posix.h"
 #include "rescuebook.h"
 
@@ -70,9 +70,10 @@ void show_help( const int cluster, const int hardbs, const int skipbs )
   std::printf( "%s - Data recovery tool.\n", Program_name );
   std::printf( "Copies data from one file or block device to another,\n"
                "trying to rescue the good parts first in case of read errors.\n"
-               "\nUsage: %s [options] infile outfile [blockfile]\n", invocation_name );
-  std::printf( "\nYou should use a blockfile unless you know what you are doing.\n"
-               "NOTE: In versions of ddrescue prior to 1.20 the blockfile was called\n"
+               "\nUsage: %s [options] infile outfile [mapfile]\n", invocation_name );
+  std::printf( "\nAlways use a mapfile unless you know you won't need it. Without a\n"
+               "mapfile, ddrescue can't resume a rescue, only reinitiate it.\n"
+               "NOTE: In versions of ddrescue prior to 1.20 the mapfile was called\n"
                "'logfile'. The format is the same; only the name has changed.\n"
                "\nIf you reboot, check the device names before restarting ddrescue.\n"
                "Do not use options '-F' or '-G' without reading the manual first.\n"
@@ -84,22 +85,22 @@ void show_help( const int cluster, const int hardbs, const int skipbs )
                "  -b, --sector-size=<bytes>      sector size of input device [default %d]\n", hardbs );
   std::printf( "  -B, --binary-prefixes          show binary multipliers in numbers [SI]\n"
                "  -c, --cluster-size=<sectors>   sectors to copy at a time [%d]\n", cluster );
-  std::printf( "  -C, --complete-only            do not read new data beyond blockfile limits\n"
+  std::printf( "  -C, --complete-only            do not read new data beyond mapfile limits\n"
                "  -d, --idirect                  use direct disc access for input file\n"
                "  -D, --odirect                  use direct disc access for output file\n"
                "  -e, --max-errors=[+]<n>        maximum number of [new] error areas allowed\n"
                "  -E, --max-error-rate=<bytes>   maximum allowed rate of read errors per second\n"
                "  -f, --force                    overwrite output device or partition\n"
                "  -F, --fill-mode=<types>        fill blocks of given types with data (?*/-+l)\n"
-               "  -G, --generate-mode            generate approx blockfile from partial copy\n"
-               "  -H, --test-mode=<file>         set map of good/bad blocks from blockfile\n"
+               "  -G, --generate-mode            generate approximate mapfile from partial copy\n"
+               "  -H, --test-mode=<file>         set map of good/bad blocks from given mapfile\n"
                "  -i, --input-position=<bytes>   starting position of domain in input file [0]\n"
-               "  -I, --verify-input-size        verify input file size with size in blockfile\n"
+               "  -I, --verify-input-size        verify input file size with size in mapfile\n"
                "  -J, --verify-on-error          reread latest good sector after every error\n"
                "  -K, --skip-size=<min>[,<max>]  initial size to skip on read error [%sB]\n",
                format_num( skipbs, 9999, -1 ) );
-  std::printf( "  -L, --loose-domain             accept an incomplete domain blockfile\n"
-               "  -m, --domain-blockfile=<file>  restrict domain to finished blocks in file\n"
+  std::printf( "  -L, --loose-domain             accept an incomplete domain mapfile\n"
+               "  -m, --domain-mapfile=<file>    restrict domain to finished blocks in file\n"
                "  -M, --retrim                   mark all failed blocks as non-trimmed\n"
                "  -n, --no-scrape                skip the scraping phase\n"
                "  -N, --no-trim                  skip the trimming phase\n"
@@ -169,10 +170,10 @@ long parse_time_interval( const char * const s )
 
 
 bool check_identical( const char * const iname, const char * const oname,
-                      const char * const bfname )
+                      const char * const mapname )
   {
-  struct stat istat, ostat, bfstat;
-  bool iexists = false, oexists = false, bfexists = false;
+  struct stat istat, ostat, mapstat;
+  bool iexists = false, oexists = false, mapexists = false;
   bool same = ( std::strcmp( iname, oname ) == 0 );
   if( !same )
     {
@@ -183,28 +184,28 @@ bool check_identical( const char * const iname, const char * const oname,
     }
   if( same )
     { show_error( "Infile and outfile are the same." ); return true; }
-  if( bfname )
+  if( mapname )
     {
-    same = ( std::strcmp( iname, bfname ) == 0 );
+    same = ( std::strcmp( iname, mapname ) == 0 );
     if( !same )
       {
-      bfexists = ( stat( bfname, &bfstat ) == 0 );
-      if( iexists && bfexists && istat.st_ino == bfstat.st_ino &&
-          istat.st_dev == bfstat.st_dev ) same = true;
+      mapexists = ( stat( mapname, &mapstat ) == 0 );
+      if( iexists && mapexists && istat.st_ino == mapstat.st_ino &&
+          istat.st_dev == mapstat.st_dev ) same = true;
       }
     if( same )
-      { show_error( "Infile and blockfile are the same." ); return true; }
-    if( std::strcmp( oname, bfname ) == 0 ||
-        ( oexists && bfexists && ostat.st_ino == bfstat.st_ino &&
-          ostat.st_dev == bfstat.st_dev ) )
-      { show_error( "Outfile and blockfile are the same." ); return true; }
+      { show_error( "Infile and mapfile are the same." ); return true; }
+    if( std::strcmp( oname, mapname ) == 0 ||
+        ( oexists && mapexists && ostat.st_ino == mapstat.st_ino &&
+          ostat.st_dev == mapstat.st_dev ) )
+      { show_error( "Outfile and mapfile are the same." ); return true; }
     }
   return false;
   }
 
 
 bool check_files( const char * const iname, const char * const oname,
-                  const char * const bfname,
+                  const char * const mapname,
                   const long long min_outfile_size, const bool force,
                   const bool generate, const bool preallocate,
                   const bool sparse )
@@ -214,13 +215,13 @@ bool check_files( const char * const iname, const char * const oname,
     show_error( "Both input and output files must be specified.", 0, true );
     return false;
     }
-  if( check_identical( iname, oname, bfname ) ) return false;
-  if( bfname )
+  if( check_identical( iname, oname, mapname ) ) return false;
+  if( mapname )
     {
     struct stat st;
-    if( stat( bfname, &st ) == 0 && !S_ISREG( st.st_mode ) )
+    if( stat( mapname, &st ) == 0 && !S_ISREG( st.st_mode ) )
       {
-      show_error( "Blockfile exists and is not a regular file." );
+      show_error( "Mapfile exists and is not a regular file." );
       return false;
       }
     }
@@ -249,17 +250,17 @@ bool check_files( const char * const iname, const char * const oname,
 
 int do_fill( const long long offset, Domain & domain,
              const char * const iname, const char * const oname,
-             const char * const bfname, const int cluster, const int hardbs,
+             const char * const mapname, const int cluster, const int hardbs,
              const Fb_options & fb_opts, const bool synchronous )
   {
-  if( !bfname )
-    { show_error( "Blockfile required in fill mode.", 0, true ); return 1; }
+  if( !mapname )
+    { show_error( "Mapfile required in fill mode.", 0, true ); return 1; }
 
-  Fillbook fillbook( offset, domain, bfname, cluster, hardbs, fb_opts,
+  Fillbook fillbook( offset, domain, mapname, cluster, hardbs, fb_opts,
                      synchronous );
-  if( !fillbook.blockfile_exists() ) return not_readable( bfname );
+  if( !fillbook.mapfile_exists() ) return not_readable( mapname );
   if( fillbook.domain().empty() ) return empty_domain();
-  if( fillbook.read_only() ) return not_writable( bfname );
+  if( fillbook.read_only() ) return not_writable( mapname );
 
   const int ides = open( iname, O_RDONLY | O_BINARY );
   if( ides < 0 )
@@ -294,12 +295,12 @@ int do_fill( const long long offset, Domain & domain,
 
 int do_generate( const long long offset, Domain & domain,
                  const char * const iname, const char * const oname,
-                 const char * const bfname,
+                 const char * const mapname,
                  const int cluster, const int hardbs )
   {
-  if( !bfname )
+  if( !mapname )
     {
-    show_error( "Blockfile must be specified in generate mode.", 0, true );
+    show_error( "Mapfile must be specified in generate mode.", 0, true );
     return 1;
     }
 
@@ -310,14 +311,14 @@ int do_generate( const long long offset, Domain & domain,
   if( isize < 0 )
     { show_error( "Input file is not seekable." ); return 1; }
 
-  Genbook genbook( offset, isize, domain, bfname, cluster, hardbs );
+  Genbook genbook( offset, isize, domain, mapname, cluster, hardbs );
   if( genbook.domain().empty() ) return empty_domain();
-  if( !genbook.blank() && genbook.current_status() != Blockfile::generating )
+  if( !genbook.blank() && genbook.current_status() != Mapfile::generating )
     {
-    show_error( "Blockfile alredy exists and is not empty.", 0, true );
+    show_error( "Mapfile alredy exists and is not empty.", 0, true );
     return 1;
     }
-  if( genbook.read_only() ) return not_writable( bfname );
+  if( genbook.read_only() ) return not_writable( mapname );
 
   const int odes = open( oname, O_RDONLY | O_BINARY );
   if( odes < 0 )
@@ -329,7 +330,7 @@ int do_generate( const long long offset, Domain & domain,
     std::printf( "%s %s\n", Program_name, PROGVERSION );
   if( verbosity >= 1 )
     {
-    std::printf( "About to generate an approximate blockfile for %s and %s\n",
+    std::printf( "About to generate an approximate mapfile for %s and %s\n",
                  iname, oname );
     std::printf( "    Starting positions: infile = %sB,  outfile = %sB\n",
                  format_num( genbook.domain().pos() ),
@@ -397,7 +398,7 @@ bool user_agrees_ids( const Rescuebook & rescuebook, const char * const iname,
 int do_rescue( const long long offset, Domain & domain,
                const Domain * const test_domain, const Rb_options & rb_opts,
                const char * const iname, const char * const oname,
-               const char * const bfname, const int cluster,
+               const char * const mapname, const int cluster,
                const int hardbs, const int o_trunc,
                const bool ask, const bool preallocate,
                const bool synchronous, const bool verify_input_size )
@@ -413,37 +414,37 @@ int do_rescue( const long long offset, Domain & domain,
       if( isize <= 0 || isize > size ) isize = size; }
 
   Rescuebook rescuebook( offset, isize, domain, test_domain, rb_opts, iname,
-                         bfname, cluster, hardbs, synchronous );
+                         mapname, cluster, hardbs, synchronous );
 
   if( verify_input_size )
     {
-    if( !rescuebook.blockfile_exists() || isize <= 0 ||
-        rescuebook.blockfile_isize() <= 0 ||
-        rescuebook.blockfile_isize() >= LLONG_MAX )
+    if( !rescuebook.mapfile_exists() || isize <= 0 ||
+        rescuebook.mapfile_isize() <= 0 ||
+        rescuebook.mapfile_isize() >= LLONG_MAX )
       {
       show_error( "Can't verify input file size.\n"
-                  "          Blockfile is unfinished or missing or size is invalid." );
+                  "          Mapfile is unfinished or missing or size is invalid." );
       return 1;
       }
-    if( rescuebook.blockfile_isize() != isize )
+    if( rescuebook.mapfile_isize() != isize )
       {
-      show_error( "Input file size differs from size calculated from blockfile." );
+      show_error( "Input file size differs from size calculated from mapfile." );
       return 1;
       }
     }
   if( rescuebook.domain().empty() )
     {
-    if( rescuebook.complete_only && !rescuebook.blockfile_exists() )
-      { show_error( "Nothing to complete; blockfile is missing or empty.", 0, true );
+    if( rescuebook.complete_only && !rescuebook.mapfile_exists() )
+      { show_error( "Nothing to complete; mapfile is missing or empty.", 0, true );
         return 1; }
     return empty_domain();
     }
   if( o_trunc && !rescuebook.blank() )
     {
-    show_error( "Outfile truncation and blockfile input are incompatible.", 0, true );
+    show_error( "Outfile truncation and mapfile input are incompatible.", 0, true );
     return 1;
     }
-  if( rescuebook.read_only() ) return not_writable( bfname );
+  if( rescuebook.read_only() ) return not_writable( mapname );
 
   if( ask && !user_agrees_ids( rescuebook, iname, oname, ides ) ) return 1;
 
@@ -464,9 +465,9 @@ int do_rescue( const long long offset, Domain & domain,
 #endif
     }
 
-  if( rescuebook.filename() && !rescuebook.blockfile_exists() &&
-      !rescuebook.write_blockfile( 0, true ) )
-    { show_error( "Can't create blockfile", errno ); return 1; }
+  if( rescuebook.filename() && !rescuebook.mapfile_exists() &&
+      !rescuebook.write_mapfile( 0, true ) )
+    { show_error( "Can't create mapfile", errno ); return 1; }
 
   if( !rate_logger.open_file() )
     { show_error( "Can't open file for logging rates", errno ); return 1; }
@@ -619,8 +620,8 @@ int main( const int argc, const char * const argv[] )
   long long ipos = 0;
   long long opos = -1;
   long long max_size = -1;
-  const char * domain_blockfile_name = 0;
-  const char * test_mode_blockfile_name = 0;
+  const char * domain_mapfile_name = 0;
+  const char * test_mode_mapfile_name = 0;
   const int cluster_bytes = 65536;
   const int default_hardbs = 512;
   const int max_hardbs = Rb_options::max_max_skipbs;
@@ -666,7 +667,7 @@ int main( const int argc, const char * const argv[] )
     { 'J', "verify-on-error",     Arg_parser::no  },
     { 'K', "skip-size",           Arg_parser::yes },
     { 'L', "loose-domain",        Arg_parser::no  },
-    { 'm', "domain-blockfile",    Arg_parser::yes },
+    { 'm', "domain-mapfile",      Arg_parser::yes },
     { 'm', "domain-logfile",      Arg_parser::yes },
     { 'M', "retrim",              Arg_parser::no  },
     { 'n', "no-scrape",           Arg_parser::no  },
@@ -728,13 +729,13 @@ int main( const int argc, const char * const argv[] )
       case 'h': show_help( cluster_bytes / default_hardbs, default_hardbs,
                            Rb_options::default_skipbs );
                 return 0;
-      case 'H': set_name( &test_mode_blockfile_name, arg, code ); break;
+      case 'H': set_name( &test_mode_mapfile_name, arg, code ); break;
       case 'i': ipos = getnum( arg, hardbs, 0 ); break;
       case 'I': verify_input_size = true; break;
       case 'J': rb_opts.verify_on_error = true; break;
       case 'K': parse_skipbs( arg, rb_opts, hardbs ); break;
       case 'L': loose = true; break;
-      case 'm': set_name( &domain_blockfile_name, arg, code ); break;
+      case 'm': set_name( &domain_mapfile_name, arg, code ); break;
       case 'M': rb_opts.retrim = true; break;
       case 'n': rb_opts.noscrape = true; break;
       case 'N': rb_opts.notrim = true; break;
@@ -771,20 +772,20 @@ int main( const int argc, const char * const argv[] )
   if( cluster < 1 ) cluster = cluster_bytes / hardbs;
   if( cluster < 1 ) cluster = 1;
 
-  const char *iname = 0, *oname = 0, *bfname = 0;
+  const char *iname = 0, *oname = 0, *mapname = 0;
   if( argind < parser.arguments() ) iname = parser.argument( argind++ ).c_str();
   if( argind < parser.arguments() ) oname = parser.argument( argind++ ).c_str();
-  if( argind < parser.arguments() ) bfname = parser.argument( argind++ ).c_str();
+  if( argind < parser.arguments() ) mapname = parser.argument( argind++ ).c_str();
   if( argind < parser.arguments() )
     { show_error( "Too many files.", 0, true ); return 1; }
 
   // end scan arguments
 
-  if( !check_files( iname, oname, bfname, rb_opts.min_outfile_size, force,
+  if( !check_files( iname, oname, mapname, rb_opts.min_outfile_size, force,
                     program_mode == m_generate, preallocate, rb_opts.sparse ) )
     return 1;
 
-  Domain domain( ipos, max_size, domain_blockfile_name, loose );
+  Domain domain( ipos, max_size, domain_mapfile_name, loose );
 
   switch( program_mode )
     {
@@ -792,33 +793,31 @@ int main( const int argc, const char * const argv[] )
       if( ask )
         { show_error( "Option '--ask' is incompatible with fill mode.", 0, true );
           return 1; }
-      if( rb_opts != Rb_options() || test_mode_blockfile_name ||
+      if( rb_opts != Rb_options() || test_mode_mapfile_name ||
           verify_input_size || preallocate || o_trunc )
         show_error( "warning: Options -aACdeEHIJKlMnOpPrRStTuxX are ignored in fill mode." );
-      return do_fill( opos - ipos, domain, iname, oname, bfname, cluster,
+      return do_fill( opos - ipos, domain, iname, oname, mapname, cluster,
                       hardbs, fb_opts, synchronous );
     case m_generate:
       if( ask )
         { show_error( "Option '--ask' is incompatible with generate mode.", 0, true );
           return 1; }
       if( fb_opts != Fb_options() || rb_opts != Rb_options() || synchronous ||
-          test_mode_blockfile_name || verify_input_size || preallocate ||
+          test_mode_mapfile_name || verify_input_size || preallocate ||
           o_trunc )
         show_error( "warning: Options -aACdDeEHIJKlMnOpPrRStTuwxXy are ignored in generate mode." );
-      return do_generate( opos - ipos, domain, iname, oname, bfname, cluster,
+      return do_generate( opos - ipos, domain, iname, oname, mapname, cluster,
                           hardbs );
     case m_none:
       {
       if( fb_opts != Fb_options() )
         { show_error( "Option '-w' is incompatible with rescue mode.", 0, true );
           return 1; }
-      const Domain * const test_domain = test_mode_blockfile_name ?
-        new Domain( 0, -1, test_mode_blockfile_name, loose ) : 0;
-      int tmp = do_rescue( opos - ipos, domain, test_domain, rb_opts, iname,
-                           oname, bfname, cluster, hardbs, o_trunc, ask,
-                           preallocate, synchronous, verify_input_size );
-      if( test_domain ) delete test_domain;
-      return tmp;
+      const Domain test_domain( 0, -1, test_mode_mapfile_name, loose );
+      return do_rescue( opos - ipos, domain,
+                        test_mode_mapfile_name ? &test_domain : 0, rb_opts,
+                        iname, oname, mapname, cluster, hardbs, o_trunc, ask,
+                        preallocate, synchronous, verify_input_size );
       }
     }
   }

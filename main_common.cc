@@ -184,20 +184,20 @@ int empty_domain()
   { show_error( "Nothing to do; domain is empty." ); return 0; }
 
 
-int not_readable( const char * const bfname )
+int not_readable( const char * const mapname )
   {
   char buf[80];
   snprintf( buf, sizeof buf,
-            "Blockfile '%s' does not exist or is not readable.", bfname );
+            "Mapfile '%s' does not exist or is not readable.", mapname );
   show_error( buf );
   return 1;
   }
 
 
-int not_writable( const char * const bfname )
+int not_writable( const char * const mapname )
   {
   char buf[80];
-  snprintf( buf, sizeof buf, "Blockfile '%s' is not writable.", bfname );
+  snprintf( buf, sizeof buf, "Mapfile '%s' is not writable.", mapname );
   show_error( buf );
   return 1;
   }

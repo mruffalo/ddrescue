@@ -1,7 +1,7 @@
 Changes in version 1.20:
 
-"logfile" has been renamed to "blockfile" everywhere, even in long
-option names. ("--domain-logfile" is now "--domain-blockfile", etc).
+"logfile" has been renamed to "mapfile" everywhere, even in long option
+names. ("--domain-logfile" is now "--domain-mapfile", etc).
 
 The short name of option "--synchronous" has been changed to "-y".
 
@@ -29,12 +29,18 @@ fraction of the appropriate unit.
 
 Fill mode has been extended to write location data into each sector.
 
-An emergency save of the blockfile has been added. It can be activated
-in case of ddrescue having trouble writing the blockfile.
+An emergency save of the mapfile has been added. It can be activated in
+case of ddrescue having trouble writing the mapfile.
 
 Device name is now shown with "--ask" or "-vv" on Haiku.
 
-Ddrescuelog can now show the status of more than one blockfile.
+Read-only mapfiles, like domain mapfiles or input mapfiles for
+ddrescuelog, can now be read from standard input if a hyphen '-' is used
+as mapfile name.
+
+Ddrescuelog can now show the status of more than one mapfile.
+
+"ddrescuelog --create-mapfile -" now writes the mapfile to standard output.
 
 The new chapter "Optical media" has been added to the manual.
 

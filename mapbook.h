@@ -15,32 +15,32 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-class Blockbook : public Blockfile
+class Mapbook : public Mapfile
   {
   const long long offset_;		// outfile offset (opos - ipos);
-  long long blockfile_isize_;
+  long long mapfile_isize_;
   Domain & domain_;			// rescue domain
   uint8_t *iobuf_base, *iobuf_;		// iobuf is aligned to page and hardbs
   const int hardbs_, softbs_;
   const int iobuf_size_;
   std::string final_msg_;
   int final_errno_;
-  long ul_t1;				// variable for update_blockfile
-  bool blockfile_exists_;
+  long ul_t1;				// variable for update_mapfile
+  bool mapfile_exists_;
 
-  bool save_blockfile( const char * const name );
+  bool save_mapfile( const char * const name );
   bool emergency_save();
 
-  Blockbook( const Blockbook & );	// declared as private
-  void operator=( const Blockbook & );	// declared as private
+  Mapbook( const Mapbook & );		// declared as private
+  void operator=( const Mapbook & );	// declared as private
 
 public:
-  Blockbook( const long long offset, const long long isize,
-             Domain & dom, const char * const bfname,
-             const int cluster, const int hardbs, const bool complete_only );
-  ~Blockbook() { delete[] iobuf_base; }
+  Mapbook( const long long offset, const long long isize,
+           Domain & dom, const char * const mapname,
+           const int cluster, const int hardbs, const bool complete_only );
+  ~Mapbook() { delete[] iobuf_base; }
 
-  bool update_blockfile( const int odes = -1, const bool force = false );
+  bool update_mapfile( const int odes = -1, const bool force = false );
 
   const Domain & domain() const { return domain_; }
   uint8_t * iobuf() const { return iobuf_; }
@@ -50,8 +50,8 @@ public:
   long long offset() const { return offset_; }
   const std::string & final_msg() const { return final_msg_; }
   int final_errno() const { return final_errno_; }
-  bool blockfile_exists() const { return blockfile_exists_; }
-  long long blockfile_isize() const { return blockfile_isize_; }
+  bool mapfile_exists() const { return mapfile_exists_; }
+  long long mapfile_isize() const { return mapfile_isize_; }
 
   void final_msg( const std::string & msg, const int e = 0 )
     { final_msg_ = msg; final_errno_ = e; }
@@ -78,7 +78,7 @@ struct Fb_options
   };
 
 
-class Fillbook : public Blockbook, public Fb_options
+class Fillbook : public Mapbook, public Fb_options
   {
   long long filled_size;		// size already filled
   long long remaining_size;		// size to be filled
@@ -99,9 +99,9 @@ class Fillbook : public Blockbook, public Fb_options
 
 public:
   Fillbook( const long long offset, Domain & dom,
-            const char * const bfname, const int cluster, const int hardbs,
+            const char * const mapname, const int cluster, const int hardbs,
             const Fb_options & fb_opts, const bool synchronous )
-    : Blockbook( offset, 0, dom, bfname, cluster, hardbs, true ),
+    : Mapbook( offset, 0, dom, mapname, cluster, hardbs, true ),
       Fb_options( fb_opts ),
       synchronous_( synchronous ),
       a_rate( 0 ), c_rate( 0 ), first_size( 0 ), last_size( 0 ),
@@ -113,7 +113,7 @@ public:
   };
 
 
-class Genbook : public Blockbook
+class Genbook : public Mapbook
   {
   long long recsize, gensize;		// total recovered and generated sizes
   int odes_;				// output file descriptor
@@ -129,9 +129,9 @@ class Genbook : public Blockbook
                     bool force = false );
 public:
   Genbook( const long long offset, const long long isize,
-           Domain & dom, const char * const bfname,
+           Domain & dom, const char * const mapname,
            const int cluster, const int hardbs )
-    : Blockbook( offset, isize, dom, bfname, cluster, hardbs, false ),
+    : Mapbook( offset, isize, dom, mapname, cluster, hardbs, false ),
       a_rate( 0 ), c_rate( 0 ), first_size( 0 ), last_size( 0 ),
       last_ipos( 0 ), t0( 0 ), t1( 0 ), oldlen( 0 )
       {}

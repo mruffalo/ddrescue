@@ -1,15 +1,17 @@
-2015-07-03  Antonio Diaz Diaz  <antonio@gnu.org>
+2015-07-22  Antonio Diaz Diaz  <antonio@gnu.org>
 
-	* Version 1.20-rc2 released.
-	* 'logfile' has been renamed to 'blockfile'.
-	* Files 'logbook.*' renamed to 'blockbook.*'.
-	* File 'logfile.cc' renamed to 'blockfile.cc'.
+	* Version 1.20-rc3 released.
+	* 'logfile' has been renamed to 'mapfile'.
+	* Files 'logbook.*' renamed to 'mapbook.*'.
+	* File 'logfile.cc' renamed to 'mapfile.cc'.
+	* mapfile.cc (read_mapfile): Read read-only mapfiles from stdin.
+	* ddrescuelog.cc (create_mapfile): '-' writes mapfile to stdout.
 
 2015-06-07  Antonio Diaz Diaz  <antonio@gnu.org>
 
 	* Version 1.20-rc1 released.
 	* rescuebook.cc (copy_block): Copy arbitrary blocks with '--idirect'.
-	* logbook.cc: Added emergency save of the blockfile.
+	* logbook.cc: Added emergency save of the mapfile.
 	* ddrescue.texi: Documented maximum size of the rescue domain.
 
 2015-05-09  Antonio Diaz Diaz  <antonio@gnu.org>
@@ -30,7 +32,7 @@
 	* io.cc (format_time): Show time in days, hours, minutes and seconds.
 	* Added per sector location data to fill mode.
 	* Show device name with '--ask' or '-vv' on Haiku.
-	* ddrescuelog.cc: Allow multiple blockfiles for '-t, --show-status'.
+	* ddrescuelog.cc: Allow multiple mapfiles for '-t, --show-status'.
 	* Added new chapter 'Optical media' to the manual.
 	* configure: Option '--enable-linux' renamed to '--enable-non-posix'.
 	* Files linux.{h,cc} renamed to non_posix.{h,cc}.
@@ -242,7 +244,7 @@
 
 	* Version 1.7 released.
 	* Skips faster over damaged areas (small read, big jump).
-	* Logfile is maintaned minimized at all times.
+	* Logfile is kept minimized at all times.
 	* Rescuebook::errors now counts the error areas found.
 	* Target 'check' added to Makefile.
 	* rescuebook.cc (split_errors): Added new variable 'error_counter'.
