@@ -12,7 +12,7 @@ File: ddrescue.info,  Node: Top,  Next: Introduction,  Up: (dir)
 GNU ddrescue Manual
 *******************
 
-This manual is for GNU ddrescue (version 1.20-rc3, 22 July 2015).
+This manual is for GNU ddrescue (version 1.20, 10 September 2015).
 
 * Menu:
 
@@ -165,9 +165,6 @@ Ddrescue is like any other power tool. You need to understand what it
 does, and you need to understand some things about the machines it does
 those things to, in order to use it safely.
 
-   Always use a mapfile unless you know you won't need it. Without a
-mapfile, ddrescue can't resume a rescue, only reinitiate it.
-
    Never try to rescue a r/w mounted partition. The resulting copy may
 be useless. It is best that the device or partition to be rescued is not
 mounted at all, not even read-only.
@@ -264,7 +261,7 @@ failed blocks, the good data found may divide them into smaller blocks,
 decreasing the total error size but increasing the number of errors.
 
    The 'remaining time' is calculated using the average rate of the
-last 30 seconds and does not take into account that some parts may be
+last 60 seconds and does not take into account that some parts may be
 excluded from the rescue (for example with '--no-trim'), or that some
 areas may be unrecoverable. Therefore it may be very imprecise, may
 vary widely during the rescue, and may show a non-zero value at the end
@@ -308,6 +305,9 @@ The format for running ddrescue is:
    INFILE and OUTFILE may be files, devices or partitions.  MAPFILE is
 a regular file and must be placed in an existing directory. If MAPFILE
 does not exist, ddrescue will create it.
+
+   Always use a mapfile unless you know you won't need it. Without a
+mapfile, ddrescue can't resume a rescue, only reinitiate it.
 
    ddrescue supports the following options:
 
@@ -787,7 +787,7 @@ Character   Meaning
 
 And here is an example mapfile:
 
-     # Mapfile. Created by GNU ddrescue version 1.20-rc3
+     # Mapfile. Created by GNU ddrescue version 1.20
      # Command line: ddrescue -d -c18 /dev/fd0 fdimage mapfile
      # Start time:   2015-07-21 09:37:44
      # Current time: 2015-07-21 09:38:19
@@ -1199,11 +1199,10 @@ in "generate mode", which is different from the default "rescue mode".
 That is, if you use the '--generate-mode' option, ddrescue does not
 rescue anything. It only tries to generate a MAPFILE for later use.
 
-   So you didn't read the important advice (*note Important advice::)
-and started ddrescue without a MAPFILE. Now, two days later, your
-computer crashed and you can't know how much data ddrescue managed to
-save. And even worse, you can't resume the rescue; you have to restart
-it from the very beginning.
+   So you didn't read the manual and started ddrescue without a
+MAPFILE. Now, two days later, your computer crashed and you can't know
+how much data ddrescue managed to save. And even worse, you can't
+resume the rescue; you have to restart it from the very beginning.
 
    Or maybe you started copying a drive with 'dd conv=noerror,sync' and
 are now in the same situation described above.  In this case, note that
@@ -1531,23 +1530,23 @@ Concept index
 
 Tag Table:
 Node: Top201
-Node: Introduction1437
-Node: Basic concepts4157
-Node: Important advice6440
-Node: Algorithm7646
-Node: Invoking ddrescue13075
-Node: Mapfile structure31556
-Node: Emergency save34285
-Node: Optical media35741
-Ref: lziprecover-example38674
-Node: Examples39438
-Node: Direct disc access43167
-Node: Fill mode45388
-Node: Generate mode50441
-Node: Ddrescuelog52419
-Node: Invoking ddrescuelog54714
-Node: Problems61929
-Node: Concept index62486
+Node: Introduction1438
+Node: Basic concepts4158
+Node: Important advice6441
+Node: Algorithm7516
+Node: Invoking ddrescue12945
+Node: Mapfile structure31557
+Node: Emergency save34282
+Node: Optical media35738
+Ref: lziprecover-example38671
+Node: Examples39435
+Node: Direct disc access43164
+Node: Fill mode45385
+Node: Generate mode50438
+Node: Ddrescuelog52379
+Node: Invoking ddrescuelog54674
+Node: Problems61889
+Node: Concept index62446
 
 End Tag Table
 

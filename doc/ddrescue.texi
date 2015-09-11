@@ -6,8 +6,8 @@
 @finalout
 @c %**end of header
 
-@set UPDATED 22 July 2015
-@set VERSION 1.20-rc3
+@set UPDATED 10 September 2015
+@set VERSION 1.20
 
 @dircategory GNU Packages
 @direntry
@@ -182,9 +182,6 @@ Ddrescue is like any other power tool. You need to understand what it
 does, and you need to understand some things about the machines it does
 those things to, in order to use it safely.
 
-Always use a mapfile unless you know you won't need it. Without a
-mapfile, ddrescue can't resume a rescue, only reinitiate it.
-
 Never try to rescue a r/w mounted partition. The resulting copy may be
 useless. It is best that the device or partition to be rescued is not
 mounted at all, not even read-only.
@@ -278,7 +275,7 @@ failed blocks, the good data found may divide them into smaller blocks,
 decreasing the total error size but increasing the number of errors.
 
 The @samp{remaining time} is calculated using the average rate of the
-last 30 seconds and does not take into account that some parts may be
+last 60 seconds and does not take into account that some parts may be
 excluded from the rescue (for example with @samp{--no-trim}), or that
 some areas may be unrecoverable. Therefore it may be very imprecise, may
 vary widely during the rescue, and may show a non-zero value at the end
@@ -335,6 +332,9 @@ ddrescue [@var{options}] @var{infile} @var{outfile} [@var{mapfile}]
 @var{infile} and @var{outfile} may be files, devices or partitions.
 @var{mapfile} is a regular file and must be placed in an existing
 directory. If @var{mapfile} does not exist, ddrescue will create it.
+
+Always use a mapfile unless you know you won't need it. Without a
+mapfile, ddrescue can't resume a rescue, only reinitiate it.
 
 ddrescue supports the following options:
 
@@ -1285,11 +1285,10 @@ mode". That is, if you use the @samp{--generate-mode} option, ddrescue
 does not rescue anything. It only tries to generate a @var{mapfile} for
 later use.
 
-So you didn't read the important advice (@pxref{Important advice}) and
-started ddrescue without a @var{mapfile}. Now, two days later, your
-computer crashed and you can't know how much data ddrescue managed to
-save. And even worse, you can't resume the rescue; you have to restart
-it from the very beginning.
+So you didn't read the manual and started ddrescue without a
+@var{mapfile}. Now, two days later, your computer crashed and you can't
+know how much data ddrescue managed to save. And even worse, you can't
+resume the rescue; you have to restart it from the very beginning.
 
 Or maybe you started copying a drive with @w{@code{dd
 conv=noerror,sync}} and are now in the same situation described above.

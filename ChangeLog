@@ -1,42 +1,30 @@
-2015-07-22  Antonio Diaz Diaz  <antonio@gnu.org>
+2015-09-10  Antonio Diaz Diaz  <antonio@gnu.org>
 
-	* Version 1.20-rc3 released.
-	* 'logfile' has been renamed to 'mapfile'.
-	* Files 'logbook.*' renamed to 'mapbook.*'.
-	* File 'logfile.cc' renamed to 'mapfile.cc'.
-	* mapfile.cc (read_mapfile): Read read-only mapfiles from stdin.
-	* ddrescuelog.cc (create_mapfile): '-' writes mapfile to stdout.
-
-2015-06-07  Antonio Diaz Diaz  <antonio@gnu.org>
-
-	* Version 1.20-rc1 released.
-	* rescuebook.cc (copy_block): Copy arbitrary blocks with '--idirect'.
-	* logbook.cc: Added emergency save of the mapfile.
-	* ddrescue.texi: Documented maximum size of the rescue domain.
-
-2015-05-09  Antonio Diaz Diaz  <antonio@gnu.org>
-
-	* Version 1.20-pre2 released.
-	* Added new option '-J, --verify-on-error'.
-	* Changed long name of option '-d' to '--idirect'.
-	* File 'ddrescue.h' renamed to 'logbook.h'.
-
-2015-03-25  Antonio Diaz Diaz  <antonio@gnu.org>
-
-	* Version 1.20-pre1 released.
+	* Version 1.20 released.
+	* 'logfile' has been renamed to 'mapfile' everywhere.
 	* Changed short name of option '--synchronous' to '-y'.
+	* Changed long name of option '-d' to '--idirect'.
 	* Added new option '-D, --odirect'.
+	* Added new option '-J, --verify-on-error'.
 	* Added new option '--max-read-rate'.
+	* rescuebook.cc (copy_block): Copy arbitrary blocks with '--idirect'.
 	* Include only bad_sector blocks in 'errsize'.
 	* rescuebook.cc (show_status): Show the estimated remaining time.
 	* io.cc (format_time): Show time in days, hours, minutes and seconds.
 	* Added per sector location data to fill mode.
+	* mapbook.cc: Added emergency save of the mapfile.
 	* Show device name with '--ask' or '-vv' on Haiku.
+	* mapfile.cc (read_mapfile): Read read-only mapfiles from stdin.
 	* ddrescuelog.cc: Allow multiple mapfiles for '-t, --show-status'.
-	* Added new chapter 'Optical media' to the manual.
+	* ddrescuelog.cc (create_mapfile): '-' writes mapfile to stdout.
+	* ddrescue.texi: Added new chapter 'Optical media'.
+	* ddrescue.texi: Documented maximum size of the rescue domain.
 	* configure: Option '--enable-linux' renamed to '--enable-non-posix'.
-	* Files linux.{h,cc} renamed to non_posix.{h,cc}.
 	* Makefile.in: Added new targets 'install*-compress'.
+	* File 'ddrescue.h' renamed to 'mapbook.h'.
+	* File 'logbook.cc' renamed to 'mapbook.cc'.
+	* File 'logfile.cc' renamed to 'mapfile.cc'.
+	* Files linux.{h,cc} renamed to non_posix.{h,cc}.
 
 2014-10-03  Antonio Diaz Diaz  <antonio@gnu.org>
 
@@ -126,7 +114,7 @@
 	* main.cc: Do not require '--force' for generate mode.
 	* ddrescue.h (Logbook::logfile_exists): Do not return false if
 	  logfile exists but is empty.
-	* Added new chapter 'Using ddrescue safely' to the manual.
+	* ddrescue.texinfo: Added new chapter 'Using ddrescue safely'.
 	* Documented that 'direct disc access' only reads whole sectors.
 	* configure: Options now accept a separate argument.
 	* Makefile.in: Added new target 'install-bin'.
@@ -238,7 +226,7 @@
 	* Added new option '-g, --generate-logfile'.
 	* Added new option '-D, --synchronous'.
 	* Fill mode now works when outfile offset differs from 0.
-	* Updated 'Fill Mode' chapter of the manual.
+	* ddrescue.texinfo: Updated 'Fill Mode' chapter.
 
 2008-01-04  Antonio Diaz Diaz  <ant_diaz@teleline.es>
 
@@ -259,7 +247,7 @@
 	* Added support for sparse output files.
 	* Blocks longer than hardbs are now split at sector boundaries.
 	* Added new option '-F, --fill'.
-	* Added new chapter 'Fill Mode' to the manual.
+	* ddrescue.texinfo: Added new chapter 'Fill Mode'.
 	* Added status line to logfile.
 	* An interrupted retry pass is now resumed instead of reinitiated.
 	* Perfect resumability if interrupted during trimming or splitting.
