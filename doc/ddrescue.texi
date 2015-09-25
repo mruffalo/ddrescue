@@ -6,8 +6,8 @@
 @finalout
 @c %**end of header
 
-@set UPDATED 10 September 2015
-@set VERSION 1.20
+@set UPDATED 25 September 2015
+@set VERSION 1.21-pre1
 
 @dircategory GNU Packages
 @direntry
@@ -275,7 +275,7 @@ failed blocks, the good data found may divide them into smaller blocks,
 decreasing the total error size but increasing the number of errors.
 
 The @samp{remaining time} is calculated using the average rate of the
-last 60 seconds and does not take into account that some parts may be
+last 30 seconds and does not take into account that some parts may be
 excluded from the rescue (for example with @samp{--no-trim}), or that
 some areas may be unrecoverable. Therefore it may be very imprecise, may
 vary widely during the rescue, and may show a non-zero value at the end
@@ -679,6 +679,13 @@ Use synchronous writes for @var{outfile}. (Issue a fsync call after
 every write). May be useful when forcing the drive to remap its bad
 sectors.
 
+@item -Z @var{bytes}
+@itemx --max-read-rate=@var{bytes}
+Maximum read rate, in bytes per second. If @var{bytes} is too small, the
+actual read rate is rounded up to the equivalent of a whole number of
+cluster reads per second. Use this option to limit the bandwidth used by
+ddrescue, for example when recovering over a network.
+
 @item -1 @var{file}
 @itemx --log-rates=@var{file}
 Log rates and error sizes every second in @var{file}. If @var{file}
@@ -715,12 +722,6 @@ Select what pass(es) to run during the copying phase. Valid values for
 @var{n} range from 0 to 3. @samp{--cpass=0} skips the copying phase
 entirely. To run only the given pass(es), specify also @samp{--no-trim}
 and @samp{--no-scrape}.
-
-@item --max-read-rate=@var{bytes}
-Maximum read rate, in bytes per second. If @var{bytes} is too small, the
-actual read rate is rounded up to the equivalent of a whole number of
-cluster reads per second. Use this option to limit the bandwidth used by
-ddrescue, for example when recovering over a network.
 
 @item --pause=@var{interval}
 Time to wait between passes. Defaults to 0. @var{interval} is formatted
@@ -973,7 +974,7 @@ umount /mnt/cdimage
 lziprecover -m -v -o backup.tar.lz rescued1.tar.lz rescued2.tar.lz
   Input files merged successfully.
 lziprecover -tv backup.tar.lz
-  ok
+  backup.tar.lz: ok
 @end example
 
 

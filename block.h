@@ -243,7 +243,8 @@ public:
   void rfind_chunk( Block & b, const Sblock::Status st,
                     const Domain & domain, const int alignment ) const;
   int change_chunk_status( const Block & b, const Sblock::Status st,
-                           const Domain & domain );
+                           const Domain & domain,
+                           Sblock::Status * const old_stp = 0 );
 
   static bool isstatus( const int st )
     { return ( st == copying || st == trimming || st == scraping ||

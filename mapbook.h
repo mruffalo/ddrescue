@@ -115,7 +115,7 @@ public:
 
 class Genbook : public Mapbook
   {
-  long long recsize, gensize;		// total recovered and generated sizes
+  long long finished_size, gensize;	// total recovered and generated sizes
   int odes_;				// output file descriptor
 					// variables for show_status
   long long a_rate, c_rate, first_size, last_size;

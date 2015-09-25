@@ -460,14 +460,15 @@ const char * format_percentage( long long num, long long den,
   }
 
 
-int do_show_status( Domain & domain, const char * const mapname )
+int do_show_status( Domain & domain, const char * const mapname,
+                    const bool loose )
   {
-  long long size_non_tried = 0, size_non_trimmed = 0, size_non_scraped = 0;
-  long long size_bad_sector = 0, size_finished = 0;
-  long areas_non_tried = 0, areas_non_trimmed = 0, areas_non_scraped = 0;
-  long areas_bad_sector = 0, areas_finished = 0;
+  long long non_tried_size = 0, non_trimmed_size = 0, non_scraped_size = 0;
+  long long bad_sector_size = 0, finished_size = 0;
+  long non_tried_areas = 0, non_trimmed_areas = 0, non_scraped_areas = 0;
+  long bad_sector_areas = 0, finished_areas = 0;
   Mapfile mapfile( mapname );
-  if( !mapfile.read_mapfile() ) return not_readable( mapname );
+  if( !mapfile.read_mapfile( loose ? '?' : 0 ) ) return not_readable( mapname );
   mapfile.compact_sblock_vector();
   const Block extent = mapfile.extent();
   domain.crop( extent );
@@ -482,48 +483,48 @@ int do_show_status( Domain & domain, const char * const mapname )
       { if( domain < sb ) break; else continue; }
     switch( sb.status() )
       {
-      case Sblock::non_tried:   size_non_tried += sb.size();
-                                ++areas_non_tried; break;
-      case Sblock::finished:    size_finished += sb.size();
-                                ++areas_finished; break;
-      case Sblock::non_trimmed: size_non_trimmed += sb.size();
-                                ++areas_non_trimmed; break;
-      case Sblock::non_scraped: size_non_scraped += sb.size();
-                                ++areas_non_scraped; break;
-      case Sblock::bad_sector:  size_bad_sector += sb.size();
-                                ++areas_bad_sector; break;
+      case Sblock::non_tried:   non_tried_size += sb.size();
+                                ++non_tried_areas; break;
+      case Sblock::non_trimmed: non_trimmed_size += sb.size();
+                                ++non_trimmed_areas; break;
+      case Sblock::non_scraped: non_scraped_size += sb.size();
+                                ++non_scraped_areas; break;
+      case Sblock::bad_sector:  bad_sector_size += sb.size();
+                                ++bad_sector_areas; break;
+      case Sblock::finished:    finished_size += sb.size();
+                                ++finished_areas; break;
       }
     }
 
   const long long domain_size = domain.in_size();
   if( verbosity >= 1 ) std::printf( "\n%s", mapname );
-  std::printf( "\n   current pos: %10sB,  current status: %s\n",
+  std::printf( "\n   current pos: %9sB,  current status: %s\n",
                format_num( mapfile.current_pos() ),
                mapfile.status_name( mapfile.current_status() ) );
-  std::printf( "mapfile extent: %10sB,  in %6ld area(s)\n",
+  std::printf( "mapfile extent: %9sB,  in %6ld area(s)\n",
                format_num( extent.size() ), true_sblocks );
   if( domain.pos() > 0 || domain.end() < extent.end() || domain.blocks() > 1 )
     {
-    std::printf( "  domain begin: %10sB,  domain end: %10sB\n",
+    std::printf( "  domain begin: %9sB,  domain end: %9sB\n",
                  format_num( domain.pos() ), format_num( domain.end() ) );
-    std::printf( "   domain size: %10sB,  in %6ld area(s)\n",
+    std::printf( "   domain size: %9sB,  in %6ld area(s)\n",
                  format_num( domain_size ), domain.blocks() );
     }
-  std::printf( "\n       rescued: %10sB,  in %6ld area(s)  (%s)\n",
-               format_num( size_finished ), areas_finished,
-               format_percentage( size_finished, domain_size ) );
-  std::printf( "     non-tried: %10sB,  in %6ld area(s)  (%s)\n",
-               format_num( size_non_tried ), areas_non_tried,
-               format_percentage( size_non_tried, domain_size ) );
-  std::printf( "   non-trimmed: %10sB,  in %6ld area(s)  (%s)\n",
-               format_num( size_non_trimmed ), areas_non_trimmed,
-               format_percentage( size_non_trimmed, domain_size ) );
-  std::printf( "   non-scraped: %10sB,  in %6ld area(s)  (%s)\n",
-               format_num( size_non_scraped ), areas_non_scraped,
-               format_percentage( size_non_scraped, domain_size ) );
-  std::printf( "       errsize: %10sB,  errors:  %8ld  (%s)\n",
-               format_num( size_bad_sector ), areas_bad_sector,
-               format_percentage( size_bad_sector, domain_size ) );
+  std::printf( "\n       rescued: %9sB,  in %6ld area(s)  (%s)\n",
+               format_num( finished_size ), finished_areas,
+               format_percentage( finished_size, domain_size ) );
+  std::printf( "     non-tried: %9sB,  in %6ld area(s)  (%s)\n",
+               format_num( non_tried_size ), non_tried_areas,
+               format_percentage( non_tried_size, domain_size ) );
+  std::printf( "   non-trimmed: %9sB,  in %6ld area(s)  (%s)\n",
+               format_num( non_trimmed_size ), non_trimmed_areas,
+               format_percentage( non_trimmed_size, domain_size ) );
+  std::printf( "   non-scraped: %9sB,  in %6ld area(s)  (%s)\n",
+               format_num( non_scraped_size ), non_scraped_areas,
+               format_percentage( non_scraped_size, domain_size ) );
+  std::printf( "       errsize: %9sB,  errors:  %8ld  (%s)\n",
+               format_num( bad_sector_size ), bad_sector_areas,
+               format_percentage( bad_sector_size, domain_size ) );
   return 0;
   }
 
@@ -602,12 +603,13 @@ int main( const int argc, const char * const argv[] )
     {
     const int code = parser.code( argind );
     if( !code ) break;					// no more options
-    const char * const arg = parser.argument( argind ).c_str();
+    const std::string & arg = parser.argument( argind );
+    const char * const ptr = arg.c_str();
     switch( code )
       {
       case 'a': set_mode( program_mode, m_change );
                 parse_types( arg, types1, types2 ); break;
-      case 'b': hardbs = getnum( arg, 0, 1, INT_MAX ); break;
+      case 'b': hardbs = getnum( ptr, 0, 1, INT_MAX ); break;
       case 'B': format_num( 0, 0, -1 ); break;		// set binary prefixes
       case 'c': set_mode( program_mode, m_create );
                 parse_2types( arg, type1, type2 ); break;
@@ -617,27 +619,27 @@ int main( const int argc, const char * const argv[] )
       case 'D': set_mode( program_mode, m_done_st ); break;
       case 'f': force = true; break;
       case 'h': show_help( default_hardbs ); return 0;
-      case 'i': ipos = getnum( arg, hardbs, 0 ); break;
+      case 'i': ipos = getnum( ptr, hardbs, 0 ); break;
       case 'l': set_mode( program_mode, m_list ); types1 = arg;
                 check_types( types1, "list-blocks" ); break;
       case 'L': loose = true; break;
-      case 'm': set_name( &domain_mapfile_name, arg, code ); break;
+      case 'm': set_name( &domain_mapfile_name, ptr, code ); break;
       case 'n': set_mode( program_mode, m_invert ); break;
-      case 'o': opos = getnum( arg, hardbs, 0 ); break;
+      case 'o': opos = getnum( ptr, hardbs, 0 ); break;
       case 'p':
       case 'P': set_mode( program_mode, m_compare );
-                second_mapname = arg; as_domain = ( code == 'P' ); break;
+                second_mapname = ptr; as_domain = ( code == 'P' ); break;
       case 'q': verbosity = -1; break;
-      case 's': max_size = getnum( arg, hardbs, -1 ); break;
+      case 's': max_size = getnum( ptr, hardbs, -1 ); break;
       case 't': set_mode( program_mode, m_status ); break;
       case 'v': if( verbosity < 4 ) ++verbosity; break;
       case 'V': show_version(); return 0;
       case 'x': set_mode( program_mode, m_xor );
-                second_mapname = arg; break;
+                second_mapname = ptr; break;
       case 'y': set_mode( program_mode, m_and );
-                second_mapname = arg; break;
+                second_mapname = ptr; break;
       case 'z': set_mode( program_mode, m_or );
-                second_mapname = arg; break;
+                second_mapname = ptr; break;
       default : internal_error( "uncaught option." );
       }
     } // end process options
@@ -690,7 +692,7 @@ int main( const int argc, const char * const argv[] )
       case m_list:
         return to_badblocks( opos - ipos, domain, mapname, hardbs, types1 );
       case m_status:
-        retval = std::max( retval, do_show_status( domain, mapname ) );
+        retval = std::max( retval, do_show_status( domain, mapname, loose ) );
       }
     }
   return retval;

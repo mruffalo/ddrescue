@@ -1,3 +1,9 @@
+2015-09-25  Antonio Diaz Diaz  <antonio@gnu.org>
+
+	* Version 1.21-pre1 released.
+	* Rescuebook: Show full range of sizes from non-tried to finished.
+	* Assigned short name '-Z' to option '--max-read-rate'.
+
 2015-09-10  Antonio Diaz Diaz  <antonio@gnu.org>
 
 	* Version 1.20 released.

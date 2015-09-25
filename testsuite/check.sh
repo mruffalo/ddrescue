@@ -100,7 +100,7 @@ cmp ${in} out || fail=1
 printf .
 
 rm -f out
-"${DDRESCUE}" -q -F+ -o15000 ${in} out2 mapfile || fail=1
+"${DDRESCUE}" -q -F+ -o15000 -c143 ${in} out2 mapfile || fail=1
 "${DDRESCUE}" -q -R -S -i15000 -o0 --unidirectional out2 out || fail=1
 cmp ${in} out || fail=1
 printf .
@@ -166,19 +166,19 @@ printf .
 
 rm -f out
 fail2=0
-for i in 0 8000 16000 24000 32000 ; do
+for i in 0 8000 16000 24000 32000 40000 48000 56000 64000 72000 ; do
 	"${DDRESCUE}" -q -i${i} -s4000 -m ${map1} ${in} out || fail2=1
 done
 cmp -s ${in} out && fail2=1
-for i in 4000 12000 20000 28000 36000 ; do
+for i in 4000 12000 20000 28000 36000 44000 52000 60000 68000 ; do
 	"${DDRESCUE}" -q -i${i} -s4000 -m ${map1} ${in} out || fail2=1
 done
 cmp ${in1} out || fail2=1
-for i in 0 8000 16000 24000 32000 ; do
+for i in 0 8000 16000 24000 32000 40000 48000 56000 64000 72000 ; do
 	"${DDRESCUE}" -q -i${i} -s4000 -m ${map2} ${in2} out || fail2=1
 done
 cmp -s ${in} out && fail2=1
-for i in 4000 12000 20000 28000 36000 ; do
+for i in 4000 12000 20000 28000 36000 44000 52000 60000 68000 ; do
 	"${DDRESCUE}" -q -i${i} -s4000 -m ${map2} ${in2} out || fail2=1
 done
 cmp ${in} out || fail2=1
@@ -195,7 +195,7 @@ rm -f mapfile
 cat ${in} > copy || framework_failure
 printf "garbage" >> copy || framework_failure
 cat ${in2} > out || framework_failure
-"${DDRESCUE}" -q -t -x 36388 ${in1} copy || fail=1
+"${DDRESCUE}" -q -t -x 72776 ${in1} copy || fail=1
 "${DDRESCUE}" -q -G ${in} out mapfile || fail=1
 "${DDRESCUE}" -q -R -T1.5d copy out mapfile || fail=1
 cmp ${in} out || fail=1
@@ -234,13 +234,13 @@ printf .
 if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
 "${DDRESCUELOG}" -P ${map1} mapfile || fail=1
 printf .
-"${DDRESCUELOG}" -b2048 -s36388 -f -c?+ mapfile < out || fail=1
+"${DDRESCUELOG}" -b2048 -s72776 -f -c?+ mapfile < out || fail=1
 "${DDRESCUELOG}" -p ${map2} - < mapfile || fail=1
 printf .
 "${DDRESCUELOG}" -b2048 -f -c?+ mapfile < out || fail=1
-"${DDRESCUELOG}" -s36388 -p ${map2} mapfile || fail=1
+"${DDRESCUELOG}" -s72776 -p ${map2} mapfile || fail=1
 printf .
-"${DDRESCUELOG}" -q -s36389 -p ${map2} mapfile
+"${DDRESCUELOG}" -q -s72777 -p ${map2} mapfile
 if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
 
 printf "10\n12\n14\n16\n" | "${DDRESCUELOG}" -b2048 -f -c+? mapfile || fail=1
@@ -274,11 +274,11 @@ if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
 printf .
 
 "${DDRESCUELOG}" -b2048 -l+ ${map1} > out || fail=1
-printf "0\n2\n4\n6\n8\n10\n12\n14\n16\n" > copy || framework_failure
+printf "0\n2\n4\n6\n8\n10\n12\n14\n16\n18\n20\n22\n24\n26\n28\n30\n32\n34\n" > copy || framework_failure
 cmp out copy || fail=1
 printf .
 "${DDRESCUELOG}" -b2048 -l?- ${map1} > out || fail=1
-printf "1\n3\n5\n7\n9\n11\n13\n15\n17\n" > copy || framework_failure
+printf "1\n3\n5\n7\n9\n11\n13\n15\n17\n19\n21\n23\n25\n27\n29\n31\n33\n35\n" > copy || framework_failure
 cmp out copy || fail=1
 printf .
 "${DDRESCUELOG}" -b2048 -l+ -i0x1800 -o0 -s0x4000 ${map1} > out || fail=1
@@ -288,11 +288,11 @@ printf .
 
 "${DDRESCUELOG}" -n ${map2} > mapfile || framework_failure
 "${DDRESCUELOG}" -b2048 -l+ mapfile > out || fail=1
-printf "0\n2\n4\n6\n8\n10\n12\n14\n16\n" > copy || framework_failure
+printf "0\n2\n4\n6\n8\n10\n12\n14\n16\n18\n20\n22\n24\n26\n28\n30\n32\n34\n" > copy || framework_failure
 cmp out copy || fail=1
 printf .
 "${DDRESCUELOG}" -b2048 -l?- mapfile > out || fail=1
-printf "1\n3\n5\n7\n9\n11\n13\n15\n17\n" > copy || framework_failure
+printf "1\n3\n5\n7\n9\n11\n13\n15\n17\n19\n21\n23\n25\n27\n29\n31\n33\n35\n" > copy || framework_failure
 cmp out copy || fail=1
 printf .
 "${DDRESCUELOG}" -b2048 -l+ -i2048 -o0 -s0x4000 mapfile > out || fail=1

@@ -30,15 +30,15 @@ namespace {
 const char * format_time_dhms( const long t )
   {
   static char buf[32];
-  const long s = t % 60;
-  const long m = ( t / 60 ) % 60;
-  const long h = ( t / 3600 ) % 24;
+  const int s = t % 60;
+  const int m = ( t / 60 ) % 60;
+  const int h = ( t / 3600 ) % 24;
   const long d = t / 86400;
 
-  if( d ) snprintf( buf, sizeof buf, "%ldd:%02ldh:%02ldm:%02lds", d, h, m, s );
-  else if( h ) snprintf( buf, sizeof buf, "%ldh:%02ldm:%02lds", h, m, s );
-  else if( m ) snprintf( buf, sizeof buf, "%ldm:%02lds", m, s );
-  else snprintf( buf, sizeof buf, "%lds", s );
+  if( d ) snprintf( buf, sizeof buf, "%ldd:%02dh:%02dm:%02ds", d, h, m, s );
+  else if( h ) snprintf( buf, sizeof buf, "%dh:%02dm:%02ds", h, m, s );
+  else if( m ) snprintf( buf, sizeof buf, "%dm:%02ds", m, s );
+  else snprintf( buf, sizeof buf, "%ds", s );
   return buf;
   }
 

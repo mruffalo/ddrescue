@@ -115,7 +115,8 @@ class Rescuebook : public Mapbook, public Rb_options
   {
   long long error_rate;
   long long sparse_size;		// end position of pending writes
-  long long recsize, errsize;		// total recovered and error sizes
+  long long non_tried_size, non_trimmed_size, non_scraped_size;
+  long long bad_sector_size, finished_size;
   const Domain * const test_domain;	// good/bad map for test mode
   const char * const iname_;
   int e_code;				// error code for errors_or_timeout
@@ -136,9 +137,10 @@ class Rescuebook : public Mapbook, public Rb_options
   bool first_post;			// first read in current pass
   bool first_read;			// first read overall
 
+  void change_chunk_status( const Block & b, const Sblock::Status st );
   bool extend_outfile_size();
   int copy_block( const Block & b, int & copied_size, int & error_size );
-  void count_errors();
+  void initialize_sizes();
   bool errors_or_timeout()
     { if( max_errors >= 0 && errors > max_errors ) e_code |= 2;
       return ( e_code != 0 ); }

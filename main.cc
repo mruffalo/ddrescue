@@ -121,11 +121,11 @@ void show_help( const int cluster, const int hardbs, const int skipbs )
                "  -x, --extend-outfile=<bytes>   extend outfile size to be at least this long\n"
                "  -X, --exit-on-error            exit after the first read error\n"
                "  -y, --synchronous              use synchronous writes for output file\n"
+               "  -Z, --max-read-rate=<bytes>    maximum read rate in bytes/s\n"
                "  -1, --log-rates=<file>         log rates and error sizes in file\n"
                "  -2, --log-reads=<file>         log all read operations in file\n"
                "      --ask                      ask for confirmation before starting the copy\n"
                "      --cpass=<n>[,<n>]          select what copying pass(es) to run\n"
-               "      --max-read-rate=<bytes>    maximum read rate in bytes/s\n"
                "      --pause=<interval>         time to wait between passes [0]\n"
                "Numbers may be in decimal, hexadecimal or octal, and may be followed by a\n"
                "multiplier: s = sectors, k = 1000, Ki = 1024, M = 10^6, Mi = 2^20, etc...\n"
@@ -144,14 +144,14 @@ void show_help( const int cluster, const int hardbs, const int skipbs )
 // Where the optional "unit" is one of 's', 'm', 'h' or 'd'.
 // Returns the number of seconds, or exits with 1 status if error.
 //
-long parse_time_interval( const char * const s )
+long parse_time_interval( const char * const ptr )
   {
   Rational r;
-  int c = r.parse( s );
+  int c = r.parse( ptr );
 
   if( c > 0 )
     {
-    switch( s[c] )
+    switch( ptr[c] )
       {
       case 'd': r *= 86400; break;			// 24 * 60 * 60
       case 'h': r *= 3600; break;			// 60 * 60
@@ -570,15 +570,15 @@ void parse_cpass( const std::string & arg, Rb_options & rb_opts )
     }
   }
 
-void parse_skipbs( const char * const arg, Rb_options & rb_opts,
+void parse_skipbs( const char * const ptr, Rb_options & rb_opts,
                    const int hardbs )
   {
-  const char * const arg2 = std::strchr( arg, ',' );
+  const char * const ptr2 = std::strchr( ptr, ',' );
 
-  if( !arg2 || arg2 != arg )
-    rb_opts.skipbs = getnum( arg, hardbs, 0, Rb_options::max_max_skipbs, true );
-  if( arg2 )
-    rb_opts.max_skipbs = getnum( arg2 + 1, hardbs, Rb_options::default_skipbs,
+  if( !ptr2 || ptr2 != ptr )
+    rb_opts.skipbs = getnum( ptr, hardbs, 0, Rb_options::max_max_skipbs, true );
+  if( ptr2 )
+    rb_opts.max_skipbs = getnum( ptr2 + 1, hardbs, Rb_options::default_skipbs,
                                  Rb_options::max_max_skipbs );
   if( rb_opts.skipbs > 0 && rb_opts.skipbs < Rb_options::default_skipbs )
     {
@@ -616,7 +616,7 @@ bool Rescuebook::reopen_infile()
 
 int main( const int argc, const char * const argv[] )
   {
-  enum Optcode { opt_ask = 256, opt_cpa, opt_pau, opt_rat };
+  enum Optcode { opt_ask = 256, opt_cpa, opt_pau };
   long long ipos = 0;
   long long opos = -1;
   long long max_size = -1;
@@ -690,10 +690,10 @@ int main( const int argc, const char * const argv[] )
     { 'x', "extend-outfile",      Arg_parser::yes },
     { 'X', "exit-on-error",       Arg_parser::no  },
     { 'y', "synchronous",         Arg_parser::no  },
+    { 'Z', "max-read-rate",       Arg_parser::yes },
     { opt_ask, "ask",             Arg_parser::no  },
     { opt_cpa, "cpass",           Arg_parser::yes },
     { opt_pau, "pause",           Arg_parser::yes },
-    { opt_rat, "max-read-rate",   Arg_parser::yes },
     {  0 , 0,                     Arg_parser::no  } };
 
   const Arg_parser parser( argc, argv, options );
@@ -705,22 +705,23 @@ int main( const int argc, const char * const argv[] )
     {
     const int code = parser.code( argind );
     if( !code ) break;					// no more options
-    const char * const arg = parser.argument( argind ).c_str();
+    const std::string & arg = parser.argument( argind );
+    const char * const ptr = arg.c_str();
     switch( code )
       {
-      case '1': rate_logger.set_filename( arg ); break;
-      case '2': read_logger.set_filename( arg ); break;
-      case 'a': rb_opts.min_read_rate = getnum( arg, hardbs, 0 ); break;
+      case '1': rate_logger.set_filename( ptr ); break;
+      case '2': read_logger.set_filename( ptr ); break;
+      case 'a': rb_opts.min_read_rate = getnum( ptr, hardbs, 0 ); break;
       case 'A': rb_opts.try_again = true; break;
-      case 'b': hardbs = getnum( arg, 0, 1, max_hardbs ); break;
+      case 'b': hardbs = getnum( ptr, 0, 1, max_hardbs ); break;
       case 'B': format_num( 0, 0, -1 ); break;		// set binary prefixes
-      case 'c': cluster = getnum( arg, 0, 1, INT_MAX ); break;
+      case 'c': cluster = getnum( ptr, 0, 1, INT_MAX ); break;
       case 'C': rb_opts.complete_only = true; break;
       case 'd': rb_opts.o_direct_in = O_DIRECT; check_o_direct(); break;
       case 'D': rb_opts.o_direct_out = O_DIRECT; check_o_direct(); break;
-      case 'e': rb_opts.new_errors_only = ( *arg == '+' );
-                rb_opts.max_errors = getnum( arg, 0, 0, INT_MAX ); break;
-      case 'E': rb_opts.max_error_rate = getnum( arg, hardbs, 0 ); break;
+      case 'e': rb_opts.new_errors_only = ( ptr[0] == '+' );
+                rb_opts.max_errors = getnum( ptr, 0, 0, INT_MAX ); break;
+      case 'E': rb_opts.max_error_rate = getnum( ptr, hardbs, 0 ); break;
       case 'f': force = true; break;
       case 'F': set_mode( program_mode, m_fill ); fb_opts.filltypes = arg;
                 fb_opts.write_location_data =
@@ -729,39 +730,39 @@ int main( const int argc, const char * const argv[] )
       case 'h': show_help( cluster_bytes / default_hardbs, default_hardbs,
                            Rb_options::default_skipbs );
                 return 0;
-      case 'H': set_name( &test_mode_mapfile_name, arg, code ); break;
-      case 'i': ipos = getnum( arg, hardbs, 0 ); break;
+      case 'H': set_name( &test_mode_mapfile_name, ptr, code ); break;
+      case 'i': ipos = getnum( ptr, hardbs, 0 ); break;
       case 'I': verify_input_size = true; break;
       case 'J': rb_opts.verify_on_error = true; break;
-      case 'K': parse_skipbs( arg, rb_opts, hardbs ); break;
+      case 'K': parse_skipbs( ptr, rb_opts, hardbs ); break;
       case 'L': loose = true; break;
-      case 'm': set_name( &domain_mapfile_name, arg, code ); break;
+      case 'm': set_name( &domain_mapfile_name, ptr, code ); break;
       case 'M': rb_opts.retrim = true; break;
       case 'n': rb_opts.noscrape = true; break;
       case 'N': rb_opts.notrim = true; break;
-      case 'o': opos = getnum( arg, hardbs, 0 ); break;
+      case 'o': opos = getnum( ptr, hardbs, 0 ); break;
       case 'O': rb_opts.reopen_on_error = true; break;
       case 'p': preallocate = true; break;
-      case 'P': rb_opts.preview_lines = arg[0] ? getnum( arg, 0, 1, 32 ) : 3;
+      case 'P': rb_opts.preview_lines = ptr[0] ? getnum( ptr, 0, 1, 32 ) : 3;
                 break;
       case 'q': verbosity = -1; break;
-      case 'r': rb_opts.max_retries = getnum( arg, 0, -1, INT_MAX ); break;
+      case 'r': rb_opts.max_retries = getnum( ptr, 0, -1, INT_MAX ); break;
       case 'R': rb_opts.reverse = true; break;
-      case 's': max_size = getnum( arg, hardbs, -1 ); break;
+      case 's': max_size = getnum( ptr, hardbs, -1 ); break;
       case 'S': rb_opts.sparse = true; break;
       case 't': o_trunc = O_TRUNC; break;
-      case 'T': rb_opts.timeout = parse_time_interval( arg ); break;
+      case 'T': rb_opts.timeout = parse_time_interval( ptr ); break;
       case 'u': rb_opts.unidirectional = true; break;
       case 'v': if( verbosity < 4 ) ++verbosity; break;
       case 'V': show_version(); return 0;
       case 'w': fb_opts.ignore_write_errors = true; break;
-      case 'x': rb_opts.min_outfile_size = getnum( arg, hardbs, 1 ); break;
+      case 'x': rb_opts.min_outfile_size = getnum( ptr, hardbs, 1 ); break;
       case 'X': rb_opts.exit_on_error = true; break;
       case 'y': synchronous = true; break;
+      case 'Z': rb_opts.max_read_rate = getnum( ptr, hardbs, 1 ); break;
       case opt_ask: ask = true; break;
-      case opt_cpa: parse_cpass( parser.argument( argind ), rb_opts ); break;
-      case opt_pau: rb_opts.pause = parse_time_interval( arg ); break;
-      case opt_rat: rb_opts.max_read_rate = getnum( arg, hardbs, 1 ); break;
+      case opt_cpa: parse_cpass( arg, rb_opts ); break;
+      case opt_pau: rb_opts.pause = parse_time_interval( ptr ); break;
       default : internal_error( "uncaught option." );
       }
     } // end process options

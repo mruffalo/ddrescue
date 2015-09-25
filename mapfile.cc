@@ -380,8 +380,7 @@ void Mapfile::rfind_chunk( Block & b, const Sblock::Status st,
   }
 
 
-// Returns an adjust value (-1, 0, +1) to keep "errors" updated without
-// having to call count_errors every time.
+// Returns an adjust value (-1, 0, +1) to keep "errors" updated.
 //   - - -   -->   - + -   return +1
 //   - - +   -->   - + +   return  0
 //   - + -   -->   - - -   return -1
@@ -392,7 +391,8 @@ void Mapfile::rfind_chunk( Block & b, const Sblock::Status st,
 //   + + +   -->   + - +   return +1
 //
 int Mapfile::change_chunk_status( const Block & b, const Sblock::Status st,
-                                  const Domain & domain )
+                                  const Domain & domain,
+                                  Sblock::Status * const old_stp )
   {
   if( b.size() <= 0 ) return 0;
   if( !domain.includes( b ) || find_index( b.pos() ) < 0 ||
@@ -401,6 +401,7 @@ int Mapfile::change_chunk_status( const Block & b, const Sblock::Status st,
   if( !sblock_vector[index_].includes( b ) )
     internal_error( "can't change status of chunk spread over more than 1 block." );
   const Sblock::Status old_st = sblock_vector[index_].status();
+  if( old_stp ) *old_stp = old_st;
   if( st == old_st ) return 0;
   const bool old_st_good = Sblock::is_good_status( old_st );
   const bool new_st_good = Sblock::is_good_status( st );

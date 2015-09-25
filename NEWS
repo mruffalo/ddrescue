@@ -1,52 +1,6 @@
-Changes in version 1.20:
+Changes in version 1.21:
 
-"logfile" has been renamed to "mapfile" everywhere, even in long option
-names. ("--domain-logfile" is now "--domain-mapfile", etc).
+Ddrescue now shows all sizes in rescue mode; non-tried, non-trimmed,
+non-scraped, bad-sector and finished.
 
-The short name of option "--synchronous" has been changed to "-y".
-
-The long name of option "-d" has been changed to "--idirect".
-
-The new option "-D, --odirect" has been added. This introduces a subtle
-backward incompatibility because "-D" was the short name of option
-"--synchronous".
-
-The new option "-J, --verify-on-error" has been added. It verifies,
-after each read error, that the input device is still returning
-consistent data.
-
-The new option "--max-read-rate" has been added.
-
-"direct disc access" now can copy arbitrary domains by reading whole
-sectors and writing only the requested part.
-
-Accounting change; only bad_sector blocks are now included in "errsize".
-
-The estimated remaining rescue time is now shown on the screen.
-
-Times are now shown in days, hours, minutes and seconds, instead of as a
-fraction of the appropriate unit.
-
-Fill mode has been extended to write location data into each sector.
-
-An emergency save of the mapfile has been added. It can be activated in
-case of ddrescue having trouble writing the mapfile.
-
-Device name is now shown with "--ask" or "-vv" on Haiku.
-
-Read-only mapfiles, like domain mapfiles or input mapfiles for
-ddrescuelog, can now be read from standard input if a hyphen '-' is used
-as mapfile name.
-
-Ddrescuelog can now show the status of more than one mapfile.
-
-"ddrescuelog --create-mapfile -" now writes the mapfile to standard output.
-
-The new chapter "Optical media" has been added to the manual.
-
-The configure option "--enable-linux" has been renamed to
-"--enable-non-posix".
-
-The targets "install-compress", "install-strip-compress",
-"install-info-compress" and "install-man-compress" have been added to
-the Makefile.
+The short name '-Z' has been assigned to option '--max-read-rate'.

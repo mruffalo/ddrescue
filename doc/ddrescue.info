@@ -12,7 +12,7 @@ File: ddrescue.info,  Node: Top,  Next: Introduction,  Up: (dir)
 GNU ddrescue Manual
 *******************
 
-This manual is for GNU ddrescue (version 1.20, 10 September 2015).
+This manual is for GNU ddrescue (version 1.21-pre1, 25 September 2015).
 
 * Menu:
 
@@ -261,7 +261,7 @@ failed blocks, the good data found may divide them into smaller blocks,
 decreasing the total error size but increasing the number of errors.
 
    The 'remaining time' is calculated using the average rate of the
-last 60 seconds and does not take into account that some parts may be
+last 30 seconds and does not take into account that some parts may be
 excluded from the rescue (for example with '--no-trim'), or that some
 areas may be unrecoverable. Therefore it may be very imprecise, may
 vary widely during the rescue, and may show a non-zero value at the end
@@ -656,6 +656,14 @@ mapfile, ddrescue can't resume a rescue, only reinitiate it.
      every write). May be useful when forcing the drive to remap its bad
      sectors.
 
+'-Z BYTES'
+'--max-read-rate=BYTES'
+     Maximum read rate, in bytes per second. If BYTES is too small, the
+     actual read rate is rounded up to the equivalent of a whole number
+     of cluster reads per second. Use this option to limit the
+     bandwidth used by ddrescue, for example when recovering over a
+     network.
+
 '-1 FILE'
 '--log-rates=FILE'
      Log rates and error sizes every second in FILE. If FILE already
@@ -693,13 +701,6 @@ mapfile, ddrescue can't resume a rescue, only reinitiate it.
      for N range from 0 to 3. '--cpass=0' skips the copying phase
      entirely. To run only the given pass(es), specify also '--no-trim'
      and '--no-scrape'.
-
-'--max-read-rate=BYTES'
-     Maximum read rate, in bytes per second. If BYTES is too small, the
-     actual read rate is rounded up to the equivalent of a whole number
-     of cluster reads per second. Use this option to limit the
-     bandwidth used by ddrescue, for example when recovering over a
-     network.
 
 '--pause=INTERVAL'
      Time to wait between passes. Defaults to 0. INTERVAL is formatted
@@ -787,7 +788,7 @@ Character   Meaning
 
 And here is an example mapfile:
 
-     # Mapfile. Created by GNU ddrescue version 1.20
+     # Mapfile. Created by GNU ddrescue version 1.21-pre1
      # Command line: ddrescue -d -c18 /dev/fd0 fdimage mapfile
      # Start time:   2015-07-21 09:37:44
      # Current time: 2015-07-21 09:38:19
@@ -921,7 +922,7 @@ with error-checked merging of copies.  (*Note lziprecover manual:
      lziprecover -m -v -o backup.tar.lz rescued1.tar.lz rescued2.tar.lz
        Input files merged successfully.
      lziprecover -tv backup.tar.lz
-       ok
+       backup.tar.lz: ok
 
 
 File: ddrescue.info,  Node: Examples,  Next: Direct disc access,  Prev: Optical media,  Up: Top
@@ -1530,23 +1531,23 @@ Concept index
 
 Tag Table:
 Node: Top201
-Node: Introduction1438
-Node: Basic concepts4158
-Node: Important advice6441
-Node: Algorithm7516
-Node: Invoking ddrescue12945
-Node: Mapfile structure31557
-Node: Emergency save34282
-Node: Optical media35738
-Ref: lziprecover-example38671
-Node: Examples39435
-Node: Direct disc access43164
-Node: Fill mode45385
-Node: Generate mode50438
-Node: Ddrescuelog52379
-Node: Invoking ddrescuelog54674
-Node: Problems61889
-Node: Concept index62446
+Node: Introduction1443
+Node: Basic concepts4163
+Node: Important advice6446
+Node: Algorithm7521
+Node: Invoking ddrescue12950
+Node: Mapfile structure31573
+Node: Emergency save34303
+Node: Optical media35759
+Ref: lziprecover-example38692
+Node: Examples39471
+Node: Direct disc access43200
+Node: Fill mode45421
+Node: Generate mode50474
+Node: Ddrescuelog52415
+Node: Invoking ddrescuelog54710
+Node: Problems61925
+Node: Concept index62482
 
 End Tag Table
 

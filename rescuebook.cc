@@ -53,6 +53,30 @@ int round_up( int size, const int hardbs )
 } // end namespace
 
 
+void Rescuebook::change_chunk_status( const Block & b, const Sblock::Status st )
+  {
+  Sblock::Status old_st = st;
+  errors += Mapfile::change_chunk_status( b, st, domain(), &old_st );
+  if( st == old_st ) return;
+  switch( old_st )
+    {
+    case Sblock::non_tried:     non_tried_size -= b.size(); break;
+    case Sblock::non_trimmed: non_trimmed_size -= b.size(); break;
+    case Sblock::non_scraped: non_scraped_size -= b.size(); break;
+    case Sblock::bad_sector:   bad_sector_size -= b.size(); break;
+    case Sblock::finished:       finished_size -= b.size(); break;
+    }
+  switch( st )
+    {
+    case Sblock::non_tried:     non_tried_size += b.size(); break;
+    case Sblock::non_trimmed: non_trimmed_size += b.size(); break;
+    case Sblock::non_scraped: non_scraped_size += b.size(); break;
+    case Sblock::bad_sector:   bad_sector_size += b.size(); break;
+    case Sblock::finished:       finished_size += b.size(); break;
+    }
+  }
+
+
 bool Rescuebook::extend_outfile_size()
   {
   if( min_outfile_size > 0 || sparse_size > 0 )
@@ -137,9 +161,11 @@ int Rescuebook::copy_block( const Block & b, int & copied_size, int & error_size
   }
 
 
-void Rescuebook::count_errors()
+void Rescuebook::initialize_sizes()
   {
   bool good = true;
+  non_tried_size = non_trimmed_size = non_scraped_size = 0;
+  bad_sector_size = finished_size = 0;
   errors = 0;
 
   for( long i = 0; i < sblocks(); ++i )
@@ -149,11 +175,12 @@ void Rescuebook::count_errors()
       { if( domain() < sb ) break; else { good = true; continue; } }
     switch( sb.status() )
       {
-      case Sblock::non_tried:
-      case Sblock::non_trimmed:
-      case Sblock::non_scraped:
-      case Sblock::finished: good = true; break;
-      case Sblock::bad_sector: if( good ) { good = false; ++errors; } break;
+      case Sblock::non_tried:     non_tried_size += sb.size(); good = true; break;
+      case Sblock::non_trimmed: non_trimmed_size += sb.size(); good = true; break;
+      case Sblock::non_scraped: non_scraped_size += sb.size(); good = true; break;
+      case Sblock::bad_sector:   bad_sector_size += sb.size();
+        if( good ) { good = false; ++errors; } break;
+      case Sblock::finished:       finished_size += sb.size(); good = true; break;
       }
     }
   }
@@ -193,23 +220,16 @@ int Rescuebook::copy_and_update( const Block & b, int & copied_size,
       else if( !truncate_vector( b.pos() + copied_size + error_size ) )
         { final_msg( "EOF found below the size calculated from mapfile" );
           retval = 1; }
+      initialize_sizes();
       }
     if( copied_size > 0 )
-      {
-      errors += change_chunk_status( Block( b.pos(), copied_size ),
-                                     Sblock::finished, domain() );
-      recsize += copied_size;
-      if( curr_st == retrying ) errsize -= copied_size;
-      }
+      change_chunk_status( Block( b.pos(), copied_size ), Sblock::finished );
     if( error_size > 0 )
       {
       error_rate += error_size;
       const Sblock::Status st2 =
         ( error_size > hardbs() ) ? st : Sblock::bad_sector;
-      errors += change_chunk_status( Block( b.pos() + copied_size, error_size ),
-                st2, domain() );
-      if( st2 == Sblock::bad_sector && curr_st != retrying )
-        errsize += error_size;
+      change_chunk_status( Block( b.pos() + copied_size, error_size ), st2 );
       struct stat st;
       if( stat( iname_, &st ) != 0 )
         { final_msg( "Input file disappeared", errno ); retval = 1; }
@@ -400,8 +420,7 @@ int Rescuebook::trim_errors()
         const long index = find_index( end - 1 );
         if( index >= 0 && domain().includes( sblock( index ) ) &&
             sblock( index ).status() == Sblock::non_trimmed )
-          errors += change_chunk_status( sblock( index ), Sblock::non_scraped,
-                                         domain() );
+          change_chunk_status( sblock( index ), Sblock::non_scraped );
         }
       update_rates();
       if( !update_mapfile( odes_ ) ) return -2;
@@ -546,18 +565,18 @@ void Rescuebook::update_rates( const bool force )
   if( t0 == 0 )
     {
     t0 = t1 = ts = initial_time();
-    first_size = last_size = recsize;
+    first_size = last_size = finished_size;
     rates_updated = true;
     if( verbosity >= 0 )
       {
-      std::fputs( "\n\n\n\n", stdout );
+      std::fputs( "\n\n\n\n\n", stdout );
       if( preview_lines > 0 )
         for( int i = -2; i < preview_lines; ++i ) std::fputc( '\n', stdout );
       }
     }
 
   long t2 = std::time( 0 );
-  if( max_read_rate > 0 && recsize - last_size > max_read_rate && t2 == t1 )
+  if( max_read_rate > 0 && finished_size - last_size > max_read_rate && t2 == t1 )
     { sleep( 1 ); t2 = std::time( 0 ); }
   if( t2 < t1 )					// clock jumped back
     {
@@ -569,11 +588,11 @@ void Rescuebook::update_rates( const bool force )
   if( force && t2 <= t1 ) t2 = t1 + 1;		// force update of e_code
   if( t2 > t1 )
     {
-    a_rate = ( recsize - first_size ) / ( t2 - t0 );
-    c_rate = ( recsize - last_size ) / ( t2 - t1 );
+    a_rate = ( finished_size - first_size ) / ( t2 - t0 );
+    c_rate = ( finished_size - last_size ) / ( t2 - t1 );
     if( !( e_code & 4 ) )
       {
-      if( recsize != last_size ) { last_size = recsize; ts = t2; }
+      if( finished_size != last_size ) { last_size = finished_size; ts = t2; }
       else if( timeout >= 0 && t2 - ts > timeout && t1 > t0 ) e_code |= 4;
       }
     if( max_error_rate >= 0 && !( e_code & 1 ) )
@@ -598,7 +617,7 @@ void Rescuebook::show_status( const long long ipos, const char * const msg,
     {
     if( verbosity >= 0 )
       {
-      std::printf( "\r%s%s%s%s", up, up, up, up );
+      std::printf( "\r%s%s%s%s%s", up, up, up, up, up );
       if( preview_lines > 0 )
         {
         for( int i = -2; i < preview_lines; ++i ) std::fputs( up, stdout );
@@ -624,24 +643,26 @@ void Rescuebook::show_status( const long long ipos, const char * const msg,
           }
         std::fputc( '\n', stdout );
         }
-      std::printf( "rescued: %10sB,   errsize:  %9sB,    current rate: %8sB/s\n",
-                   format_num( recsize ), format_num( errsize, 99999 ),
+      std::printf( "  rescued: %9sB, non-trimmed: %9sB,  current rate: %8sB/s\n",
+                   format_num( finished_size ), format_num( non_trimmed_size ),
                    format_num( c_rate, 99999 ) );
-      std::printf( "   ipos: %10sB,    errors:   %7ld,      average rate: %8sB/s\n",
-                   format_num( last_ipos ), errors,
+      std::printf( "non-tried: %9sB, non-scraped: %9sB,  average rate: %8sB/s\n",
+                   format_num( non_tried_size ), format_num( non_scraped_size ),
                    format_num( a_rate, 99999 ) );
+      std::printf( "     ipos: %9sB,     errsize: %9sB,      run time: %11s\n",
+                   format_num( last_ipos ),
+                   format_num( bad_sector_size, 99999 ), format_time( t1 - t0 ) );
       if( first_post ) sliding_avg.reset();
       else sliding_avg.add_term( c_rate );
       const long long s_rate = domain().full() ? 0 : sliding_avg();
       const long remaining_time = ( s_rate <= 0 ) ? -1 :
         std::min( std::min( (long long)LONG_MAX, 315359999968464000LL ),
-                  ( domain().in_size() - recsize -
-                    ( max_retries ? 0 : errsize ) + s_rate - 1 ) / s_rate );
-      std::printf( "   opos: %10sB,  run time: %11s,  remaining time: %11s\n",
-                   format_num( last_ipos + offset() ),
-                   format_time( t1 - t0 ),
+                  ( non_tried_size + non_trimmed_size + non_scraped_size +
+                    ( max_retries ? bad_sector_size : 0 ) + s_rate - 1 ) / s_rate );
+      std::printf( "     opos: %9sB,      errors: %8ld,  remaining time: %11s\n",
+                   format_num( last_ipos + offset() ), errors,
                    format_time( remaining_time, remaining_time >= 180 ) );
-      std::printf( "time since last successful read: %11s\n",
+      std::printf( "                              time since last successful read: %11s\n",
                    format_time( t1 - ts ) );
       if( msg && msg[0] && !errors_or_timeout() )
         {
@@ -651,7 +672,8 @@ void Rescuebook::show_status( const long long ipos, const char * const msg,
         }
       std::fflush( stdout );
       }
-    rate_logger.print_line( t1 - t0, last_ipos, a_rate, c_rate, errors, errsize );
+    rate_logger.print_line( t1 - t0, last_ipos, a_rate, c_rate, errors,
+                            bad_sector_size );
     if( !force && !first_post ) read_logger.print_time( t1 - t0 );
     rates_updated = false;
     first_post = false;
@@ -668,8 +690,11 @@ Rescuebook::Rescuebook( const long long offset, const long long isize,
     Rb_options( rb_opts ),
     error_rate( 0 ),
     sparse_size( sparse ? 0 : -1 ),
-    recsize( 0 ),
-    errsize( 0 ),
+    non_tried_size( 0 ),
+    non_trimmed_size( 0 ),
+    non_scraped_size( 0 ),
+    bad_sector_size( 0 ),
+    finished_size( 0 ),
     test_domain( test_dom ),
     iname_( iname ),
     e_code( 0 ),
@@ -677,7 +702,7 @@ Rescuebook::Rescuebook( const long long offset, const long long isize,
     voe_ipos( -1 ), voe_buf( new uint8_t[hardbs] ),
     a_rate( 0 ), c_rate( 0 ), first_size( 0 ), last_size( 0 ),
     iobuf_ipos( -1 ), last_ipos( 0 ), t0( 0 ), t1( 0 ), ts( 0 ), oldlen( 0 ),
-    rates_updated( false ), sliding_avg( 60 ), first_post( false ),
+    rates_updated( false ), sliding_avg( 30 ), first_post( false ),
     first_read( true )
   {
   if( preview_lines > softbs() / 16 ) preview_lines = softbs() / 16;
@@ -708,7 +733,7 @@ Rescuebook::Rescuebook( const long long offset, const long long isize,
           sb.status() == Sblock::non_trimmed )
         change_sblock_status( index, Sblock::non_tried );
       }
-  count_errors();
+  initialize_sizes();				// counts errors
   if( new_errors_only ) max_errors += errors;
   }
 
@@ -720,19 +745,9 @@ int Rescuebook::do_rescue( const int ides, const int odes )
   bool copy_pending = false, trim_pending = false, scrape_pending = false;
   ides_ = ides; odes_ = odes;
 
-  for( long i = 0; i < sblocks(); ++i )
-    {
-    const Sblock & sb = sblock( i );
-    if( !domain().includes( sb ) ) { if( domain() < sb ) break; else continue; }
-    switch( sb.status() )
-      {
-      case Sblock::non_tried:   copy_pending = true;	// fall through
-      case Sblock::non_trimmed: trim_pending = true;	// fall through
-      case Sblock::non_scraped: scrape_pending = true; break;
-      case Sblock::bad_sector:  errsize += sb.size(); break;
-      case Sblock::finished:    recsize += sb.size(); break;
-      }
-    }
+  if( non_tried_size ) copy_pending = trim_pending = scrape_pending = true;
+  if( non_trimmed_size )              trim_pending = scrape_pending = true;
+  if( non_scraped_size )                             scrape_pending = true;
   set_signals();
   if( verbosity >= 0 )
     {
@@ -742,17 +757,18 @@ int Rescuebook::do_rescue( const int ides, const int odes )
       std::fputs( "Initial status (read from mapfile)\n", stdout );
       if( verbosity >= 3 )
         {
-        std::printf( "current position: %10sB,     current sector: %7lld\n",
+        std::printf( "current position: %9sB,     current sector: %7lld\n",
                      format_num( current_pos() ), current_pos() / hardbs() );
         if( sblocks() )
-          std::printf( " last block size: %10sB\n",
+          std::printf( " last block size: %9sB\n",
                        format_num( sblock( sblocks() - 1 ).size() ) );
         }
       if( domain().pos() > 0 || domain().end() < mapfile_isize() )
         std::printf( "(sizes below are limited to the domain %sB to %sB)\n",
                      format_num( domain().pos() ), format_num( domain().end() ) );
-      std::printf( "rescued: %10sB,  errsize:%9sB,  errors: %7ld\n",
-                   format_num( recsize ), format_num( errsize, 99999 ), errors );
+      std::printf( "  rescued: %9sB,     errsize: %9sB,  errors: %7ld\n",
+                   format_num( finished_size ),
+                   format_num( bad_sector_size, 99999 ), errors );
       std::fputs( "\nCurrent status\n", stdout );
       }
     }

@@ -132,13 +132,13 @@ void Fillbook::show_status( const long long ipos, const char * const msg,
       last_size = filled_size;
       }
     std::printf( "\r%s%s%s", up, up, up );
-    std::printf( "filled size: %10sB,  filled areas: %6ld,  current rate: %8sB/s\n",
+    std::printf( "filled size: %9sB,  filled areas: %6ld,  current rate: %8sB/s\n",
                  format_num( filled_size ), filled_areas,
                  format_num( c_rate, 99999 ) );
-    std::printf( "remain size: %10sB,  remain areas: %6ld,  average rate: %8sB/s\n",
+    std::printf( "remain size: %9sB,  remain areas: %6ld,  average rate: %8sB/s\n",
                  format_num( remaining_size ), remaining_areas,
                  format_num( a_rate, 99999 ) );
-    std::printf( "current pos: %10sB,  run time: %11s\n",
+    std::printf( "current pos: %9sB,  run time: %11s\n",
                  format_num( last_ipos + offset() ), format_time( t1 - t0 ) );
     if( msg && msg[0] )
       {
@@ -181,9 +181,9 @@ int Fillbook::do_fill( const int odes )
     if( mapfile_exists() )
       {
       std::fputs( "Initial status (read from mapfile)\n", stdout );
-      std::printf( "filled size:    %10sB,  filled areas:    %7ld\n",
+      std::printf( "filled size:    %9sB,  filled areas:    %7ld\n",
                    format_num( filled_size ), filled_areas );
-      std::printf( "remaining size: %10sB,  remaining areas: %7ld\n",
+      std::printf( "remaining size: %9sB,  remaining areas: %7ld\n",
                    format_num( remaining_size ), remaining_areas );
       std::fputs( "Current status\n", stdout );
       }

@@ -39,22 +39,19 @@ const char * format_time( const long t, const bool low_prec )
   static int current = 0;
   if( t < 0 ) return "n/a";
   char * const buf = buffer[current++]; current %= buffers;
-  const long s = t % 60;
-  const long m = ( t / 60 ) % 60;
-  const long h = ( t / 3600 ) % 24;
-  const long d = ( t / 86400 ) % 365;
-  const long y = t / 31536000;
+  const int s = t % 60;
+  const int m = ( t / 60 ) % 60;
+  const int h = ( t / 3600 ) % 24;
+  const long d = t / 86400;
   int len = 0;				// max len is 11 chars (10h 10m 10s)
 
-  if( y > 0 ) len = snprintf( buf, bufsize, "%ldy", y );
-  if( d > 0 && len >= 0 && len <= 8 - ( d > 9 ) )
-    len += snprintf( buf + len, bufsize - len, "%s%ldd", len ? " " : "", d );
-  if( h > 0 && len >= 0 && len <= 8 - ( h > 9 ) )
-    len += snprintf( buf + len, bufsize - len, "%s%ldh", len ? " " : "", h );
-  if( m > 0 && len >= 0 && len <= 8 - ( m > 9 ) )
-    len += snprintf( buf + len, bufsize - len, "%s%ldm", len ? " " : "", m );
-  if( ( s > 0 && len >= 0 && len <= 8 - ( s > 9 ) && !low_prec ) || len == 0 )
-    len += snprintf( buf + len, bufsize - len, "%s%lds", len ? " " : "", s );
+  if( d > 0 ) len = snprintf( buf, bufsize, "%ldd", d );
+  if( h > 0 && len >= 0 && len <= 7 )
+    len += snprintf( buf + len, bufsize - len, "%s%2dh", len ? " " : "", h );
+  if( m > 0 && len >= 0 && len <= 7 )
+    len += snprintf( buf + len, bufsize - len, "%s%2dm", len ? " " : "", m );
+  if( ( s > 0 && len >= 0 && len <= 7 && !low_prec ) || len == 0 )
+    len += snprintf( buf + len, bufsize - len, "%s%2ds", len ? " " : "", s );
   return buf;
   }
 
@@ -74,7 +71,7 @@ void Genbook::check_block( const Block & b, int & copied_size, int & error_size 
       {
       change_chunk_status( Block( b.pos() + pos, size ),
                            Sblock::finished, domain() );
-      recsize += size;
+      finished_size += size;
       }
     gensize += size;
     pos += size;
@@ -145,10 +142,10 @@ void Genbook::show_status( const long long ipos, const char * const msg,
       last_size = gensize;
       }
     std::printf( "\r%s%s", up, up );
-    std::printf( "rescued: %10sB,  generated:%10sB,  current rate: %8sB/s\n",
-                 format_num( recsize ), format_num( gensize ),
+    std::printf( "rescued: %9sB,  generated: %9sB,  current rate: %8sB/s\n",
+                 format_num( finished_size ), format_num( gensize ),
                  format_num( c_rate, 99999 ) );
-    std::printf( "   opos: %10sB,  run time: %11s,  average rate: %8sB/s\n",
+    std::printf( "   opos: %9sB,  run time: %11s,  average rate: %8sB/s\n",
                  format_num( last_ipos + offset() ), format_time( t1 - t0 ),
                  format_num( a_rate, 99999 ) );
     if( msg && msg[0] )
@@ -166,7 +163,7 @@ void Genbook::show_status( const long long ipos, const char * const msg,
 //
 int Genbook::do_generate( const int odes )
   {
-  recsize = 0; gensize = 0;
+  finished_size = 0; gensize = 0;
   odes_ = odes;
 
   for( long i = 0; i < sblocks(); ++i )
@@ -174,7 +171,7 @@ int Genbook::do_generate( const int odes )
     const Sblock & sb = sblock( i );
     if( !domain().includes( sb ) )
       { if( domain() < sb ) break; else continue; }
-    if( sb.status() == Sblock::finished ) recsize += sb.size();
+    if( sb.status() == Sblock::finished ) finished_size += sb.size();
     if( sb.status() != Sblock::non_tried ) gensize += sb.size();
     }
   set_signals();
@@ -184,8 +181,8 @@ int Genbook::do_generate( const int odes )
     if( mapfile_exists() )
       {
       std::fputs( "Initial status (read from mapfile)\n", stdout );
-      std::printf( "rescued: %10sB,  generated:%10sB\n",
-                   format_num( recsize ), format_num( gensize ) );
+      std::printf( "rescued: %9sB,  generated: %9sB\n",
+                   format_num( finished_size ), format_num( gensize ) );
       std::fputs( "Current status\n", stdout );
       }
     }
