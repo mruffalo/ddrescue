@@ -87,31 +87,31 @@ if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
 if [ $? = 1 ] ; then printf . ; else printf - ; fail=1 ; fi
 
 rm -f mapfile
-"${DDRESCUE}" -q -t -p -i15000 ${in} out mapfile || fail=1
-"${DDRESCUE}" -q -y -f -n -s15000 ${in} out mapfile || fail=1
+"${DDRESCUE}" -q -t -p -J -b1024 -i15000 ${in} out mapfile || fail=1
+"${DDRESCUE}" -q -A -y -e0 -f -n -s15000 ${in} out mapfile || fail=1
 cmp ${in} out || fail=1
 printf .
 
 rm -f out
 rm -f mapfile
-"${DDRESCUE}" -q -R -i15000 ${in} out mapfile || fail=1
+"${DDRESCUE}" -q -R -i15000 -a 1k -E0 ${in} out mapfile || fail=1
 "${DDRESCUE}" -q -R -s15000 --cpass=3 ${in} out mapfile || fail=1
 cmp ${in} out || fail=1
 printf .
 
 rm -f out
 "${DDRESCUE}" -q -F+ -o15000 -c143 ${in} out2 mapfile || fail=1
-"${DDRESCUE}" -q -R -S -i15000 -o0 --unidirectional out2 out || fail=1
+"${DDRESCUE}" -q -R -S -i15000 -o0 -u -Z1MiB out2 out || fail=1
 cmp ${in} out || fail=1
 printf .
 
 printf "garbage" >> out || framework_failure
-"${DDRESCUE}" -q -R -t -i15000 -o0 out2 out || fail=1
+"${DDRESCUE}" -q -N -R -t -i15000 -o0 --pause=0 out2 out || fail=1
 cmp ${in} out || fail=1
 printf .
 
 rm -f out
-"${DDRESCUE}" -q -O -H - ${in} out < ${map1} || fail=1
+"${DDRESCUE}" -q -O -r1 -H - ${in} out < ${map1} || fail=1
 cmp ${in1} out || fail=1
 printf .
 "${DDRESCUE}" -q -O -L -K0 -c1 -H ${map2i} ${in2} out || fail=1
@@ -121,7 +121,7 @@ printf .
 rm -f out
 "${DDRESCUE}" -q -c1 -H ${map3} ${in3} out || fail=1
 "${DDRESCUE}" -q -c2 -H ${map4} ${in4} out || fail=1
-"${DDRESCUE}" -q -H ${map5} ${in5} out || fail=1
+"${DDRESCUE}" -q -M -H ${map5} ${in5} out || fail=1
 cmp ${in} out || fail=1
 printf .
 
@@ -134,7 +134,7 @@ cmp ${in} out || fail=1
 printf .
 
 rm -f out
-"${DDRESCUE}" -q -R -m ${map2} ${in} out || fail=1
+"${DDRESCUE}" -q -R -B -m ${map2} ${in} out || fail=1
 cmp ${in2} out || fail=1
 printf .
 "${DDRESCUE}" -q -R -K,64KiB -m ${map1} ${in1} out || fail=1

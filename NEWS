@@ -4,3 +4,6 @@ Ddrescue now shows all sizes in rescue mode; non-tried, non-trimmed,
 non-scraped, bad-sector and finished.
 
 The short name '-Z' has been assigned to option '--max-read-rate'.
+
+The mapfile is now "fsync'ed" every 5 minutes because some systems seem
+to never write the mapfile to disc.

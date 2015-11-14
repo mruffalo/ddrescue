@@ -1,3 +1,8 @@
+2015-11-14  Antonio Diaz Diaz  <antonio@gnu.org>
+
+	* Version 1.21-pre2 released.
+	* mapbook.cc (update_mapfile): 'fsync' the mapfile every 5 minutes.
+
 2015-09-25  Antonio Diaz Diaz  <antonio@gnu.org>
 
 	* Version 1.21-pre1 released.
@@ -68,7 +73,7 @@
 	* Changed short name of option '--generate-mode' to '-G'.
 	* Default value of option '-l, --logfile-size' increased to 10000.
 	* If interrupted, ddrescue terminates by raising the signal received.
-	* rescuebook.cc (copy_non_tried): Do not mark skipped blocks as
+	* rescuebook.cc (copy_non_tried): Don't mark skipped blocks as
 	  non-trimmed. Try them in additional passes (before trimming).
 	* rescuebook.cc: Limit the copying phase to 3 passes.
 	* rescuebook.cc: Alternate direction of passes during copying phase.
@@ -117,8 +122,8 @@
 	* ddrescue.h (slow_read): Return false for the first 10 seconds.
 	* io.cc (show_status) Leave cursor after message so that ^C does
 	  not overwrite it.
-	* main.cc: Do not require '--force' for generate mode.
-	* ddrescue.h (Logbook::logfile_exists): Do not return false if
+	* main.cc: Don't require '--force' for generate mode.
+	* ddrescue.h (Logbook::logfile_exists): Don't return false if
 	  logfile exists but is empty.
 	* ddrescue.texinfo: Added new chapter 'Using ddrescue safely'.
 	* Documented that 'direct disc access' only reads whole sectors.

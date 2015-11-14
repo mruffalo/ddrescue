@@ -206,7 +206,8 @@ public:
   void set_to_status( const Sblock::Status st )
     { sblock_vector.assign( 1, Sblock( 0, -1, st ) ); }
   bool read_mapfile( const int default_sblock_status = 0, const bool ro = true );
-  int write_mapfile( FILE * f = 0, const bool timestamp = false ) const;
+  int write_mapfile( FILE * f = 0, const bool timestamp = false,
+                     const bool mf_sync = false ) const;
 
   bool blank() const;
   long long current_pos() const { return current_pos_; }

@@ -230,8 +230,8 @@ int Rescuebook::copy_and_update( const Block & b, int & copied_size,
       const Sblock::Status st2 =
         ( error_size > hardbs() ) ? st : Sblock::bad_sector;
       change_chunk_status( Block( b.pos() + copied_size, error_size ), st2 );
-      struct stat st;
-      if( stat( iname_, &st ) != 0 )
+      struct stat istat;
+      if( stat( iname_, &istat ) != 0 )
         { final_msg( "Input file disappeared", errno ); retval = 1; }
       }
     }

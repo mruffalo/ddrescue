@@ -51,7 +51,7 @@ bool Mapbook::save_mapfile( const char * const name )
   {
   std::remove( name );
   FILE * const f = std::fopen( name, "w" );
-  if( f && write_mapfile( f, true ) && std::fclose( f ) == 0 )
+  if( f && write_mapfile( f, true, true ) && std::fclose( f ) == 0 )
     {
     char buf[80];
     snprintf( buf, sizeof buf, "Mapfile saved in '%s'\n", name );
@@ -91,7 +91,7 @@ Mapbook::Mapbook( const long long offset, const long long isize,
   : Mapfile( mapname ), offset_( offset ), mapfile_isize_( 0 ),
     domain_( dom ), hardbs_( hardbs ), softbs_( cluster * hardbs_ ),
     iobuf_size_( hardbs_ + softbs_ ),
-    final_errno_( 0 ), ul_t1( 0 ), mapfile_exists_( false )
+    final_errno_( 0 ), um_t1( 0 ), um_t1s( 0 ), mapfile_exists_( false )
   {
   int alignment = sysconf( _SC_PAGESIZE );
   if( alignment < hardbs_ || alignment % hardbs_ ) alignment = hardbs_;
@@ -130,15 +130,17 @@ bool Mapbook::update_mapfile( const int odes, const bool force )
   if( !filename() ) return true;
   const int interval = 30 + std::min( 270L, sblocks() / 38 );	// 30s to 5m
   const long t2 = std::time( 0 );
-  if( ul_t1 == 0 ) ul_t1 = t2;				// initialize
-  if( !force && t2 - ul_t1 < interval ) return true;
-  ul_t1 = t2;
+  if( um_t1 == 0 || um_t1 > t2 ) um_t1 = um_t1s = t2;	// initialize
+  if( !force && t2 - um_t1 < interval ) return true;
+  um_t1 = t2;
+  const bool mf_sync = ( force || t2 - um_t1s >= 300 );	// fsync mf every 5m
+  if( mf_sync ) um_t1s = t2;
   if( odes >= 0 ) fsync( odes );
 
   while( true )
     {
     errno = 0;
-    if( write_mapfile( 0, true ) ) return true;
+    if( write_mapfile( 0, true, mf_sync ) ) return true;
     if( verbosity < 0 ) return false;
     const int saved_errno = errno;
     std::fputc( '\n', stderr );

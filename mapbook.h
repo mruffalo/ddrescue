@@ -25,7 +25,7 @@ class Mapbook : public Mapfile
   const int iobuf_size_;
   std::string final_msg_;
   int final_errno_;
-  long ul_t1;				// variable for update_mapfile
+  long um_t1, um_t1s;			// variables for update_mapfile
   bool mapfile_exists_;
 
   bool save_mapfile( const char * const name );

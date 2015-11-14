@@ -230,7 +230,8 @@ bool Mapfile::read_mapfile( const int default_sblock_status, const bool ro )
   }
 
 
-int Mapfile::write_mapfile( FILE * f, const bool timestamp ) const
+int Mapfile::write_mapfile( FILE * f, const bool timestamp,
+                            const bool mf_sync ) const
   {
   const bool f_given = ( f != 0 );
 
@@ -248,6 +249,7 @@ int Mapfile::write_mapfile( FILE * f, const bool timestamp ) const
     const Sblock & sb = sblock_vector[i];
     std::fprintf( f, "0x%08llX  0x%08llX  %c\n", sb.pos(), sb.size(), sb.status() );
     }
+  if( mf_sync ) fsync( fileno( f ) );
   return ( f_given || std::fclose( f ) == 0 );
   }
 
