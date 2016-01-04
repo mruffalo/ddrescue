@@ -6,8 +6,8 @@
 @finalout
 @c %**end of header
 
-@set UPDATED 14 November 2015
-@set VERSION 1.21-pre2
+@set UPDATED 4 January 2016
+@set VERSION 1.21-pre3
 
 @dircategory GNU Packages
 @direntry
@@ -54,7 +54,7 @@ This manual is for GNU ddrescue (version @value{VERSION}, @value{UPDATED}).
 @end menu
 
 @sp 1
-Copyright @copyright{} 2004-2015 Antonio Diaz Diaz.
+Copyright @copyright{} 2004-2016 Antonio Diaz Diaz.
 
 This manual is free documentation: you have unlimited permission
 to copy, distribute and modify it.

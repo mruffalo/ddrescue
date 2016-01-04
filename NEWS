@@ -1,5 +1,8 @@
 Changes in version 1.21:
 
+A bug in the aligment of the I/O buffer has been (hopefully) fixed.
+(Thanks to Heikki Tauriainen).
+
 Ddrescue now shows all sizes in rescue mode; non-tried, non-trimmed,
 non-scraped, bad-sector and finished.
 

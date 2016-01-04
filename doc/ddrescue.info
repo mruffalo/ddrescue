@@ -12,7 +12,7 @@ File: ddrescue.info,  Node: Top,  Next: Introduction,  Up: (dir)
 GNU ddrescue Manual
 *******************
 
-This manual is for GNU ddrescue (version 1.21-pre2, 14 November 2015).
+This manual is for GNU ddrescue (version 1.21-pre3, 4 January 2016).
 
 * Menu:
 
@@ -34,7 +34,7 @@ This manual is for GNU ddrescue (version 1.21-pre2, 14 November 2015).
 * Concept index::         Index of concepts
 
 
-   Copyright (C) 2004-2015 Antonio Diaz Diaz.
+   Copyright (C) 2004-2016 Antonio Diaz Diaz.
 
    This manual is free documentation: you have unlimited permission to
 copy, distribute and modify it.
@@ -788,7 +788,7 @@ Character   Meaning
 
 And here is an example mapfile:
 
-     # Mapfile. Created by GNU ddrescue version 1.21-pre2
+     # Mapfile. Created by GNU ddrescue version 1.21-pre3
      # Command line: ddrescue -d -c18 /dev/fd0 fdimage mapfile
      # Start time:   2015-07-21 09:37:44
      # Current time: 2015-07-21 09:38:19
@@ -1531,23 +1531,23 @@ Concept index
 
 Tag Table:
 Node: Top201
-Node: Introduction1442
-Node: Basic concepts4162
-Node: Important advice6445
-Node: Algorithm7520
-Node: Invoking ddrescue12949
-Node: Mapfile structure31572
-Node: Emergency save34302
-Node: Optical media35758
-Ref: lziprecover-example38691
-Node: Examples39470
-Node: Direct disc access43199
-Node: Fill mode45420
-Node: Generate mode50473
-Node: Ddrescuelog52414
-Node: Invoking ddrescuelog54709
-Node: Problems61924
-Node: Concept index62481
+Node: Introduction1440
+Node: Basic concepts4160
+Node: Important advice6443
+Node: Algorithm7518
+Node: Invoking ddrescue12947
+Node: Mapfile structure31570
+Node: Emergency save34300
+Node: Optical media35756
+Ref: lziprecover-example38689
+Node: Examples39468
+Node: Direct disc access43197
+Node: Fill mode45418
+Node: Generate mode50471
+Node: Ddrescuelog52412
+Node: Invoking ddrescuelog54707
+Node: Problems61922
+Node: Concept index62479
 
 End Tag Table
 

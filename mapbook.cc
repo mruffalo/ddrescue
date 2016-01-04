@@ -1,5 +1,5 @@
 /*  GNU ddrescue - Data recovery tool
-    Copyright (C) 2004-2015 Antonio Diaz Diaz.
+    Copyright (C) 2004-2016 Antonio Diaz Diaz.
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -93,13 +93,14 @@ Mapbook::Mapbook( const long long offset, const long long isize,
     iobuf_size_( hardbs_ + softbs_ ),
     final_errno_( 0 ), um_t1( 0 ), um_t1s( 0 ), mapfile_exists_( false )
   {
-  int alignment = sysconf( _SC_PAGESIZE );
+  long alignment = sysconf( _SC_PAGESIZE );
   if( alignment < hardbs_ || alignment % hardbs_ ) alignment = hardbs_;
-  if( alignment < 2 || alignment > 65536 ) alignment = 0;
+  if( alignment < 2 || alignment > 1 << 20 ) alignment = 0;
   iobuf_ = iobuf_base = new uint8_t[ iobuf_size_ + alignment ];
-  if( alignment > 1 )		// align iobuf for use with raw devices
+  if( alignment > 1 )		// align iobuf for direct disc access
     {
-    const int disp = alignment - ( reinterpret_cast<long> (iobuf_) % alignment );
+    const int disp =
+      alignment - ( reinterpret_cast<unsigned long long> (iobuf_) % alignment );
     if( disp > 0 && disp < alignment ) iobuf_ += disp;
     }
 

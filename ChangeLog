@@ -1,3 +1,9 @@
+2016-01-04  Antonio Diaz Diaz  <antonio@gnu.org>
+
+	* Version 1.21-pre3 released.
+	* mapbook.cc (Mapbook): Fix iobuf alignment.
+	  (Reported by Heikki Tauriainen).
+
 2015-11-14  Antonio Diaz Diaz  <antonio@gnu.org>
 
 	* Version 1.21-pre2 released.
@@ -372,7 +378,7 @@
 	* Version 0.1 released.
 
 
-Copyright (C) 2004-2015 Antonio Diaz Diaz.
+Copyright (C) 2004-2016 Antonio Diaz Diaz.
 
 This file is a collection of facts, and thus it is not copyrightable,
 but just in case, you have unlimited permission to copy, distribute and
