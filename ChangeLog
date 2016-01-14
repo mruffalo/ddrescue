@@ -1,3 +1,8 @@
+2016-01-14  Antonio Diaz Diaz  <antonio@gnu.org>
+
+	* Version 1.21-pre4 released.
+	* rescuebook.cc (copy_block): Return 1 on unaligned read error.
+
 2016-01-04  Antonio Diaz Diaz  <antonio@gnu.org>
 
 	* Version 1.21-pre3 released.

@@ -158,7 +158,7 @@ long parse_time_interval( const char * const ptr )
       case 'm': r *= 60; break;
       case 's':
       case  0 : break;
-      default : show_error( "Bad unit in time interval", 0, true );
+      default : show_error( "Bad unit in time interval.", 0, true );
                 std::exit( 1 );
       }
     const long interval = r.round();

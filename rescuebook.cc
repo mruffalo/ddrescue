@@ -95,8 +95,7 @@ bool Rescuebook::extend_outfile_size()
   }
 
 
-// Return values: 1 write error, 0 OK.
-// If !OK, copied_size and error_size are set to 0.
+// Return values: 2 bad infile, 1 I/O error, 0 OK.
 // If OK && copied_size + error_size < b.size(), it means EOF has been reached.
 //
 int Rescuebook::copy_block( const Block & b, int & copied_size, int & error_size )
@@ -120,6 +119,8 @@ int Rescuebook::copy_block( const Block & b, int & copied_size, int & error_size
       }
     else copied_size = readblock( ides_, iobuf(), b.size(), b.pos() );
     error_size = errno ? b.size() - copied_size : 0;
+    if( errno == EINVAL )
+      { final_msg( "Unaligned read error. Is sector size correct?" ); return 1; }
     }
   else { copied_size = 0; error_size = b.size(); }
 
@@ -134,11 +135,7 @@ int Rescuebook::copy_block( const Block & b, int & copied_size, int & error_size
       }
     else if( writeblock( odes_, iobuf(), copied_size, pos ) != copied_size ||
              ( synchronous_ && fsync( odes_ ) < 0 && errno != EINVAL ) )
-      {
-      copied_size = 0; error_size = 0;
-      final_msg( "Write error", errno );
-      return 1;
-      }
+      { final_msg( "Write error", errno ); return 1; }
     }
   else iobuf_ipos = -1;
 

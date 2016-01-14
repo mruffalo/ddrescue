@@ -12,7 +12,7 @@ File: ddrescue.info,  Node: Top,  Next: Introduction,  Up: (dir)
 GNU ddrescue Manual
 *******************
 
-This manual is for GNU ddrescue (version 1.21-pre3, 4 January 2016).
+This manual is for GNU ddrescue (version 1.21-pre4, 14 January 2016).
 
 * Menu:
 
@@ -788,7 +788,7 @@ Character   Meaning
 
 And here is an example mapfile:
 
-     # Mapfile. Created by GNU ddrescue version 1.21-pre3
+     # Mapfile. Created by GNU ddrescue version 1.21-pre4
      # Command line: ddrescue -d -c18 /dev/fd0 fdimage mapfile
      # Start time:   2015-07-21 09:37:44
      # Current time: 2015-07-21 09:38:19
@@ -1531,23 +1531,23 @@ Concept index
 
 Tag Table:
 Node: Top201
-Node: Introduction1440
-Node: Basic concepts4160
-Node: Important advice6443
-Node: Algorithm7518
-Node: Invoking ddrescue12947
-Node: Mapfile structure31570
-Node: Emergency save34300
-Node: Optical media35756
-Ref: lziprecover-example38689
-Node: Examples39468
-Node: Direct disc access43197
-Node: Fill mode45418
-Node: Generate mode50471
-Node: Ddrescuelog52412
-Node: Invoking ddrescuelog54707
-Node: Problems61922
-Node: Concept index62479
+Node: Introduction1441
+Node: Basic concepts4161
+Node: Important advice6444
+Node: Algorithm7519
+Node: Invoking ddrescue12948
+Node: Mapfile structure31571
+Node: Emergency save34301
+Node: Optical media35757
+Ref: lziprecover-example38690
+Node: Examples39469
+Node: Direct disc access43198
+Node: Fill mode45419
+Node: Generate mode50472
+Node: Ddrescuelog52413
+Node: Invoking ddrescuelog54708
+Node: Problems61923
+Node: Concept index62480
 
 End Tag Table
 

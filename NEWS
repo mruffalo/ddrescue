@@ -3,6 +3,9 @@ Changes in version 1.21:
 A bug in the aligment of the I/O buffer has been (hopefully) fixed.
 (Thanks to Heikki Tauriainen).
 
+Ddrescue now exits with status 1 in case of unaligned read in direct
+mode (because of a wrong sector size, for example).
+
 Ddrescue now shows all sizes in rescue mode; non-tried, non-trimmed,
 non-scraped, bad-sector and finished.
 
