@@ -1,15 +1,28 @@
 Changes in version 1.21:
 
-A bug in the aligment of the I/O buffer has been (hopefully) fixed.
+A bug in the alignment of the I/O buffer has been (hopefully) fixed.
 (Thanks to Heikki Tauriainen).
 
 Ddrescue now exits with status 1 in case of unaligned read in direct
 mode (because of a wrong sector size, for example).
 
+Short option names '-1' and '-2' have been removed to avoid mistakes in
+the command line.
+
+Only regular files are now allowed as arguments of options '--log-rates'
+and '--log-reads'.
+
+Option '-D, --odirect' now works also in fill mode.
+
+Option '-J, --verify-on-error' now exits with status 1 if a read error
+happens before a good sector is found.
+
+The short name '-Z' has been assigned to option '--max-read-rate'.
+
 Ddrescue now shows all sizes in rescue mode; non-tried, non-trimmed,
 non-scraped, bad-sector and finished.
 
-The short name '-Z' has been assigned to option '--max-read-rate'.
+Ddrescue now shows the percentage of the domain rescued in rescue mode.
 
 The mapfile is now "fsync'ed" every 5 minutes because some systems seem
 to never write the mapfile to disc.

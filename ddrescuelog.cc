@@ -417,49 +417,6 @@ int to_badblocks( const long long offset, Domain & domain,
   }
 
 
-// Shows the fraction "num/den" as a percentage with "prec" decimals.
-// If 'prec' is negative, only the needed decimals are shown.
-//
-const char * format_percentage( long long num, long long den,
-                                const int iwidth = 3, int prec = -2 )
-  {
-  static char buf[80];
-
-  if( den < 0 ) { num = -num; den = -den; }
-  if( llabs( num ) <= LLONG_MAX / 100 && den <= LLONG_MAX / 10 ) num *= 100;
-  else if( llabs( num ) <= LLONG_MAX / 10 ) { num *= 10; den /= 10; }
-  else den /= 100;
-  if( den == 0 )
-    {
-    if( num > 0 ) return "+INF";
-    else if( num < 0 ) return "-INF";
-    else return "NAN";
-    }
-  const bool trunc = ( prec < 0 );
-  if( prec < 0 ) prec = -prec;
-
-  unsigned i;
-  if( num < 0 && num / den == 0 )
-    i = snprintf( buf, sizeof( buf ), "%*s", iwidth, "-0" );
-  else i = snprintf( buf, sizeof( buf ), "%*lld", iwidth, num / den );
-  if( i < sizeof( buf ) - 2 )
-    {
-    long long rest = llabs( num ) % den;
-    if( prec > 0 && ( rest > 0 || !trunc ) )
-      {
-      buf[i++] = '.';
-      while( prec > 0 && ( rest > 0 || !trunc ) && i < sizeof( buf ) - 2 )
-        { rest *= 10; buf[i++] = (char)( rest / den ) + '0';
-          rest %= den; --prec; }
-      }
-    }
-  else i = sizeof( buf ) - 2;
-  buf[i++] = '%';
-  buf[i] = 0;
-  return buf;
-  }
-
-
 int do_show_status( Domain & domain, const char * const mapname,
                     const bool loose )
   {
@@ -510,12 +467,12 @@ int do_show_status( Domain & domain, const char * const mapname,
     std::printf( "   domain size: %9sB,  in %6ld area(s)\n",
                  format_num( domain_size ), domain.blocks() );
     }
-  std::printf( "\n       rescued: %9sB,  in %6ld area(s)  (%s)\n",
-               format_num( finished_size ), finished_areas,
-               format_percentage( finished_size, domain_size ) );
-  std::printf( "     non-tried: %9sB,  in %6ld area(s)  (%s)\n",
+  std::printf( "\n     non-tried: %9sB,  in %6ld area(s)  (%s)\n",
                format_num( non_tried_size ), non_tried_areas,
                format_percentage( non_tried_size, domain_size ) );
+  std::printf( "       rescued: %9sB,  in %6ld area(s)  (%s)\n",
+               format_num( finished_size ), finished_areas,
+               format_percentage( finished_size, domain_size ) );
   std::printf( "   non-trimmed: %9sB,  in %6ld area(s)  (%s)\n",
                format_num( non_trimmed_size ), non_trimmed_areas,
                format_percentage( non_trimmed_size, domain_size ) );

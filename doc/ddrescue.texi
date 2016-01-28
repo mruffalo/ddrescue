@@ -6,8 +6,8 @@
 @finalout
 @c %**end of header
 
-@set UPDATED 14 January 2016
-@set VERSION 1.21-pre4
+@set UPDATED 28 January 2016
+@set VERSION 1.21-rc1
 
 @dircategory GNU Packages
 @direntry
@@ -387,7 +387,7 @@ or 9) is a good value for floppies.
 
 @item -C
 @itemx --complete-only
-Limit rescue domain to the blocks listed in the @var{mapfile}. Do not
+Limit rescue domain to the blocks listed in the @var{mapfile}. Don't
 read new data beyond @var{mapfile} limits. This is useful when reading
 from devices of undefined size (like raw devices), when the drive
 returns an incorrect size, or when reading from a partial copy. It can
@@ -402,8 +402,8 @@ O_DIRECT flag). Sector size must be correctly set for this to work. Not
 all systems support this.
 
 If your system does not support direct disc access, ddrescue will warn
-you. If the sector size is not correctly set, all reads will result in
-errors and no data will be rescued.
+you. If the sector size is not correctly set, an unaligned read error
+will result and ddrescue will exit with status 1.
 
 @item -D
 @itemx --odirect
@@ -491,10 +491,13 @@ rescue.
 @itemx --verify-on-error
 After every read error, read again the last good sector found and verify
 that it returns the same data. Exit with status 2 if the read fails or
-returns inconsistent data. This option performs one extra read after
-each error, wearing the drive faster. Use it only on drives that stop
-responding or return garbage data after finding errors. You may need to
-power cycle the drive before restarting ddrescue.
+returns inconsistent data. Exit with status 1 if a read error happens
+before a good sector is found.
+
+This option performs one extra read after each error, wearing the drive
+faster. Use it only on drives that stop responding or return garbage
+data after finding errors. You may need to power cycle the drive before
+restarting ddrescue.
 
 @item -K [@var{initial}][,@var{max}]
 @itemx --skip-size=[@var{initial}][,@var{max}]
@@ -525,10 +528,11 @@ to skip is calculated from the end of the block that just failed.
 Accept an incomplete synthetic (user fabricated) domain mapfile or
 test-mode mapfile and fill the gaps in the list of data blocks with
 non-tried blocks. The blocks in the mapfile must be strictly ascending
-and non-overlapping, but they do not need to be contiguous. This option
+and non-overlapping, but they don't need to be contiguous. This option
 allows making quick edits to a mapfile without all the size calculations
 involved in making all data blocks contiguous again.
 
+@anchor{--domain-mapfile}
 @item -m @var{file}
 @itemx --domain-mapfile=@var{file}
 Restrict the rescue domain to the blocks marked as finished in the
@@ -653,6 +657,10 @@ of a failing drive. Fill mode normally writes to @var{outfile} one
 cluster at a time. With this option, after the first write error is
 found in an area, the rest of that area is filled sector by sector.
 
+Note that in rescue mode a write error is fatal and forces to repeat the
+rescue or to copy @var{outfile} to a third drive using @var{mapfile} as
+domain (@pxref{--domain-mapfile}).
+
 @item -x @var{bytes}
 @itemx --extend-outfile=@var{bytes}
 Extend the size of @var{outfile} to make it at least @var{bytes} long.
@@ -662,11 +670,11 @@ size for @var{outfile}. Only regular files can be extended.
 
 @item -X
 @itemx --exit-on-error
-Exit after the first read error is encountered during the copying phase.
-This is similar but different to @samp{--timeout=0}, which waits until
-the screen status is refreshed (at least 1 second). If there is at least
-one successful read per second, @samp{--timeout=0} does not make
-ddrescue to exit.
+Exit with status 1 after the first read error is encountered during the
+copying phase. This is similar but different to @samp{--timeout=0},
+which waits until the screen status is refreshed (at least 1 second). If
+there is at least one successful read per second, @samp{--timeout=0}
+does not make ddrescue to exit.
 
 This is also similar but different to @samp{--max-errors=+0}, which
 exits when a new error area is found. If the read errors are adjacent to
@@ -686,29 +694,6 @@ actual read rate is rounded up to the equivalent of a whole number of
 cluster reads per second. Use this option to limit the bandwidth used by
 ddrescue, for example when recovering over a network.
 
-@item -1 @var{file}
-@itemx --log-rates=@var{file}
-Log rates and error sizes every second in @var{file}. If @var{file}
-already exists, it will be overwritten. Every time the screen is updated
-with new details, some of those details (time, input position, current
-and average rates, number of errors and error size) are written to
-@var{file} in a format usable by plotting utilities like gnuplot. This
-allows a posterior analysis of the drive to see if it has any weak zones
-(areas where the transfer rate drops well below the sustained average).
-
-@item -2 @var{file}
-@itemx --log-reads=@var{file}
-Log all read operations in @var{file}. If @var{file} already exists, it
-will be overwritten. Every read attempt and its result (position, size,
-copied size and error size) is written to @var{file}. (The position
-written is always the beginning of the block tried, even if reading
-backwards). A line is also written at the beginning of each phase
-(copying, trimming, scraping and retrying). Finally, a line with a time
-mark is written every second (unless the read takes more time). Use this
-option with caution because @var{file} may become very large very
-quickly. Use lzip to compress @var{file} if you need to store or
-transmit it.
-
 @item --ask
 Ask for user confirmation before starting the copy. If the first letter
 of the answer is @samp{y}, ddrescue starts copying. Else it exits with
@@ -722,6 +707,27 @@ Select what pass(es) to run during the copying phase. Valid values for
 @var{n} range from 0 to 3. @samp{--cpass=0} skips the copying phase
 entirely. To run only the given pass(es), specify also @samp{--no-trim}
 and @samp{--no-scrape}.
+
+@item --log-rates=@var{file}
+Log rates and error sizes every second in @var{file}. If @var{file}
+already exists, it will be overwritten. Every time the screen is updated
+with new details, some of those details (time, input position, current
+and average rates, number of errors and error size) are written to
+@var{file} in a format usable by plotting utilities like gnuplot. This
+allows a posterior analysis of the drive to see if it has any weak zones
+(areas where the transfer rate drops well below the sustained average).
+
+@item --log-reads=@var{file}
+Log all read operations in @var{file}. If @var{file} already exists, it
+will be overwritten. Every read attempt and its result (position, size,
+copied size and error size) is written to @var{file}. (The position
+written is always the beginning of the block tried, even if reading
+backwards). A line is also written at the beginning of each phase
+(copying, trimming, scraping and retrying). Finally, a line with a time
+mark is written every second (unless the read takes more time). Use this
+option with caution because @var{file} may become very large very
+quickly. Use lzip to compress @var{file} if you need to store or
+transmit it.
 
 @item --pause=@var{interval}
 Time to wait between passes. Defaults to 0. @var{interval} is formatted
@@ -1019,7 +1025,7 @@ At least not with ddrescue.
 @noindent
 Example 1: Rescue a whole disc with two ext2 partitions in /dev/hda to
 /dev/hdb.@*
-Note: you do not need to partition /dev/hdb beforehand, but if the
+Note: you don't need to partition /dev/hdb beforehand, but if the
 partition table on /dev/hda is damaged, you'll need to recreate it
 somehow on /dev/hdb.
 
@@ -1230,8 +1236,8 @@ Fill mode can also help you to figure out, independently of the file
 system used, what files are partially or entirely in the bad areas of
 the disc. Just follow these steps:
 
-1) Copy the damaged drive with ddrescue until finished. Do not use
-sparse writes. This yields a mapfile with only finished (@samp{+}) and
+1) Copy the damaged drive with ddrescue until finished. Don't use sparse
+writes. This yields a mapfile containing only finished (@samp{+}) and
 bad-sector (@samp{-}) blocks.
 
 2) Fill the bad-sector blocks of the copied drive or image file with a
@@ -1377,7 +1383,7 @@ Example 3: Rescue a whole disc with two ext2 partitions in /dev/hda to
 ddrescuelog. Disc sector size is 512, file system block size is 4096.
 Arguments to options @samp{-i} and @samp{-s} are the starting positions
 and sizes of the partitions being rescued.@*
-Note: you do not need to partition /dev/hdb beforehand, but if the
+Note: you don't need to partition /dev/hdb beforehand, but if the
 partition table on /dev/hda is damaged, you'll need to recreate it
 somehow on /dev/hdb.
 
@@ -1497,7 +1503,7 @@ other similar filesystem repairing tool.
 Accept an incomplete synthetic (user fabricated) domain mapfile or
 compare-as-domain mapfile and fill the gaps in the list of data blocks
 with non-tried blocks. The blocks in the mapfile must be strictly
-ascending and non-overlapping, but they do not need to be contiguous.
+ascending and non-overlapping, but they don't need to be contiguous.
 This option allows making quick edits to a mapfile without all the size
 calculations involved in making all data blocks contiguous again.
 

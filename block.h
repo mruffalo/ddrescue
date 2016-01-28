@@ -117,6 +117,8 @@ public:
 class Domain
   {
   std::vector< Block > block_vector;	// blocks are ordered and don't overlap
+  mutable long long cached_in_size;
+  void reset_cached_in_size() { cached_in_size = -1; }
 
 public:
   Domain( const long long p, const long long s,
@@ -132,10 +134,13 @@ public:
 
   long long in_size() const
     {
-    long long s = 0;
-    for( unsigned long i = 0; i < block_vector.size(); ++i )
-      s += block_vector[i].size();
-    return s;
+    if( cached_in_size < 0 )
+      {
+      cached_in_size = 0;
+      for( unsigned long i = 0; i < block_vector.size(); ++i )
+        cached_in_size += block_vector[i].size();
+      }
+    return cached_in_size;
     }
 
   bool operator!=( const Domain & d ) const
@@ -170,7 +175,11 @@ public:
     }
 
   void clear()
-    { block_vector.clear(); block_vector.push_back( Block( 0, 0 ) ); }
+    {
+    block_vector.clear(); block_vector.push_back( Block( 0, 0 ) );
+    cached_in_size = 0;
+    }
+
   void crop( const Block & b );
   void crop_by_file_size( const long long size ) { crop( Block( 0, size ) ); }
   };
@@ -270,3 +279,5 @@ bool write_timestamp( FILE * const f );
 bool write_final_timestamp( FILE * const f );
 const char * format_num( long long num, long long limit = 999999,
                          const int set_prefix = 0 );
+const char * format_percentage( long long num, long long den,
+                                const int iwidth = 3, int prec = -2 );

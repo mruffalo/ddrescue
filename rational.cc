@@ -1,5 +1,5 @@
 /*  Rational - Rational number class with overflow detection
-    Copyright (C) 2005-2015 Antonio Diaz Diaz.
+    Copyright (C) 2005-2016 Antonio Diaz Diaz.
 
     This library is free software: you have unlimited permission to
     copy, distribute and modify it.

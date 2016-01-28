@@ -1,3 +1,13 @@
+2016-01-28  Antonio Diaz Diaz  <antonio@gnu.org>
+
+	* Version 1.21-rc1 released.
+	* Removed short option names '-1' and '-2'.
+	* Allow only regular files for '--log-rates' and '--log-reads'.
+	* Option '-D, --odirect' now works also in fill mode.
+	* rescuebook.cc (copy_block): Set e_code if verify_on_error and
+	  a read error happens before the first good read.
+	* rescuebook.cc (show_status): Show percent rescued.
+
 2016-01-14  Antonio Diaz Diaz  <antonio@gnu.org>
 
 	* Version 1.21-pre4 released.

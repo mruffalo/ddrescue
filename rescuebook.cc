@@ -153,6 +153,7 @@ int Rescuebook::copy_block( const Block & b, int & copied_size, int & error_size
       if( std::memcmp( voe_buf, iobuf(), hardbs() ) != 0 )
         { final_msg( "Input file returns inconsistent data" ); return 2; }
       }
+    else if( error_size > 0 ) e_code |= 2;
     }
   return 0;
   }
@@ -298,7 +299,7 @@ int Rescuebook::fcopy_non_tried( const char * const msg, const int pass )
     if( ( error_size > 0 || slow_read() ) && pos >= 0 )
       {
       if( reopen_on_error && !reopen_infile() ) return 1;
-      if( skipbs > 0 && pass <= 2 )		// do not skip if skipbs == 0
+      if( skipbs > 0 && pass <= 2 )		// don't skip if skipbs == 0
         {
         b.assign( pos, skip_size );
         find_chunk( b, Sblock::non_tried, domain(), hardbs() );
@@ -350,7 +351,7 @@ int Rescuebook::rcopy_non_tried( const char * const msg, const int pass )
     if( ( error_size > 0 || slow_read() ) && end > 0 )
       {
       if( reopen_on_error && !reopen_infile() ) return 1;
-      if( skipbs > 0 && pass <= 2 )		// do not skip if skipbs == 0
+      if( skipbs > 0 && pass <= 2 )		// don't skip if skipbs == 0
         {
         b.assign( end - skip_size, skip_size );
         rfind_chunk( b, Sblock::non_tried, domain(), hardbs() );
@@ -640,14 +641,14 @@ void Rescuebook::show_status( const long long ipos, const char * const msg,
           }
         std::fputc( '\n', stdout );
         }
-      std::printf( "  rescued: %9sB, non-trimmed: %9sB,  current rate: %8sB/s\n",
-                   format_num( finished_size ), format_num( non_trimmed_size ),
+      std::printf( "     ipos: %9sB, non-trimmed: %9sB,  current rate: %8sB/s\n",
+                   format_num( last_ipos ), format_num( non_trimmed_size ),
                    format_num( c_rate, 99999 ) );
-      std::printf( "non-tried: %9sB, non-scraped: %9sB,  average rate: %8sB/s\n",
-                   format_num( non_tried_size ), format_num( non_scraped_size ),
-                   format_num( a_rate, 99999 ) );
-      std::printf( "     ipos: %9sB,     errsize: %9sB,      run time: %11s\n",
-                   format_num( last_ipos ),
+      std::printf( "     opos: %9sB, non-scraped: %9sB,  average rate: %8sB/s\n",
+                   format_num( last_ipos + offset() ),
+                   format_num( non_scraped_size ), format_num( a_rate, 99999 ) );
+      std::printf( "non-tried: %9sB,     errsize: %9sB,      run time: %11s\n",
+                   format_num( non_tried_size ),
                    format_num( bad_sector_size, 99999 ), format_time( t1 - t0 ) );
       if( first_post ) sliding_avg.reset();
       else sliding_avg.add_term( c_rate );
@@ -656,10 +657,11 @@ void Rescuebook::show_status( const long long ipos, const char * const msg,
         std::min( std::min( (long long)LONG_MAX, 315359999968464000LL ),
                   ( non_tried_size + non_trimmed_size + non_scraped_size +
                     ( max_retries ? bad_sector_size : 0 ) + s_rate - 1 ) / s_rate );
-      std::printf( "     opos: %9sB,      errors: %8ld,  remaining time: %11s\n",
-                   format_num( last_ipos + offset() ), errors,
+      std::printf( "  rescued: %9sB,      errors: %8ld,  remaining time: %11s\n",
+                   format_num( finished_size ), errors,
                    format_time( remaining_time, remaining_time >= 180 ) );
-      std::printf( "                              time since last successful read: %11s\n",
+      std::printf( "percent rescued: %s      time since last successful read: %11s\n",
+                   format_percentage( finished_size, domain().in_size(), 3, 2 ),
                    format_time( t1 - ts ) );
       if( msg && msg[0] && !errors_or_timeout() )
         {

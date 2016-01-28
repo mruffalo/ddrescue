@@ -23,9 +23,9 @@ protected:
   bool error;
 
 public:
-  Logger() : f( 0 ), error( false ) {}
+  Logger() : filename_( 0 ), f( 0 ), error( false ) {}
 
-  void set_filename( const char * const name ) { filename_ = name; }
+  bool set_filename( const char * const name );
   bool close_file();
   };
 

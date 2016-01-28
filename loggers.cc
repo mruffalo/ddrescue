@@ -20,6 +20,7 @@
 #include <cstdio>
 #include <string>
 #include <vector>
+#include <sys/stat.h>
 
 #include "block.h"
 #include "loggers.h"
@@ -47,6 +48,18 @@ const char * format_time_dhms( const long t )
 
 Rate_logger rate_logger;
 Read_logger read_logger;
+
+
+bool Logger::set_filename( const char * const name )
+  {
+  if( name && name[0] )
+    {
+    struct stat st;
+    if( stat( name, &st ) == 0 && !S_ISREG( st.st_mode ) ) return false;
+    filename_ = name;
+    }
+  return true;
+  }
 
 
 bool Logger::close_file()
