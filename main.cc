@@ -97,7 +97,7 @@ void show_help( const int cluster, const int hardbs, const int skipbs )
                "  -i, --input-position=<bytes>   starting position of domain in input file [0]\n"
                "  -I, --verify-input-size        verify input file size with size in mapfile\n"
                "  -J, --verify-on-error          reread latest good sector after every error\n"
-               "  -K, --skip-size=<min>[,<max>]  initial size to skip on read error [%sB]\n",
+               "  -K, --skip-size=[<i>][,<max>]  initial size to skip on read error [%sB]\n",
                format_num( skipbs, 9999, -1 ) );
   std::printf( "  -L, --loose-domain             accept an incomplete domain mapfile\n"
                "  -m, --domain-mapfile=<file>    restrict domain to finished blocks in file\n"

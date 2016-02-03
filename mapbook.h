@@ -44,6 +44,8 @@ public:
 
   const Domain & domain() const { return domain_; }
   uint8_t * iobuf() const { return iobuf_; }
+  uint8_t * iobuf_aux() const	// hardbs-sized buffer for verify_on_error
+    { return iobuf_ + iobuf_size_; }
   int iobuf_size() const { return iobuf_size_; }
   int hardbs() const { return hardbs_; }
   int softbs() const { return softbs_; }

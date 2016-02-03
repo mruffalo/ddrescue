@@ -12,7 +12,7 @@ File: ddrescue.info,  Node: Top,  Next: Introduction,  Up: (dir)
 GNU ddrescue Manual
 *******************
 
-This manual is for GNU ddrescue (version 1.21-rc1, 28 January 2016).
+This manual is for GNU ddrescue (version 1.21-rc2, 3 February 2016).
 
 * Menu:
 
@@ -792,7 +792,7 @@ Character   Meaning
 
 And here is an example mapfile:
 
-     # Mapfile. Created by GNU ddrescue version 1.21-rc1
+     # Mapfile. Created by GNU ddrescue version 1.21-rc2
      # Command line: ddrescue -d -c18 /dev/fd0 fdimage mapfile
      # Start time:   2015-07-21 09:37:44
      # Current time: 2015-07-21 09:38:19

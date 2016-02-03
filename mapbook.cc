@@ -90,13 +90,13 @@ Mapbook::Mapbook( const long long offset, const long long isize,
                   const bool complete_only )
   : Mapfile( mapname ), offset_( offset ), mapfile_isize_( 0 ),
     domain_( dom ), hardbs_( hardbs ), softbs_( cluster * hardbs_ ),
-    iobuf_size_( hardbs_ + softbs_ ),
+    iobuf_size_( softbs_ + hardbs_ ),	// +hardbs for direct unaligned reads
     final_errno_( 0 ), um_t1( 0 ), um_t1s( 0 ), mapfile_exists_( false )
   {
   long alignment = sysconf( _SC_PAGESIZE );
   if( alignment < hardbs_ || alignment % hardbs_ ) alignment = hardbs_;
   if( alignment < 2 || alignment > 1 << 20 ) alignment = 0;
-  iobuf_ = iobuf_base = new uint8_t[ iobuf_size_ + alignment ];
+  iobuf_ = iobuf_base = new uint8_t[ alignment + iobuf_size_ + hardbs_ ];
   if( alignment > 1 )		// align iobuf for direct disc access
     {
     const int disp =

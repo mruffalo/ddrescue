@@ -145,15 +145,20 @@ int Rescuebook::copy_block( const Block & b, int & copied_size, int & error_size
     {
     if( copied_size >= hardbs() && b.pos() % hardbs() == 0 )
       { voe_ipos = b.pos(); std::memcpy( voe_buf, iobuf(), hardbs() ); }
-    else if( copied_size <= 0 && error_size > 0 && voe_ipos >= 0 )
+    if( error_size > 0 )
       {
-      const int size = readblock( ides_, iobuf(), hardbs(), voe_ipos );
-      if( size != hardbs() )
-        { final_msg( "Input file no longer returns data", errno ); return 2; }
-      if( std::memcmp( voe_buf, iobuf(), hardbs() ) != 0 )
-        { final_msg( "Input file returns inconsistent data" ); return 2; }
+      if( voe_ipos >= 0 )
+        {
+        const int size = readblock( ides_, iobuf_aux(), hardbs(), voe_ipos );
+        if( size != hardbs() )
+          { final_msg( "Input file no longer returns data", errno ); e_code |= 8; }
+        else if( std::memcmp( voe_buf, iobuf_aux(), hardbs() ) != 0 )
+          { final_msg( "Input file returns inconsistent data" ); e_code |= 8; }
+        }
+      else
+        { final_msg( "Read error found before the first good read" );
+          e_code |= 8; }
       }
-    else if( error_size > 0 ) e_code |= 2;
     }
   return 0;
   }
@@ -397,8 +402,9 @@ int Rescuebook::trim_errors()
       const int retval = copy_and_update( b, copied_size, error_size, msg,
                                           trimming, true );
       if( retval ) return retval;
-      if( error_size > 0 ) error_found = true;
       update_rates();
+      if( error_size > 0 )
+        { error_found = true; if( exit_on_error ) { e_code |= 2; return 1; } }
       if( !update_mapfile( odes_ ) ) return -2;
       }
     error_found = false;
@@ -412,7 +418,6 @@ int Rescuebook::trim_errors()
       const int retval = copy_and_update( b, copied_size, error_size, msg,
                                           trimming, false );
       if( retval ) return retval;
-      if( error_size > 0 ) error_found = true;
       if( error_size > 0 && end > pos )
         {
         const long index = find_index( end - 1 );
@@ -421,6 +426,8 @@ int Rescuebook::trim_errors()
           change_chunk_status( sblock( index ), Sblock::non_scraped );
         }
       update_rates();
+      if( error_size > 0 )
+        { error_found = true; if( exit_on_error ) { e_code |= 2; return 1; } }
       if( !update_mapfile( odes_ ) ) return -2;
       }
     }
@@ -457,6 +464,7 @@ int Rescuebook::scrape_errors()
                                           scraping, true );
       if( retval ) return retval;
       update_rates();
+      if( error_size > 0 && exit_on_error ) { e_code |= 2; return 1; }
       if( !update_mapfile( odes_ ) ) return -2;
       }
     }
@@ -516,6 +524,7 @@ int Rescuebook::fcopy_errors( const char * const msg, const int retry )
                                         retrying, true );
     if( retval ) return retval;
     update_rates();
+    if( error_size > 0 && exit_on_error ) { e_code |= 2; return 1; }
     if( !update_mapfile( odes_ ) ) return -2;
     }
   if( !block_found ) return 0;
@@ -551,6 +560,7 @@ int Rescuebook::rcopy_errors( const char * const msg, const int retry )
                                         retrying, false );
     if( retval ) return retval;
     update_rates();
+    if( error_size > 0 && exit_on_error ) { e_code |= 2; return 1; }
     if( !update_mapfile( odes_ ) ) return -2;
     }
   if( !block_found ) return 0;
@@ -765,10 +775,10 @@ int Rescuebook::do_rescue( const int ides, const int odes )
       if( domain().pos() > 0 || domain().end() < mapfile_isize() )
         std::printf( "(sizes below are limited to the domain %sB to %sB)\n",
                      format_num( domain().pos() ), format_num( domain().end() ) );
-      std::printf( "  rescued: %9sB,     errsize: %9sB,  errors: %7ld\n",
+      std::printf( "  rescued: %9sB,     errsize: %9sB,  errors: %7ld\n\n",
                    format_num( finished_size ),
                    format_num( bad_sector_size, 99999 ), errors );
-      std::fputs( "\nCurrent status\n", stdout );
+      std::fputs( "Current status\n", stdout );
       }
     }
   int retval = 0;
@@ -815,6 +825,9 @@ int Rescuebook::do_rescue( const int ides, const int odes )
     compact_sblock_vector();
     if( !update_mapfile( odes_, true ) && retval == 0 ) retval = 1;
     }
+  if( final_msg().size() )
+    { if( final_errno() ) show_error( final_msg().c_str(), final_errno() );
+      else { std::fputs( final_msg().c_str(), stdout ); std::fputc( '\n', stdout ); } }
   if( close( odes_ ) != 0 )
     { show_error( "Can't close outfile", errno );
       if( retval == 0 ) retval = 1; }
@@ -822,7 +835,6 @@ int Rescuebook::do_rescue( const int ides, const int odes )
     show_error( "warning: Error closing the rates logging file." );
   if( !read_logger.close_file() )
     show_error( "warning: Error closing the reads logging file." );
-  if( final_msg().size() ) show_error( final_msg().c_str(), final_errno() );
   if( retval ) return retval;		// errors have priority over signals
   if( signaled ) return signaled_exit();
   return 0;

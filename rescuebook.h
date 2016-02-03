@@ -119,7 +119,8 @@ class Rescuebook : public Mapbook, public Rb_options
   const Domain * const test_domain;	// good/bad map for test mode
   const char * const iname_;
   int e_code;				// error code for errors_or_timeout
-					// 1 rate, 2 errors, 4 timeout
+					// 1 rate, 2 errors, 4 timeout,
+					// 8 other (explained in final_msg)
   long errors;				// error areas found so far
   int ides_, odes_;			// input and output file descriptors
   const bool synchronous_;

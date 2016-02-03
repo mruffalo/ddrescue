@@ -1,3 +1,10 @@
+2016-02-03  Antonio Diaz Diaz  <antonio@gnu.org>
+
+	* Version 1.21-rc2 released.
+	* rescuebook.cc (copy_block): Set e_code on any error if
+	  verify_on_error.
+	* Option '-X, --exit-on-error' has been extended to all phases.
+
 2016-01-28  Antonio Diaz Diaz  <antonio@gnu.org>
 
 	* Version 1.21-rc1 released.

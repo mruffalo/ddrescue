@@ -206,10 +206,10 @@ int Fillbook::do_fill( const int odes )
     compact_sblock_vector();
     if( !update_mapfile( odes_, true ) && retval == 0 ) retval = 1;
     }
+  if( final_msg().size() ) show_error( final_msg().c_str(), final_errno() );
   if( close( odes_ ) != 0 )
     { show_error( "Can't close outfile", errno );
       if( retval == 0 ) retval = 1; }
-  if( final_msg().size() ) show_error( final_msg().c_str(), final_errno() );
   if( retval ) return retval;		// errors have priority over signals
   if( signaled ) return signaled_exit();
   return 0;
