@@ -1,6 +1,6 @@
 #! /bin/sh
 # check script for GNU ddrescue - Data recovery tool
-# Copyright (C) 2009-2015 Antonio Diaz Diaz.
+# Copyright (C) 2009-2016 Antonio Diaz Diaz.
 #
 # This script is free software: you have unlimited permission
 # to copy, distribute and modify it.
@@ -20,7 +20,7 @@ fi
 
 if [ -d tmp ] ; then rm -rf tmp ; fi
 mkdir tmp
-cd "${objdir}"/tmp
+cd "${objdir}"/tmp || framework_failure
 
 in="${testdir}"/test.txt
 in1="${testdir}"/test1.txt

@@ -6,8 +6,8 @@
 @finalout
 @c %**end of header
 
-@set UPDATED 3 February 2016
-@set VERSION 1.21-rc2
+@set UPDATED 17 March 2016
+@set VERSION 1.21
 
 @dircategory GNU Packages
 @direntry
@@ -147,8 +147,8 @@ file system. /dev/hda1, /dev/sdb3, are partition names.
 @item Recoverable formats
 As ddrescue uses standard library functions to read data from the device
 being rescued, only mountable device formats can be rescued with
-ddrescue. CD-ROMs and DVDs can be mounted and they can be rescued,
-"compact disc digital audio" CDs can't, "video CDs"[1] maybe.@* [1]
+ddrescue. CD-ROMs and DVDs can be rescued, "compact disc digital audio"
+CDs can't, "video CDs"[1] maybe.@* [1]
 http://en.wikipedia.org/wiki/Video_CD
 
 @item Rescue domain
@@ -670,11 +670,11 @@ size for @var{outfile}. Only regular files can be extended.
 
 @item -X
 @itemx --exit-on-error
-Exit with status 1 after the first read error is encountered during the
-copying phase. This is similar but different to @samp{--timeout=0},
-which waits until the screen status is refreshed (at least 1 second). If
-there is at least one successful read per second, @samp{--timeout=0}
-does not make ddrescue to exit.
+Exit with status 1 after the first read error is encountered. This is
+similar but different to @samp{--timeout=0}, which waits until the
+screen status is refreshed (at least 1 second). If there is at least one
+successful read per second, @samp{--timeout=0} does not make ddrescue to
+exit.
 
 This is also similar but different to @samp{--max-errors=+0}, which
 exits when a new error area is found. If the read errors are adjacent to
@@ -886,6 +886,10 @@ error that prevents the whole last record from being copied by dd,
 potentially losing data. Also dd may create an image larger than the
 original if the @samp{sync} conversion and a block size larger than the
 sector size are specified.
+
+In some cases, a specialized tool like dvdisaster may be a better option
+than ddrescue for recovering data from CD-ROMs because dvdisaster can
+read and analyze raw CD sectors, which ddrescue can't.
 
 Recordable CD and DVD media keep their data only for a finite time
 (typically for some years). After that time, data loss develops slowly
@@ -1407,9 +1411,9 @@ The format for running ddrescuelog is:
 ddrescuelog [@var{options}] @var{mapfile}
 @end example
 
-Use @samp{-} as @var{mapfile} to read the mapfile from standard input or
-to write the mapfile created by @samp{--create-mapfile} to standard
-output.
+Use @samp{-} as @var{mapfile} to read the mapfile from standard input
+(also in the options taking a mapfile argument) or to write the mapfile
+created by @samp{--create-mapfile} to standard output.
 
 Ddrescuelog supports the following options:
 
@@ -1510,8 +1514,7 @@ calculations involved in making all data blocks contiguous again.
 @item -m @var{file}
 @itemx --domain-mapfile=@var{file}
 Restrict the rescue domain to the blocks marked as finished in the
-mapfile @var{file}. Use @samp{-} as @var{file} to read from standard
-input.
+mapfile @var{file}.
 
 @item -n
 @itemx --invert-mapfile

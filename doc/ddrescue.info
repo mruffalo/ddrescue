@@ -12,7 +12,7 @@ File: ddrescue.info,  Node: Top,  Next: Introduction,  Up: (dir)
 GNU ddrescue Manual
 *******************
 
-This manual is for GNU ddrescue (version 1.21-rc2, 3 February 2016).
+This manual is for GNU ddrescue (version 1.21, 17 March 2016).
 
 * Menu:
 
@@ -128,9 +128,8 @@ Partition
 Recoverable formats
      As ddrescue uses standard library functions to read data from the
      device being rescued, only mountable device formats can be rescued
-     with ddrescue. CD-ROMs and DVDs can be mounted and they can be
-     rescued, "compact disc digital audio" CDs can't, "video CDs"[1]
-     maybe.
+     with ddrescue. CD-ROMs and DVDs can be rescued, "compact disc
+     digital audio" CDs can't, "video CDs"[1] maybe.
      [1] http://en.wikipedia.org/wiki/Video_CD
 
 Rescue domain
@@ -644,11 +643,11 @@ mapfile, ddrescue can't resume a rescue, only reinitiate it.
 
 '-X'
 '--exit-on-error'
-     Exit with status 1 after the first read error is encountered
-     during the copying phase. This is similar but different to
-     '--timeout=0', which waits until the screen status is refreshed
-     (at least 1 second). If there is at least one successful read per
-     second, '--timeout=0' does not make ddrescue to exit.
+     Exit with status 1 after the first read error is encountered. This
+     is similar but different to '--timeout=0', which waits until the
+     screen status is refreshed (at least 1 second). If there is at
+     least one successful read per second, '--timeout=0' does not make
+     ddrescue to exit.
 
      This is also similar but different to '--max-errors=+0', which
      exits when a new error area is found. If the read errors are
@@ -792,7 +791,7 @@ Character   Meaning
 
 And here is an example mapfile:
 
-     # Mapfile. Created by GNU ddrescue version 1.21-rc2
+     # Mapfile. Created by GNU ddrescue version 1.21
      # Command line: ddrescue -d -c18 /dev/fd0 fdimage mapfile
      # Start time:   2015-07-21 09:37:44
      # Current time: 2015-07-21 09:38:19
@@ -854,6 +853,10 @@ error that prevents the whole last record from being copied by dd,
 potentially losing data. Also dd may create an image larger than the
 original if the 'sync' conversion and a block size larger than the
 sector size are specified.
+
+   In some cases, a specialized tool like dvdisaster may be a better
+option than ddrescue for recovering data from CD-ROMs because
+dvdisaster can read and analyze raw CD sectors, which ddrescue can't.
 
    Recordable CD and DVD media keep their data only for a finite time
 (typically for some years). After that time, data loss develops slowly
@@ -1304,8 +1307,9 @@ The format for running ddrescuelog is:
 
      ddrescuelog [OPTIONS] MAPFILE
 
-   Use '-' as MAPFILE to read the mapfile from standard input or to
-write the mapfile created by '--create-mapfile' to standard output.
+   Use '-' as MAPFILE to read the mapfile from standard input (also in
+the options taking a mapfile argument) or to write the mapfile created
+by '--create-mapfile' to standard output.
 
    Ddrescuelog supports the following options:
 
@@ -1408,7 +1412,7 @@ write the mapfile created by '--create-mapfile' to standard output.
 '-m FILE'
 '--domain-mapfile=FILE'
      Restrict the rescue domain to the blocks marked as finished in the
-     mapfile FILE. Use '-' as FILE to read from standard input.
+     mapfile FILE.
 
 '-n'
 '--invert-mapfile'
@@ -1535,24 +1539,24 @@ Concept index
 
 Tag Table:
 Node: Top201
-Node: Introduction1440
-Node: Basic concepts4160
-Node: Important advice6443
-Node: Algorithm7518
-Node: Invoking ddrescue12947
-Ref: --domain-mapfile22224
-Node: Mapfile structure31838
-Node: Emergency save34567
-Node: Optical media36023
-Ref: lziprecover-example38956
-Node: Examples39735
-Node: Direct disc access43463
-Node: Fill mode45684
-Node: Generate mode50742
-Node: Ddrescuelog52683
-Node: Invoking ddrescuelog54977
-Node: Problems62191
-Node: Concept index62748
+Node: Introduction1434
+Node: Basic concepts4154
+Node: Important advice6408
+Node: Algorithm7483
+Node: Invoking ddrescue12912
+Ref: --domain-mapfile22189
+Node: Mapfile structure31778
+Node: Emergency save34503
+Node: Optical media35959
+Ref: lziprecover-example39094
+Node: Examples39873
+Node: Direct disc access43601
+Node: Fill mode45822
+Node: Generate mode50880
+Node: Ddrescuelog52821
+Node: Invoking ddrescuelog55115
+Node: Problems62332
+Node: Concept index62889
 
 End Tag Table
 

@@ -5,6 +5,7 @@ INSTALL_PROGRAM = $(INSTALL) -m 755
 INSTALL_DATA = $(INSTALL) -m 644
 INSTALL_DIR = $(INSTALL) -d -m 755
 SHELL = /bin/sh
+CAN_RUN_INSTALLINFO = $(SHELL) -c "install-info --version" > /dev/null 2>&1
 
 ddobjs = mapbook.o fillbook.o genbook.o io.o rescuebook.o main.o
 objs = arg_parser.o rational.o non_posix.o loggers.o block.o mapfile.o $(ddobjs)
@@ -91,7 +92,9 @@ install-info :
 	if [ ! -d "$(DESTDIR)$(infodir)" ] ; then $(INSTALL_DIR) "$(DESTDIR)$(infodir)" ; fi
 	-rm -f "$(DESTDIR)$(infodir)/$(pkgname).info"*
 	$(INSTALL_DATA) $(VPATH)/doc/$(pkgname).info "$(DESTDIR)$(infodir)/$(pkgname).info"
-	-install-info --info-dir="$(DESTDIR)$(infodir)" "$(DESTDIR)$(infodir)/$(pkgname).info"
+	-if $(CAN_RUN_INSTALLINFO) ; then \
+		install-info --info-dir="$(DESTDIR)$(infodir)" "$(DESTDIR)$(infodir)/$(pkgname).info" ; \
+	fi
 
 install-info-compress : install-info
 	lzip -v -9 "$(DESTDIR)$(infodir)/$(pkgname).info"
@@ -114,7 +117,9 @@ uninstall-bin :
 	-rm -f "$(DESTDIR)$(bindir)/ddrescuelog"
 
 uninstall-info :
-	-install-info --info-dir="$(DESTDIR)$(infodir)" --remove "$(DESTDIR)$(infodir)/$(pkgname).info"
+	-if $(CAN_RUN_INSTALLINFO) ; then \
+		install-info --info-dir="$(DESTDIR)$(infodir)" --remove "$(DESTDIR)$(infodir)/$(pkgname).info" ; \
+	fi
 	-rm -f "$(DESTDIR)$(infodir)/$(pkgname).info"*
 
 uninstall-man :

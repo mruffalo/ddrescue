@@ -134,7 +134,7 @@ int Rescuebook::copy_block( const Block & b, int & copied_size, int & error_size
       if( end > sparse_size ) sparse_size = end;
       }
     else if( writeblock( odes_, iobuf(), copied_size, pos ) != copied_size ||
-             ( synchronous_ && fsync( odes_ ) < 0 && errno != EINVAL ) )
+             ( synchronous_ && fsync( odes_ ) != 0 && errno != EINVAL ) )
       { final_msg( "Write error", errno ); return 1; }
     }
   else iobuf_ipos = -1;

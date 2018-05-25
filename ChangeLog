@@ -1,41 +1,20 @@
-2016-02-03  Antonio Diaz Diaz  <antonio@gnu.org>
+2016-03-17  Antonio Diaz Diaz  <antonio@gnu.org>
 
-	* Version 1.21-rc2 released.
-	* rescuebook.cc (copy_block): Set e_code on any error if
-	  verify_on_error.
-	* Option '-X, --exit-on-error' has been extended to all phases.
-
-2016-01-28  Antonio Diaz Diaz  <antonio@gnu.org>
-
-	* Version 1.21-rc1 released.
+	* Version 1.21 released.
+	* mapbook.cc (Mapbook): Fix iobuf alignment.
+	  (Reported by Heikki Tauriainen).
 	* Removed short option names '-1' and '-2'.
 	* Allow only regular files for '--log-rates' and '--log-reads'.
 	* Option '-D, --odirect' now works also in fill mode.
-	* rescuebook.cc (copy_block): Set e_code if verify_on_error and
-	  a read error happens before the first good read.
-	* rescuebook.cc (show_status): Show percent rescued.
-
-2016-01-14  Antonio Diaz Diaz  <antonio@gnu.org>
-
-	* Version 1.21-pre4 released.
 	* rescuebook.cc (copy_block): Return 1 on unaligned read error.
-
-2016-01-04  Antonio Diaz Diaz  <antonio@gnu.org>
-
-	* Version 1.21-pre3 released.
-	* mapbook.cc (Mapbook): Fix iobuf alignment.
-	  (Reported by Heikki Tauriainen).
-
-2015-11-14  Antonio Diaz Diaz  <antonio@gnu.org>
-
-	* Version 1.21-pre2 released.
-	* mapbook.cc (update_mapfile): 'fsync' the mapfile every 5 minutes.
-
-2015-09-25  Antonio Diaz Diaz  <antonio@gnu.org>
-
-	* Version 1.21-pre1 released.
-	* Rescuebook: Show full range of sizes from non-tried to finished.
+	  Set e_code on any error if verify_on_error.
+	* Option '-X, --exit-on-error' has been extended to all phases.
 	* Assigned short name '-Z' to option '--max-read-rate'.
+	* mapbook.cc (update_mapfile): 'fsync' the mapfile every 5 minutes.
+	* Rescuebook: Show full range of sizes from non-tried to finished.
+	* rescuebook.cc (show_status): Show percent rescued.
+	* configure: Avoid warning on some shells when testing for g++.
+	* Makefile.in: Detect the existence of install-info.
 
 2015-09-10  Antonio Diaz Diaz  <antonio@gnu.org>
 
@@ -47,7 +26,7 @@
 	* Added new option '-J, --verify-on-error'.
 	* Added new option '--max-read-rate'.
 	* rescuebook.cc (copy_block): Copy arbitrary blocks with '--idirect'.
-	* Include only bad_sector blocks in 'errsize'.
+	* Include only bad-sector blocks in 'errsize'.
 	* rescuebook.cc (show_status): Show the estimated remaining time.
 	* io.cc (format_time): Show time in days, hours, minutes and seconds.
 	* Added per sector location data to fill mode.

@@ -177,8 +177,7 @@ bool Mapfile::read_mapfile( const int default_sblock_status, const bool ro )
   FILE * f = 0;
   errno = 0;
   read_only_ = ro;
-  if( ro && std::strcmp( filename_, "-" ) == 0 && !isatty( fileno( stdin ) ) )
-    f = stdin;
+  if( ro && std::strcmp( filename_, "-" ) == 0 ) f = stdin;
   else if( ro || ( !(f = std::fopen( filename_, "r+" )) && errno != ENOENT ) )
     { f = std::fopen( filename_, "r" ); read_only_ = true; }
   if( !f ) return false;

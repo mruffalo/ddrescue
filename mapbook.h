@@ -20,7 +20,8 @@ class Mapbook : public Mapfile
   const long long offset_;		// outfile offset (opos - ipos);
   long long mapfile_isize_;
   Domain & domain_;			// rescue domain
-  uint8_t *iobuf_base, *iobuf_;		// iobuf is aligned to page and hardbs
+  uint8_t *iobuf_base;			// alignment + iobuf + iobuf_aux
+  uint8_t *iobuf_;			// buffer aligned to page and hardbs
   const int hardbs_, softbs_;
   const int iobuf_size_;
   std::string final_msg_;

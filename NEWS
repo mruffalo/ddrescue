@@ -12,20 +12,20 @@ the command line.
 Only regular files are now allowed as arguments of options '--log-rates'
 and '--log-reads'.
 
-Option '-X, --exit-on-error' has been extended to all phases.
-
 Option '-D, --odirect' now works also in fill mode.
 
 Option '-J, --verify-on-error' now marks blocks as failed on any error,
 and exits with status 1 if a read error happens before a good sector is
 found.
 
+Option '-X, --exit-on-error' has been extended to all phases.
+
 The short name '-Z' has been assigned to option '--max-read-rate'.
+
+The mapfile is now "fsync'ed" every 5 minutes because some systems seem
+to never write the mapfile to disc.
 
 Ddrescue now shows all sizes in rescue mode; non-tried, non-trimmed,
 non-scraped, bad-sector and finished.
 
 Ddrescue now shows the percentage of the domain rescued in rescue mode.
-
-The mapfile is now "fsync'ed" every 5 minutes because some systems seem
-to never write the mapfile to disc.

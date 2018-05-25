@@ -80,6 +80,8 @@ void show_help( const int hardbs )
                "  -x, --xor-mapfile=<file>        XOR the finished blocks in file with mapfile\n"
                "  -y, --and-mapfile=<file>        AND the finished blocks in file with mapfile\n"
                "  -z, --or-mapfile=<file>         OR the finished blocks in file with mapfile\n"
+               "Use '-' to read a mapfile from standard input or to write the mapfile\n"
+               "created by '--create-mapfile' to standard output.\n"
                "Numbers may be in decimal, hexadecimal or octal, and may be followed by a\n"
                "multiplier: s = sectors, k = 1000, Ki = 1024, M = 10^6, Mi = 2^20, etc...\n"
                "\nExit status: 0 for a normal exit, 1 for environmental problems (file\n"

@@ -53,7 +53,7 @@ int Fillbook::fill_block( const Sblock & sb )
         std::memset( buf + len, ' ', bufsize - len );
       }
   if( writeblock( odes_, iobuf(), size, sb.pos() + offset() ) != size ||
-      ( synchronous_ && fsync( odes_ ) < 0 && errno != EINVAL ) )
+      ( synchronous_ && fsync( odes_ ) != 0 && errno != EINVAL ) )
     {
     if( !ignore_write_errors ) final_msg( "Write error", errno );
     return 1;
