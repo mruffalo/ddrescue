@@ -1,5 +1,5 @@
 /*  GNU ddrescue - Data recovery tool
-    Copyright (C) 2004-2016 Antonio Diaz Diaz.
+    Copyright (C) 2004-2017 Antonio Diaz Diaz.
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -15,7 +15,16 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-class Mapbook : public Mapfile
+struct Mb_options
+  {
+  int mapfile_save_interval;			// default -1 = auto
+  int mapfile_sync_interval;			// default 300s (5m)
+
+  Mb_options() : mapfile_save_interval( -1 ), mapfile_sync_interval( 300 ) {}
+  };
+
+
+class Mapbook : public Mapfile, public Mb_options
   {
   const long long offset_;		// outfile offset (opos - ipos);
   long long mapfile_isize_;
@@ -37,8 +46,9 @@ class Mapbook : public Mapfile
 
 public:
   Mapbook( const long long offset, const long long isize,
-           Domain & dom, const char * const mapname,
-           const int cluster, const int hardbs, const bool complete_only );
+           Domain & dom, const Mb_options & mb_opts,
+           const char * const mapname, const int cluster,
+           const int hardbs, const bool complete_only );
   ~Mapbook() { delete[] iobuf_base; }
 
   bool update_mapfile( const int odes = -1, const bool force = false );
@@ -85,8 +95,8 @@ class Fillbook : public Mapbook, public Fb_options
   {
   long long filled_size;		// size already filled
   long long remaining_size;		// size to be filled
-  long filled_areas;			// areas already filled
-  long remaining_areas;			// areas to be filled
+  unsigned long filled_areas;		// areas already filled
+  unsigned long remaining_areas;	// areas to be filled
   int odes_;				// output file descriptor
   const bool synchronous_;
 					// variables for show_status
@@ -101,10 +111,10 @@ class Fillbook : public Mapbook, public Fb_options
                     bool force = false );
 
 public:
-  Fillbook( const long long offset, Domain & dom,
-            const char * const mapname, const int cluster, const int hardbs,
-            const Fb_options & fb_opts, const bool synchronous )
-    : Mapbook( offset, 0, dom, mapname, cluster, hardbs, true ),
+  Fillbook( const long long offset, Domain & dom, const Fb_options & fb_opts,
+            const Mb_options & mb_opts, const char * const mapname,
+            const int cluster, const int hardbs, const bool synchronous )
+    : Mapbook( offset, 0, dom, mb_opts, mapname, cluster, hardbs, true ),
       Fb_options( fb_opts ),
       synchronous_( synchronous ),
       a_rate( 0 ), c_rate( 0 ), first_size( 0 ), last_size( 0 ),
@@ -132,9 +142,9 @@ class Genbook : public Mapbook
                     bool force = false );
 public:
   Genbook( const long long offset, const long long isize,
-           Domain & dom, const char * const mapname,
-           const int cluster, const int hardbs )
-    : Mapbook( offset, isize, dom, mapname, cluster, hardbs, false ),
+           Domain & dom, const Mb_options & mb_opts,
+           const char * const mapname, const int cluster, const int hardbs )
+    : Mapbook( offset, isize, dom, mb_opts, mapname, cluster, hardbs, false ),
       a_rate( 0 ), c_rate( 0 ), first_size( 0 ), last_size( 0 ),
       last_ipos( 0 ), t0( 0 ), t1( 0 ), oldlen( 0 )
       {}

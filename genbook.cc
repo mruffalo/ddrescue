@@ -1,5 +1,5 @@
 /*  GNU ddrescue - Data recovery tool
-    Copyright (C) 2004-2016 Antonio Diaz Diaz.
+    Copyright (C) 2004-2017 Antonio Diaz Diaz.
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -47,11 +47,11 @@ const char * format_time( const long t, const bool low_prec )
 
   if( d > 0 ) len = snprintf( buf, bufsize, "%ldd", d );
   if( h > 0 && len >= 0 && len <= 7 )
-    len += snprintf( buf + len, bufsize - len, "%s%2dh", len ? " " : "", h );
+    len += snprintf( buf + len, bufsize - len, "%s%dh", len ? ( (h < 10) ? "  " : " " ) : "", h );
   if( m > 0 && len >= 0 && len <= 7 )
-    len += snprintf( buf + len, bufsize - len, "%s%2dm", len ? " " : "", m );
+    len += snprintf( buf + len, bufsize - len, "%s%dm", len ? ( (m < 10) ? "  " : " " ) : "", m );
   if( ( s > 0 && len >= 0 && len <= 7 && !low_prec ) || len == 0 )
-    len += snprintf( buf + len, bufsize - len, "%s%2ds", len ? " " : "", s );
+    len += snprintf( buf + len, bufsize - len, "%s%ds", len ? ( (s < 10) ? "  " : " " ) : "", s );
   return buf;
   }
 

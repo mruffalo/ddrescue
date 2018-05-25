@@ -1,5 +1,5 @@
 /*  GNU ddrescue - Data recovery tool
-    Copyright (C) 2013-2016 Antonio Diaz Diaz.
+    Copyright (C) 2013-2017 Antonio Diaz Diaz.
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -25,9 +25,25 @@ protected:
 public:
   Logger() : filename_( 0 ), f( 0 ), error( false ) {}
 
+  bool active() const { return ( f != 0 && !error ); }
   bool set_filename( const char * const name );
   bool close_file();
   };
+
+
+class Event_logger : public Logger
+  {
+public:
+  bool open_file();
+  bool echo_msg( const char * const msg );
+  bool print_msg( const long time, const char * const percent_rescued,
+                  const char * const msg );
+  bool print_eor( const long time, const char * const percent_rescued,
+                  const long long current_pos,
+                  const char * const current_status_name );
+  };
+
+extern Event_logger event_logger;
 
 
 class Rate_logger : public Logger
@@ -38,7 +54,8 @@ public:
   bool open_file();
   bool print_line( const long time, const long long ipos,
                    const long long a_rate, const long long c_rate,
-                   const long errors, const long long errsize );
+                   const unsigned long bad_areas,
+                   const long long bad_size );
   };
 
 extern Rate_logger rate_logger;

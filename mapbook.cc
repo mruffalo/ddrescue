@@ -1,5 +1,5 @@
 /*  GNU ddrescue - Data recovery tool
-    Copyright (C) 2004-2016 Antonio Diaz Diaz.
+    Copyright (C) 2004-2017 Antonio Diaz Diaz.
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -85,17 +85,18 @@ bool Mapbook::emergency_save()
 
 
 Mapbook::Mapbook( const long long offset, const long long isize,
-                  Domain & dom, const char * const mapname,
-                  const int cluster, const int hardbs,
-                  const bool complete_only )
-  : Mapfile( mapname ), offset_( offset ), mapfile_isize_( 0 ),
-    domain_( dom ), hardbs_( hardbs ), softbs_( cluster * hardbs_ ),
+                  Domain & dom, const Mb_options & mb_opts,
+                  const char * const mapname, const int cluster,
+                  const int hardbs, const bool complete_only )
+  : Mapfile( mapname ), Mb_options( mb_opts ), offset_( offset ),
+    mapfile_isize_( 0 ), domain_( dom ), hardbs_( hardbs ),
+    softbs_( cluster * hardbs_ ),
     iobuf_size_( softbs_ + hardbs_ ),	// +hardbs for direct unaligned reads
     final_errno_( 0 ), um_t1( 0 ), um_t1s( 0 ), mapfile_exists_( false )
   {
   long alignment = sysconf( _SC_PAGESIZE );
   if( alignment < hardbs_ || alignment % hardbs_ ) alignment = hardbs_;
-  if( alignment < 2 || alignment > 1 << 20 ) alignment = 0;
+  if( alignment < 2 ) alignment = 0;
   iobuf_ = iobuf_base = new uint8_t[ alignment + iobuf_size_ + hardbs_ ];
   if( alignment > 1 )		// align iobuf for direct disc access
     {
@@ -129,12 +130,13 @@ Mapbook::Mapbook( const long long offset, const long long isize,
 bool Mapbook::update_mapfile( const int odes, const bool force )
   {
   if( !filename() ) return true;
-  const int interval = 30 + std::min( 270L, sblocks() / 38 );	// 30s to 5m
+  const int interval = ( mapfile_save_interval >= 0 ) ? mapfile_save_interval :
+    30 + std::min( 270L, sblocks() / 38 );	// auto, 30s to 5m
   const long t2 = std::time( 0 );
   if( um_t1 == 0 || um_t1 > t2 ) um_t1 = um_t1s = t2;	// initialize
   if( !force && t2 - um_t1 < interval ) return true;
   um_t1 = t2;
-  const bool mf_sync = ( force || t2 - um_t1s >= 300 );	// fsync mf every 5m
+  const bool mf_sync = ( force || t2 - um_t1s >= mapfile_sync_interval );
   if( mf_sync ) um_t1s = t2;
   if( odes >= 0 ) fsync( odes );
 

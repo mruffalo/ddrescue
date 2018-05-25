@@ -49,7 +49,7 @@ loggers.o     : block.h loggers.h
 mapfile.o     : block.h
 non_posix.o   : non_posix.h
 rational.o    : rational.h
-rescuebook.o  : loggers.h rescuebook.h
+rescuebook.o  : rational.h loggers.h rescuebook.h
 main.o        : arg_parser.h rational.h loggers.h non_posix.h main_common.cc rescuebook.h
 ddrescuelog.o : Makefile arg_parser.h block.h main_common.cc
 
@@ -141,14 +141,14 @@ dist : doc
 	  $(DISTNAME)/doc/ddrescuelog.1 \
 	  $(DISTNAME)/doc/$(pkgname).info \
 	  $(DISTNAME)/doc/$(pkgname).texi \
+	  $(DISTNAME)/*.h \
+	  $(DISTNAME)/*.cc \
 	  $(DISTNAME)/testsuite/check.sh \
 	  $(DISTNAME)/testsuite/mapfile[1-5] \
 	  $(DISTNAME)/testsuite/mapfile2i \
 	  $(DISTNAME)/testsuite/mapfile_blank \
 	  $(DISTNAME)/testsuite/test.txt \
-	  $(DISTNAME)/testsuite/test[1-5].txt \
-	  $(DISTNAME)/*.h \
-	  $(DISTNAME)/*.cc
+	  $(DISTNAME)/testsuite/test[1-5].txt
 	rm -f $(DISTNAME)
 	lzip -v -9 $(DISTNAME).tar
 

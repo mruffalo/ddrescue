@@ -1,31 +1,76 @@
-Changes in version 1.21:
+Changes in version 1.22:
 
-A bug in the alignment of the I/O buffer has been (hopefully) fixed.
-(Thanks to Heikki Tauriainen).
+The option '-X, --exit-on-error' has been replaced by
+'-X, --max-read-errors'. This introduces a backward incompatibility with
+versions 1.19 to 1.21 in that option '-X' now requires an argument. The
+long form '--exit-on-error' is still accepted, but will be removed in a
+future version of ddrescue.
 
-Ddrescue now exits with status 1 in case of unaligned read in direct
-mode (because of a wrong sector size, for example).
+The new option '--max-slow-reads' has been added. It makes ddrescue exit
+with status 1 if too many slow reads are encountered during the copying
+phase.
 
-Short option names '-1' and '-2' have been removed to avoid mistakes in
-the command line.
+The new option '--delay-slow' has been added. It sets the initial delay
+before ddrescue starts checking for slow reads.
 
-Only regular files are now allowed as arguments of options '--log-rates'
-and '--log-reads'.
+The new option '--reset-slow' has been added. It resets the slow reads
+counter every time the read rate reaches or surpasses '--min-read-rate'.
 
-Option '-D, --odirect' now works also in fill mode.
+The new option '--log-events' has been added. It logs all significant
+events in a file, indicating the time, the percentage rescued, and a
+message describing the event.
 
-Option '-J, --verify-on-error' now marks blocks as failed on any error,
-and exits with status 1 if a read error happens before a good sector is
-found.
+The new option '--mapfile-interval' has been added. It changes the
+interval at which ddrescue saves and fsyncs the mapfile.
 
-Option '-X, --exit-on-error' has been extended to all phases.
+The new option '--pause-on-error' has been added. It makes (or
+simulates) a pause after each read error.
 
-The short name '-Z' has been assigned to option '--max-read-rate'.
+The option '--pause' has been renamed to '--pause-on-pass'.
 
-The mapfile is now "fsync'ed" every 5 minutes because some systems seem
-to never write the mapfile to disc.
+The option '--max-errors' has been renamed to '--max-bad-areas'.
 
-Ddrescue now shows all sizes in rescue mode; non-tried, non-trimmed,
-non-scraped, bad-sector and finished.
+Ddrescue now shows the number of read errors, the error rate and (if a
+--min-read-rate is specified) the number of slow reads.
 
-Ddrescue now shows the percentage of the domain rescued in rescue mode.
+The 'current_pass' field has been added to the mapfile. This allows the
+copying phase to resume instead of restart from pass 1. It also allows
+the retrying phase to resume in the same direction it was interrupted.
+
+Two new passes have been added to the copying phase.
+Sometimes there is a significant difference in read speed and likelihood
+of data recovery between blocks skipped due to slow areas, and blocks
+skipped due to read failures. Two passes have been inserted after pass 2
+that read the blocks skipped due to slow areas (if any) before the final
+sweeping pass (which now is pass 5).
+
+The '--cpass' option now accepts ranges of passes; '--cpass=1-4'.
+
+The option '-K, --skip-size' now accepts sizes up to 1 EiB.
+
+The initial skip size now defaults to (infile_size / 100_000) with a
+minimum value of 64 KiB.
+
+The minimum read rate of good non-tried areas is no longer reduced after
+each pass, and now only affects passes 1 and 2.
+
+During the trimming phase, if any edge of a non-trimmed block is already
+adjacent to a bad sector, it is considered as already trimmed and is not
+trimmed again.
+
+The 's' multiplier may now be appended to any of the other multipliers.
+For example, 'ks' = kilosectors (1000 * sector_size), or
+'Kis' = kibisectors (1024 * sector_size).
+
+Options '--ask' and '-vv' now always show file size, even if model and
+serial number are also shown.
+
+Device model and serial number are now shown with '--ask' or '-vv' on
+Cygwin. (Patch written by Christian Franke).
+
+The tried size (non-trimmed + non-scraped + bad-sector sizes) is now
+shown in the initial status.
+
+The new option '-A, --annotate-mapfile' has been added to ddrescuelog.
+It adds comments to a mapfile containing the positions and sizes of the
+blocks in human-readable form.

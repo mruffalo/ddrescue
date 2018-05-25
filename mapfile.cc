@@ -1,5 +1,5 @@
 /*  GNU ddrescue - Data recovery tool
-    Copyright (C) 2004-2016 Antonio Diaz Diaz.
+    Copyright (C) 2004-2017 Antonio Diaz Diaz.
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -32,10 +32,10 @@
 
 namespace {
 
-int my_fgetc( FILE * const f )
+int my_fgetc( FILE * const f, const bool allow_comment = true )
   {
   int ch = std::fgetc( f );
-  if( ch == '#' )			// comment
+  if( ch == '#' && allow_comment )			// comment
     { do ch = std::fgetc( f ); while( ch != '\n' && ch != EOF ); }
   return ch;
   }
@@ -60,7 +60,7 @@ const char * my_fgets( FILE * const f, int & linenum )
       if( ch == EOF ) { if( len > 0 ) ch = '\n'; else break; }
       if( len < maxlen ) buf[len++] = ch;
       if( ch == '\n' ) { ++linenum; break; }
-      ch = my_fgetc( f );
+      ch = my_fgetc( f, std::isspace( ch ) );
       }
     }
   if( len > 0 ) { buf[len] = 0; return buf; }
@@ -189,8 +189,11 @@ bool Mapfile::read_mapfile( const int default_sblock_status, const bool ro )
   if( line )						// status line
     {
     char ch;
-    int n = std::sscanf( line, "%lli %c\n", &current_pos_, &ch );
-    if( n == 2 && current_pos_ >= 0 && isstatus( ch ) )
+    current_pass_ = 1;					// default value
+    const int n = std::sscanf( line, "%lli %c %d\n",
+                               &current_pos_, &ch, &current_pass_ );
+    if( ( n == 3 || n == 2 ) && current_pos_ >= 0 && isstatus( ch ) &&
+        current_pass_ >= 1 )
       current_status_ = Status( ch );
     else
       { show_mapfile_error( filename_, linenum ); std::exit( 2 ); }
@@ -200,7 +203,7 @@ bool Mapfile::read_mapfile( const int default_sblock_status, const bool ro )
       line = my_fgets( f, linenum );
       if( !line ) break;
       long long pos, size;
-      n = std::sscanf( line, "%lli %lli %c\n", &pos, &size, &ch );
+      const int n = std::sscanf( line, "%lli %lli %c\n", &pos, &size, &ch );
       if( n == 3 && pos >= 0 && Sblock::isstatus( ch ) &&
           ( size > 0 || ( size == 0 && pos == 0 ) ) )
         {
@@ -230,7 +233,8 @@ bool Mapfile::read_mapfile( const int default_sblock_status, const bool ro )
 
 
 int Mapfile::write_mapfile( FILE * f, const bool timestamp,
-                            const bool mf_sync ) const
+                            const bool mf_sync,
+                            const Domain * const annotate_domainp ) const
   {
   const bool f_given = ( f != 0 );
 
@@ -239,14 +243,22 @@ int Mapfile::write_mapfile( FILE * f, const bool timestamp,
   write_file_header( f, "Mapfile" );
   if( timestamp ) write_timestamp( f );
   if( current_msg.size() ) std::fprintf( f, "# %s\n", current_msg.c_str() );
-  std::fprintf( f, "# current_pos  current_status\n"
-                   "0x%08llX     %c\n"
+  char buf[80] = { 0 };		// comment
+  if( annotate_domainp )
+    snprintf( buf, sizeof buf, "\t#  %sB", format_num( current_pos_ ) );
+  std::fprintf( f, "# current_pos  current_status  current_pass\n"
+                   "0x%08llX     %c               %d%s\n"
                    "#      pos        size  status\n",
-                current_pos_, current_status_ );
+                current_pos_, current_status_, current_pass_, buf );
   for( unsigned long i = 0; i < sblock_vector.size(); ++i )
     {
     const Sblock & sb = sblock_vector[i];
-    std::fprintf( f, "0x%08llX  0x%08llX  %c\n", sb.pos(), sb.size(), sb.status() );
+    if( annotate_domainp && annotate_domainp->includes( sb ) )
+      snprintf( buf, sizeof buf, "\t#  %9sB  %9s%c", format_num( sb.pos() ),
+                format_num( sb.size() ), ( sb.size() > 999999 ) ? 'B' : ' ' );
+    else buf[0] = 0;
+    std::fprintf( f, "0x%08llX  0x%08llX  %c%s\n",
+                  sb.pos(), sb.size(), sb.status(), buf );
     }
   if( mf_sync ) fsync( fileno( f ) );
   return ( f_given || std::fclose( f ) == 0 );
@@ -333,55 +345,75 @@ long Mapfile::find_index( const long long pos ) const
   }
 
 
-// Find chunk from b.pos of size <= b.size and status st.
-// If not found, put b.size to 0.
+// Find chunk from b.pos forwards of size <= b.size and status st.
+// If not found, or if after_finished is true and none of the blocks
+// found follows a finished block, put b.size to 0.
+// If at least one block of status st is found, return true.
 //
-void Mapfile::find_chunk( Block & b, const Sblock::Status st,
-                          const Domain & domain, const int alignment ) const
+bool Mapfile::find_chunk( Block & b, const Sblock::Status st,
+                          const Domain & domain, const int alignment,
+                          const bool after_finished ) const
   {
-  if( b.size() <= 0 ) return;
+  if( b.size() <= 0 ) return false;
   if( b.pos() < sblock_vector.front().pos() )
     b.pos( sblock_vector.front().pos() );
-  if( find_index( b.pos() ) < 0 ) { b.size( 0 ); return; }
+  if( find_index( b.pos() ) < 0 ) { b.size( 0 ); return false; }
   long i;
+  bool block_found = false;
   for( i = index_; i < sblocks(); ++i )
     if( sblock_vector[i].status() == st && domain.includes( sblock_vector[i] ) )
-      { index_ = i; break; }
-  if( i >= sblocks() ) { b.size( 0 ); return; }
+      {
+      block_found = true;
+      if( !after_finished || i <= 0 ||
+          sblock_vector[i-1].status() == Sblock::finished )
+        { index_ = i; break; }
+      }
+  if( i >= sblocks() ) { b.size( 0 ); return block_found; }
   if( b.pos() < sblock_vector[index_].pos() )
     b.pos( sblock_vector[index_].pos() );
   if( !sblock_vector[index_].includes( b ) )
     b.crop( sblock_vector[index_] );
   if( b.end() != sblock_vector[index_].end() )
     b.align_end( alignment );
+  return block_found;
   }
 
 
 // Find chunk from b.end backwards of size <= b.size and status st.
-// If not found, put b.size to 0.
+// If not found, or if before_finished is true and none of the blocks
+// found precedes a finished block, put b.size to 0.
+// If at least one block of status st is found, return true.
 //
-void Mapfile::rfind_chunk( Block & b, const Sblock::Status st,
-                           const Domain & domain, const int alignment ) const
+bool Mapfile::rfind_chunk( Block & b, const Sblock::Status st,
+                           const Domain & domain, const int alignment,
+                           const bool before_finished ) const
   {
-  if( b.size() <= 0 ) return;
-  if( sblock_vector.back().end() < b.end() )
+  if( b.size() <= 0 ) return false;
+  if( b.end() > sblock_vector.back().end() )
     b.end( sblock_vector.back().end() );
-  if( find_index( b.end() - 1 ) < 0 ) { b.size( 0 ); return; }
+  if( find_index( b.end() - 1 ) < 0 ) { b.size( 0 ); return false; }
   long i;
+  bool block_found = false;
   for( i = index_; i >= 0; --i )
     if( sblock_vector[i].status() == st && domain.includes( sblock_vector[i] ) )
-      { index_ = i; break; }
-  if( i < 0 ) { b.size( 0 ); return; }
+      {
+      block_found = true;
+      if( !before_finished || i + 1 >= sblocks() ||
+          sblock_vector[i+1].status() == Sblock::finished )
+        { index_ = i; break; }
+      }
+  if( i < 0 ) { b.size( 0 ); return block_found; }
   if( b.end() > sblock_vector[index_].end() )
     b.end( sblock_vector[index_].end() );
   if( !sblock_vector[index_].includes( b ) )
     b.crop( sblock_vector[index_] );
   if( b.pos() != sblock_vector[index_].pos() )
     b.align_pos( alignment );
+  return block_found;
   }
 
 
-// Returns an adjust value (-1, 0, +1) to keep "errors" updated.
+// Returns an adjust value (-1, 0, +1) to keep 'bad_areas' updated.
 //   - - -   -->   - + -   return +1
 //   - - +   -->   - + +   return  0
 //   - + -   -->   - - -   return -1

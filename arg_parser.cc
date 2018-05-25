@@ -1,5 +1,5 @@
 /*  Arg_parser - POSIX/GNU command line argument parser. (C++ version)
-    Copyright (C) 2006-2016 Antonio Diaz Diaz.
+    Copyright (C) 2006-2017 Antonio Diaz Diaz.
 
     This library is free software. Redistribution and use in source and
     binary forms, with or without modification, are permitted provided
@@ -42,7 +42,7 @@ bool Arg_parser::parse_long_option( const char * const opt, const char * const a
       else if( index < 0 ) index = i;		// First nonexact match found
       else if( options[index].code != options[i].code ||
                options[index].has_arg != options[i].has_arg )
-        ambig = true;			// Second or later nonexact match found
+        ambig = true;		// Second or later nonexact match found
       }
 
   if( ambig && !exact )
@@ -142,7 +142,7 @@ Arg_parser::Arg_parser( const int argc, const char * const argv[],
   {
   if( argc < 2 || !argv || !options ) return;
 
-  std::vector< std::string > non_options;	// skipped non-options
+  std::vector< const char * > non_options;	// skipped non-options
   int argind = 1;				// index in argv
 
   while( argind < argc )
@@ -163,17 +163,17 @@ Arg_parser::Arg_parser( const int argc, const char * const argv[],
       }
     else
       {
-      if( !in_order ) non_options.push_back( argv[argind++] );
-      else { data.push_back( Record() ); data.back().argument = argv[argind++]; }
+      if( in_order ) data.push_back( Record( argv[argind++] ) );
+      else non_options.push_back( argv[argind++] );
       }
     }
   if( error_.size() ) data.clear();
   else
     {
     for( unsigned i = 0; i < non_options.size(); ++i )
-      { data.push_back( Record() ); data.back().argument.swap( non_options[i] ); }
+      data.push_back( Record( non_options[i] ) );
     while( argind < argc )
-      { data.push_back( Record() ); data.back().argument = argv[argind++]; }
+      data.push_back( Record( argv[argind++] ) );
     }
   }
 
@@ -192,5 +192,5 @@ Arg_parser::Arg_parser( const char * const opt, const char * const arg,
       parse_short_option( opt, arg, options, argind );
     if( error_.size() ) data.clear();
     }
-  else { data.push_back( Record() ); data.back().argument = opt; }
+  else data.push_back( Record( opt ) );
   }

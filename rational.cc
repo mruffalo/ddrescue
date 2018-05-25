@@ -1,5 +1,5 @@
 /*  Rational - Rational number class with overflow detection
-    Copyright (C) 2005-2016 Antonio Diaz Diaz.
+    Copyright (C) 2005-2017 Antonio Diaz Diaz.
 
     This library is free software: you have unlimited permission to
     copy, distribute and modify it.
@@ -30,20 +30,7 @@
 
 namespace {
 
-int gcd( int n, int m )				// Greatest Common Divisor
-  {
-  if( n < 0 ) n = -n;
-  if( m < 0 ) m = -m;
-
-  while( true )
-    {
-    if( m ) n %= m; else return n;
-    if( n ) m %= n; else return m;
-    }
-  }
-
-
-long long llgcd( long long n, long long m )	// Greatest Common Divisor
+long long gcd( long long n, long long m )	// Greatest Common Divisor
   {
   if( n < 0 ) n = -n;
   if( m < 0 ) m = -m;
@@ -59,50 +46,50 @@ long long llgcd( long long n, long long m )	// Greatest Common Divisor
 const std::string overflow_string( const int n )
   { if( n > 0 ) return "+INF"; if( n < 0 ) return "-INF"; return "NAN"; }
 
-int overflow_value( const int n )
-  { if( n > 0 ) return INT_MAX; if( n < 0 ) return -INT_MAX; return 0; }
-
-int lloverflow_value( const long long n )
-  { if( n > 0 ) return INT_MAX; if( n < 0 ) return -INT_MAX; return 0; }
+int overflow_value( const long long n, const bool negate = false )
+  {
+  if( negate )
+    { if( n > 0 ) return -INT_MAX; if( n < 0 ) return INT_MAX; return 0; }
+  else
+    { if( n > 0 ) return INT_MAX; if( n < 0 ) return -INT_MAX; return 0; }
+  }
 
 } // end namespace
 
 
 void Rational::normalize( long long n, long long d )
   {
-  if( d == 0 ) { num = lloverflow_value( n ); den = 0; return; }  // set error
+  if( d == 0 ) { num = overflow_value( n ); den = 0; return; }  // set error
   if( n == 0 ) { num = 0; den = 1; return; }
   if( d != 1 )
     {
-    const long long tmp = llgcd( n, d );
+    const long long tmp = gcd( n, d );
     n /= tmp; d /= tmp;
     }
 
   if( n <= INT_MAX && n >= -INT_MAX && d <= INT_MAX && d >= -INT_MAX )
     { if( d >= 0 ) { num = n; den = d; } else { num = -n; den = -d; } }
   else
-    { num = lloverflow_value( (d >= 0) ? n : -n ); den = 0; }
+    { num = overflow_value( n, d < 0 ); den = 0; }
   }
 
 
 void Rational::normalize()
   {
-  if( den == 0 ) return;			// no op on error
+  if( den == 0 ) { num = overflow_value( num ); return; }
   if( num == 0 ) { den = 1; return; }
-  if( num < -INT_MAX )
-    {
-    if( den < -INT_MAX ) den = -INT_MAX;
-    num = overflow_value( -den ); den = 0; return;
-    }
-  if( den < 0 )
-    {
-    if( den < -INT_MAX ) { num = overflow_value( -num ); den = 0; return; }
-    num = -num; den = -den;
-    }
   if( den != 1 )
     {
     const int tmp = gcd( num, den );
     num /= tmp; den /= tmp;
+    }
+  if( num < -INT_MAX )
+    { num = overflow_value( den, true ); den = 0; return; }
+  if( den < 0 )
+    {
+    if( den < -INT_MAX )
+      { num = overflow_value( num, true ); den = 0; return; }
+    num = -num; den = -den;
     }
   }
 

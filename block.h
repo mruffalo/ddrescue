@@ -1,5 +1,5 @@
 /*  GNU ddrescue - Data recovery tool
-    Copyright (C) 2004-2016 Antonio Diaz Diaz.
+    Copyright (C) 2004-2017 Antonio Diaz Diaz.
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -197,6 +197,7 @@ private:
   const char * const filename_;
   std::string current_msg;
   Status current_status_;
+  int current_pass_;
   mutable long index_;			// cached index of last find or change
   bool read_only_;
   std::vector< Sblock > sblock_vector;	// note: blocks are consecutive
@@ -207,7 +208,7 @@ private:
 public:
   explicit Mapfile( const char * const mapname )
     : current_pos_( 0 ), filename_( mapname ), current_status_( copying ),
-      index_( 0 ), read_only_( false ) {}
+      current_pass_( 1 ), index_( 0 ), read_only_( false ) {}
 
   void compact_sblock_vector();
   void extend_sblock_vector( const long long isize );
@@ -216,11 +217,13 @@ public:
     { sblock_vector.assign( 1, Sblock( 0, -1, st ) ); }
   bool read_mapfile( const int default_sblock_status = 0, const bool ro = true );
   int write_mapfile( FILE * f = 0, const bool timestamp = false,
-                     const bool mf_sync = false ) const;
+                     const bool mf_sync = false,
+                     const Domain * const annotate_domainp = 0 ) const;
 
   bool blank() const;
   long long current_pos() const { return current_pos_; }
   Status current_status() const { return current_status_; }
+  int current_pass() const { return current_pass_; }
   const char * filename() const { return filename_; }
   bool read_only() const { return read_only_; }
 
@@ -228,6 +231,7 @@ public:
   void current_status( const Status st, const char * const msg = "" )
     { current_status_ = st;
       current_msg = ( st == finished ) ? "Finished" : msg; }
+  void current_pass( const int pass ) { current_pass_ = pass; }
 
   Block extent() const
     { if( sblock_vector.empty() ) return Block( 0, 0 );
@@ -248,10 +252,12 @@ public:
     }
 
   long find_index( const long long pos ) const;
-  void find_chunk( Block & b, const Sblock::Status st,
-                   const Domain & domain, const int alignment ) const;
-  void rfind_chunk( Block & b, const Sblock::Status st,
-                    const Domain & domain, const int alignment ) const;
+  bool find_chunk( Block & b, const Sblock::Status st,
+                   const Domain & domain, const int alignment,
+                   const bool after_finished = false ) const;
+  bool rfind_chunk( Block & b, const Sblock::Status st,
+                    const Domain & domain, const int alignment,
+                    const bool before_finished = false ) const;
   int change_chunk_status( const Block & b, const Sblock::Status st,
                            const Domain & domain,
                            Sblock::Status * const old_stp = 0 );

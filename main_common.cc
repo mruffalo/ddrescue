@@ -1,5 +1,5 @@
 /*  GNU ddrescue - Data recovery tool
-    Copyright (C) 2004-2016 Antonio Diaz Diaz.
+    Copyright (C) 2004-2017 Antonio Diaz Diaz.
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -19,7 +19,7 @@ int verbosity = 0;
 
 namespace {
 
-const char * const program_year = "2016";
+const char * const program_year = "2017";
 std::string command_line;
 
 
@@ -48,12 +48,15 @@ long long getnum( const char * const ptr, const int hardbs,
 
   if( !errno && tail[0] )
     {
-    int factor = ( tail[1] == 'i' ) ? 1024 : 1000;
-    int exponent = 0;
-    bool bad_multiplier = false;
+    const unsigned char c1 = tail[1];
+    int factor;
+    int sector = 0;		// number of sector multipliers present
+    if( c1 == 'i' ) { factor = 1024; if( tail[2] == 's' ) ++sector; }
+    else { factor = 1000; if( c1 == 's' ) ++sector; }
+    int exponent = -1;				// -1 = bad multiplier
     switch( tail[0] )
       {
-      case ',': if( !comma ) { bad_multiplier = true; } break;
+      case ',': if( comma ) exponent = 0; break;
       case 'Y': exponent = 8; break;
       case 'Z': exponent = 7; break;
       case 'E': exponent = 6; break;
@@ -61,16 +64,13 @@ long long getnum( const char * const ptr, const int hardbs,
       case 'T': exponent = 4; break;
       case 'G': exponent = 3; break;
       case 'M': exponent = 2; break;
-      case 'K': if( factor == 1024 ) exponent = 1; else bad_multiplier = true;
-                break;
-      case 'k': if( factor == 1000 ) exponent = 1; else bad_multiplier = true;
-                break;
-      case 's': if( hardbs > 0 ) { factor = hardbs; exponent = 1; }
-                else bad_multiplier = true;
-                break;
-      default : bad_multiplier = true;
+      case 'K': if( factor == 1024 ) exponent = 1; break;
+      case 'k': if( factor == 1000 ) exponent = 1; break;
+      case 's': if( factor == 1000 ) { exponent = 0; ++sector; } break;
       }
-    if( bad_multiplier )
+    if( exponent < 0 || sector > 1 || ( sector == 1 && hardbs <= 0 ) ||
+        ( tail[0] != ',' &&
+          c1 != 0 && c1 != ',' && c1 != 'B' && c1 != 'i' && c1 != 's' ) )
       {
       show_error( "Bad multiplier in numerical argument.", 0, true );
       std::exit( 1 );
@@ -79,6 +79,11 @@ long long getnum( const char * const ptr, const int hardbs,
       {
       if( LLONG_MAX / factor >= llabs( result ) ) result *= factor;
       else { errno = ERANGE; break; }
+      }
+    if( sector == 1 )
+      {
+      if( LLONG_MAX / hardbs >= llabs( result ) ) result *= hardbs;
+      else errno = ERANGE;
       }
     }
   if( !errno && ( result < min || result > max ) ) errno = ERANGE;
@@ -234,7 +239,7 @@ bool write_final_timestamp( FILE * const f )
   static std::string timestamp;
 
   if( timestamp.empty() ) timestamp = get_timestamp();
-  return ( std::fprintf( f, "# End time: %s\n", timestamp.c_str() ) >= 0 );
+  return ( std::fprintf( f, "# End time:     %s\n", timestamp.c_str() ) >= 0 );
   }
 
 

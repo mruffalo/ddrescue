@@ -1,5 +1,5 @@
 /*  GNU ddrescue - Data recovery tool
-    Copyright (C) 2014-2016 Antonio Diaz Diaz.
+    Copyright (C) 2014-2017 Antonio Diaz Diaz.
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -15,4 +15,4 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-const char * device_id( const int fd );
+bool device_id( const int fd, std::string & id_str );

@@ -1,5 +1,5 @@
 /*  GNU ddrescuelog - Tool for ddrescue mapfiles
-    Copyright (C) 2011-2016 Antonio Diaz Diaz.
+    Copyright (C) 2011-2017 Antonio Diaz Diaz.
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -42,8 +42,9 @@ const char * const Program_name = "GNU ddrescuelog";
 const char * const program_name = "ddrescuelog";
 const char * invocation_name = 0;
 
-enum Mode { m_none, m_and, m_change, m_compare, m_complete, m_create,
-            m_delete, m_done_st, m_invert, m_list, m_or, m_status, m_xor };
+enum Mode { m_none, m_and, m_annotate, m_change, m_compare, m_complete,
+            m_create, m_delete, m_done_st, m_invert, m_list, m_or,
+            m_status, m_xor };
 
 
 void show_help( const int hardbs )
@@ -58,6 +59,7 @@ void show_help( const int hardbs )
                "  -h, --help                      display this help and exit\n"
                "  -V, --version                   output version information and exit\n"
                "  -a, --change-types=<ot>,<nt>    change the block types of mapfile\n"
+               "  -A, --annotate-mapfile          add comments with human-readable pos/sizes\n"
                "  -b, --block-size=<bytes>        block size in bytes [default %d]\n", hardbs );
   std::printf( "  -B, --binary-prefixes           show binary multipliers in numbers [SI]\n"
                "  -c, --create-mapfile[=<tt>]     create mapfile from list of blocks [+-]\n"
@@ -200,6 +202,20 @@ int do_logic_ops( Domain & domain, const char * const mapname,
     }
   mapfile.compact_sblock_vector();
   mapfile.write_mapfile( stdout );
+  if( std::fclose( stdout ) != 0 )
+    { show_error( "Can't close stdout", errno ); return 1; }
+  return 0;
+  }
+
+
+int annotate_mapfile( Domain & domain, const char * const mapname )
+  {
+  Mapfile mapfile( mapname );
+  if( !mapfile.read_mapfile() ) return not_readable( mapname );
+  domain.crop( mapfile.extent() );
+  if( domain.empty() ) return empty_domain();
+  mapfile.split_by_domain_borders( domain );
+  mapfile.write_mapfile( stdout, false, false, &domain );
   if( std::fclose( stdout ) != 0 )
     { show_error( "Can't close stdout", errno ); return 1; }
   return 0;
@@ -422,10 +438,10 @@ int to_badblocks( const long long offset, Domain & domain,
 int do_show_status( Domain & domain, const char * const mapname,
                     const bool loose )
   {
-  long long non_tried_size = 0, non_trimmed_size = 0, non_scraped_size = 0;
-  long long bad_sector_size = 0, finished_size = 0;
-  long non_tried_areas = 0, non_trimmed_areas = 0, non_scraped_areas = 0;
-  long bad_sector_areas = 0, finished_areas = 0;
+  long long non_tried_size = 0, non_trimmed_size = 0;
+  long long non_scraped_size = 0, bad_size = 0, finished_size = 0;
+  unsigned long non_tried_areas = 0, non_trimmed_areas = 0;
+  unsigned long non_scraped_areas = 0, bad_areas = 0, finished_areas = 0;
   Mapfile mapfile( mapname );
   if( !mapfile.read_mapfile( loose ? '?' : 0 ) ) return not_readable( mapname );
   mapfile.compact_sblock_vector();
@@ -448,8 +464,8 @@ int do_show_status( Domain & domain, const char * const mapname,
                                 ++non_trimmed_areas; break;
       case Sblock::non_scraped: non_scraped_size += sb.size();
                                 ++non_scraped_areas; break;
-      case Sblock::bad_sector:  bad_sector_size += sb.size();
-                                ++bad_sector_areas; break;
+      case Sblock::bad_sector:  bad_size += sb.size();
+                                ++bad_areas; break;
       case Sblock::finished:    finished_size += sb.size();
                                 ++finished_areas; break;
       }
@@ -469,21 +485,21 @@ int do_show_status( Domain & domain, const char * const mapname,
     std::printf( "   domain size: %9sB,  in %6ld area(s)\n",
                  format_num( domain_size ), domain.blocks() );
     }
-  std::printf( "\n     non-tried: %9sB,  in %6ld area(s)  (%s)\n",
+  std::printf( "\n     non-tried: %9sB,  in %6lu area(s)  (%s)\n",
                format_num( non_tried_size ), non_tried_areas,
                format_percentage( non_tried_size, domain_size ) );
-  std::printf( "       rescued: %9sB,  in %6ld area(s)  (%s)\n",
+  std::printf( "       rescued: %9sB,  in %6lu area(s)  (%s)\n",
                format_num( finished_size ), finished_areas,
                format_percentage( finished_size, domain_size ) );
-  std::printf( "   non-trimmed: %9sB,  in %6ld area(s)  (%s)\n",
+  std::printf( "   non-trimmed: %9sB,  in %6lu area(s)  (%s)\n",
                format_num( non_trimmed_size ), non_trimmed_areas,
                format_percentage( non_trimmed_size, domain_size ) );
-  std::printf( "   non-scraped: %9sB,  in %6ld area(s)  (%s)\n",
+  std::printf( "   non-scraped: %9sB,  in %6lu area(s)  (%s)\n",
                format_num( non_scraped_size ), non_scraped_areas,
                format_percentage( non_scraped_size, domain_size ) );
-  std::printf( "       errsize: %9sB,  errors:  %8ld  (%s)\n",
-               format_num( bad_sector_size ), bad_sector_areas,
-               format_percentage( bad_sector_size, domain_size ) );
+  std::printf( "    bad-sector: %9sB,  in %6lu area(s)  (%s)\n",
+               format_num( bad_size ), bad_areas,
+               format_percentage( bad_size, domain_size ) );
   return 0;
   }
 
@@ -517,6 +533,7 @@ int main( const int argc, const char * const argv[] )
   const Arg_parser::Option options[] =
     {
     { 'a', "change-types",        Arg_parser::yes },
+    { 'A', "annotate-mapfile",    Arg_parser::no  },
     { 'b', "block-size",          Arg_parser::yes },
     { 'b', "sector-size",         Arg_parser::yes },
     { 'B', "binary-prefixes",     Arg_parser::no  },
@@ -568,6 +585,7 @@ int main( const int argc, const char * const argv[] )
       {
       case 'a': set_mode( program_mode, m_change );
                 parse_types( arg, types1, types2 ); break;
+      case 'A': set_mode( program_mode, m_annotate ); break;
       case 'b': hardbs = getnum( ptr, 0, 1, INT_MAX ); break;
       case 'B': format_num( 0, 0, -1 ); break;		// set binary prefixes
       case 'c': set_mode( program_mode, m_create );
@@ -639,6 +657,7 @@ int main( const int argc, const char * const argv[] )
       case m_or:
       case m_xor:
         return do_logic_ops( domain, mapname, second_mapname, program_mode );
+      case m_annotate: return annotate_mapfile( domain, mapname );
       case m_change: return change_types( domain, mapname, types1, types2 );
       case m_compare: return compare_mapfiles( domain, mapname, second_mapname,
                                                as_domain, loose );
