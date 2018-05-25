@@ -95,7 +95,7 @@ bool Rescuebook::extend_outfile_size()
     if( min_size > size )
       {
       const uint8_t zero = 0;
-      if( writeblock( odes_, &zero, 1, min_size - 1 ) != 1 ) return false;
+      if( writeblockp( odes_, &zero, 1, min_size - 1 ) != 1 ) return false;
       fsync( odes_ );
       }
     }
@@ -119,13 +119,13 @@ int Rescuebook::copy_block( const Block & b, int & copied_size, int & error_size
       const int size = pre + b.size() + post;
       if( size > iobuf_size() )
         internal_error( "(size > iobuf_size) copying a Block." );
-      copied_size = readblock( ides_, iobuf(), size, b.pos() - pre );
+      copied_size = readblockp( ides_, iobuf(), size, b.pos() - pre );
       copied_size -= std::min( pre, copied_size );
       if( copied_size > b.size() ) copied_size = b.size();
       if( pre > 0 && copied_size > 0 )
         std::memmove( iobuf(), iobuf() + pre, copied_size );
       }
-    else copied_size = readblock( ides_, iobuf(), b.size(), b.pos() );
+    else copied_size = readblockp( ides_, iobuf(), b.size(), b.pos() );
     error_size = errno ? b.size() - copied_size : 0;
     if( errno == EINVAL )
       { final_msg( "Unaligned read error. Is sector size correct?" ); return 1; }
@@ -141,7 +141,7 @@ int Rescuebook::copy_block( const Block & b, int & copied_size, int & error_size
       const long long end = pos + copied_size;
       if( end > sparse_size ) sparse_size = end;
       }
-    else if( writeblock( odes_, iobuf(), copied_size, pos ) != copied_size ||
+    else if( writeblockp( odes_, iobuf(), copied_size, pos ) != copied_size ||
              ( synchronous_ && fsync( odes_ ) != 0 && errno != EINVAL ) )
       { final_msg( "Write error", errno ); return 1; }
     }
@@ -157,7 +157,7 @@ int Rescuebook::copy_block( const Block & b, int & copied_size, int & error_size
       {
       if( voe_ipos >= 0 )
         {
-        const int size = readblock( ides_, iobuf_aux(), hardbs(), voe_ipos );
+        const int size = readblockp( ides_, iobuf_aux(), hardbs(), voe_ipos );
         if( size != hardbs() )
           { final_msg( "Input file no longer returns data", errno ); e_code |= 8; }
         else if( std::memcmp( voe_buf, iobuf_aux(), hardbs() ) != 0 )
@@ -939,7 +939,7 @@ int Rescuebook::do_rescue( const int ides, const int odes )
     { if( final_errno() ) show_error( final_msg().c_str(), final_errno() );
       else { std::fputs( final_msg().c_str(), stdout ); std::fputc( '\n', stdout ); } }
   if( close( odes_ ) != 0 )
-    { show_error( "Can't close outfile", errno );
+    { show_error( "Error closing outfile", errno );
       if( retval == 0 ) retval = 1; }
   event_logger.print_eor( t1 - t0, percent_rescued(), current_pos(),
                           status_name( current_status() ) );

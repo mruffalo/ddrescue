@@ -166,10 +166,11 @@ const char * format_time( const long t, const bool low_prec = false );
 
 // Defined in io.cc
 //
-int readblock( const int fd, uint8_t * const buf, const int size,
-               const long long pos );
-int writeblock( const int fd, const uint8_t * const buf, const int size,
+int readblock( const int fd, uint8_t * const buf, const int size );
+int readblockp( const int fd, uint8_t * const buf, const int size,
                 const long long pos );
+int writeblockp( const int fd, const uint8_t * const buf, const int size,
+                 const long long pos );
 bool interrupted();
 void set_signals();
 int signaled_exit();

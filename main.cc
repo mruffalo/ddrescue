@@ -280,7 +280,9 @@ int do_fill( const long long offset, Domain & domain,
   if( ides < 0 )
     { show_error( "Can't open input file", errno ); return 1; }
   if( !fillbook.read_buffer( ides ) )
-    { show_error( "Error reading fill data from input file." ); return 1; }
+    { show_error( "Error reading fill data from input file", errno ); return 1; }
+  if( close( ides ) != 0 )
+    { show_error( "Error closing infile", errno ); return 1; }
 
   const int odes = open( oname, O_CREAT | O_WRONLY | o_direct_out | O_BINARY,
                          outmode );
@@ -652,13 +654,18 @@ void parse_pause_on_error( const char * const p, Rb_options & rb_opts )
 void parse_skipbs( const char * const ptr, Rb_options & rb_opts,
                    const int hardbs )
   {
-  const char * const ptr2 = std::strchr( ptr, ',' );
+  const char * tail = ptr;
 
-  if( !ptr2 || ptr2 != ptr )
-    rb_opts.skipbs = getnum( ptr, hardbs, 0, rb_opts.max_max_skipbs, true );
-  if( ptr2 )
-    rb_opts.max_skipbs = getnum( ptr2 + 1, hardbs, Rb_options::min_skipbs,
-                                 rb_opts.max_max_skipbs );
+  if( tail[0] != ',' )
+    rb_opts.skipbs = getnum( ptr, hardbs, 0, rb_opts.max_max_skipbs, &tail );
+  if( tail[0] == ',' )
+    rb_opts.max_skipbs = getnum( tail + 1, hardbs, Rb_options::min_skipbs,
+                                 rb_opts.max_max_skipbs, &tail );
+  if( tail[0] )
+    {
+    show_error( "Bad separator in argument of '--skip-size'", 0, true );
+    std::exit( 1 );
+    }
   if( rb_opts.skipbs > 0 && rb_opts.skipbs < Rb_options::min_skipbs )
     {
     show_error( "Minimum initial skip size is 64KiB." );

@@ -1,3 +1,9 @@
+2017-10-28  Antonio Diaz Diaz  <antonio@gnu.org>
+
+	* Version 1.23-pre3 released.
+	* fillbook.cc (fill_block): Write location data as one line.
+	* fillbook.cc (read_buffer): Do not require a seekable infile.
+
 2017-06-30  Antonio Diaz Diaz  <antonio@gnu.org>
 
 	* Version 1.23-pre2 released.

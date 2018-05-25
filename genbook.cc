@@ -61,7 +61,7 @@ const char * format_time( const long t, const bool low_prec )
 void Genbook::check_block( const Block & b, int & copied_size, int & error_size )
   {
   if( b.size() <= 0 ) internal_error( "bad size checking a Block." );
-  copied_size = readblock( odes_, iobuf(), b.size(), b.pos() + offset() );
+  copied_size = readblockp( odes_, iobuf(), b.size(), b.pos() + offset() );
   if( errno ) error_size = b.size() - copied_size;
 
   for( int pos = 0; pos < copied_size; )

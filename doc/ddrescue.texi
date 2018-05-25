@@ -6,8 +6,8 @@
 @finalout
 @c %**end of header
 
-@set UPDATED 30 June 2017
-@set VERSION 1.23-pre2
+@set UPDATED 28 October 2017
+@set VERSION 1.23-pre3
 
 @dircategory GNU Packages
 @direntry
@@ -1282,11 +1282,11 @@ into each sector filled. With bad sectors filled in this way, it should
 be possible to retry the recovery of important files, as location of the
 error is known by looking into the unfinished copy of the file.
 
-In fill mode @var{infile} may have any size. If it is too small, the
-data will be duplicated as many times as necessary to fill the input
-buffer. If it is too big, only the data needed to fill the input buffer
-will be read. Then the same data will be written to every cluster or
-sector to be filled.
+In fill mode @var{infile} does not need to be seekable and it may be of
+any size. If it is too small, the data will be duplicated as many times
+as necessary to fill the input buffer. If it is too big, only the data
+needed to fill the input buffer will be read. Then the same data will be
+written to every cluster or sector to be filled.
 
 Note that in fill mode @var{infile} is always read from position 0. If
 you specify a @samp{--input-position}, it refers to the original
@@ -1313,11 +1313,10 @@ The fill mode has a number of uses. See the following examples:
 Example 1: Mark parts of the rescued copy to allow finding them when
 examined in an hex editor. For example, the following command line fills
 all blocks marked as @samp{-} (bad-sector) with copies of the string
-@w{@samp{BAD SECTOR }}:
+@w{@samp{BAD-SECTOR }}:
 
 @example
-printf "BAD SECTOR " > tmpfile
-ddrescue --fill-mode=- tmpfile outfile mapfile
+ddrescue --fill-mode=- <(printf "BAD-SECTOR ") outfile mapfile
 @end example
 
 @noindent

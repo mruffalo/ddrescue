@@ -33,9 +33,12 @@ void show_version()
   }
 
 
+// Recognized formats: <num>[YZEPTGM][i][Bs], <num>k[Bs], <num>Ki[Bs]
+//
 long long getnum( const char * const ptr, const int hardbs,
-                  const long long min = LLONG_MIN + 1,
-                  const long long max = LLONG_MAX, const bool comma = false )
+                  const long long llimit = -LLONG_MAX,
+                  const long long ulimit = LLONG_MAX,
+                  const char ** const tailp = 0 )
   {
   char * tail;
   errno = 0;
@@ -48,15 +51,12 @@ long long getnum( const char * const ptr, const int hardbs,
 
   if( !errno && tail[0] )
     {
-    const unsigned char c1 = tail[1];
-    int factor;
-    int sector = 0;		// number of sector multipliers present
-    if( c1 == 'i' ) { factor = 1024; if( tail[2] == 's' ) ++sector; }
-    else { factor = 1000; if( c1 == 's' ) ++sector; }
+    char * const p = tail++;
+    int factor = 1000;				// default factor
     int exponent = -1;				// -1 = bad multiplier
-    switch( tail[0] )
+    char usuf = 0;			// 'B' or 's' unit suffix is present
+    switch( *p )
       {
-      case ',': if( comma ) exponent = 0; break;
       case 'Y': exponent = 8; break;
       case 'Z': exponent = 7; break;
       case 'E': exponent = 6; break;
@@ -64,13 +64,17 @@ long long getnum( const char * const ptr, const int hardbs,
       case 'T': exponent = 4; break;
       case 'G': exponent = 3; break;
       case 'M': exponent = 2; break;
-      case 'K': if( factor == 1024 ) exponent = 1; break;
-      case 'k': if( factor == 1000 ) exponent = 1; break;
-      case 's': if( factor == 1000 ) { exponent = 0; ++sector; } break;
+      case 'K': if( tail[0] == 'i' ) { ++tail; factor = 1024; exponent = 1; } break;
+      case 'k': if( tail[0] != 'i' ) exponent = 1; break;
+      case 'B':
+      case 's': usuf = *p; exponent = 0; break;
+      default : if( tailp ) { tail = p; exponent = 0; } break;
       }
-    if( exponent < 0 || sector > 1 || ( sector == 1 && hardbs <= 0 ) ||
-        ( tail[0] != ',' &&
-          c1 != 0 && c1 != ',' && c1 != 'B' && c1 != 'i' && c1 != 's' ) )
+    if( exponent > 1 && tail[0] == 'i' ) { ++tail; factor = 1024; }
+    if( exponent > 0 && usuf == 0 && ( tail[0] == 'B' || tail[0] == 's' ) )
+      { usuf = tail[0]; ++tail; }
+    if( exponent < 0 || ( usuf == 's' && hardbs <= 0 ) ||
+        ( !tailp && tail[0] != 0 ) )
       {
       show_error( "Bad multiplier in numerical argument.", 0, true );
       std::exit( 1 );
@@ -80,18 +84,19 @@ long long getnum( const char * const ptr, const int hardbs,
       if( LLONG_MAX / factor >= llabs( result ) ) result *= factor;
       else { errno = ERANGE; break; }
       }
-    if( sector == 1 )
+    if( usuf == 's' )
       {
       if( LLONG_MAX / hardbs >= llabs( result ) ) result *= hardbs;
       else errno = ERANGE;
       }
     }
-  if( !errno && ( result < min || result > max ) ) errno = ERANGE;
+  if( !errno && ( result < llimit || result > ulimit ) ) errno = ERANGE;
   if( errno )
     {
     show_error( "Numerical argument out of limits." );
     std::exit( 1 );
     }
+  if( tailp ) *tailp = tail;
   return result;
   }
 

@@ -46,13 +46,11 @@ int Fillbook::fill_block( const Sblock & sb )
       char * const buf = (char *)iobuf() + ( pos - sb.pos() );
       const int bufsize = std::min( 80LL, sb.end() - pos );
       const int len = snprintf( buf, bufsize,
-                                "\n# position      sector  status\n"
-                                "0x%08llX  0x%08llX  %c\n",
-                                pos, pos / hardbs(), sb.status() );
-      if( len > 0 && len < bufsize )
-        std::memset( buf + len, ' ', bufsize - len );
+                        "\n# position 0x%08llX sector 0x%08llX status %c",
+                        pos, pos / hardbs(), sb.status() );
+      if( len > 0 && len < bufsize ) buf[len] = ' ';
       }
-  if( writeblock( odes_, iobuf(), size, sb.pos() + offset() ) != size ||
+  if( writeblockp( odes_, iobuf(), size, sb.pos() + offset() ) != size ||
       ( synchronous_ && fsync( odes_ ) != 0 && errno != EINVAL ) )
     {
     if( !ignore_write_errors ) final_msg( "Write error", errno );
@@ -208,7 +206,7 @@ int Fillbook::do_fill( const int odes )
     }
   if( final_msg().size() ) show_error( final_msg().c_str(), final_errno() );
   if( close( odes_ ) != 0 )
-    { show_error( "Can't close outfile", errno );
+    { show_error( "Error closing outfile", errno );
       if( retval == 0 ) retval = 1; }
   if( retval ) return retval;		// errors have priority over signals
   if( signaled ) return signaled_exit();
@@ -218,8 +216,8 @@ int Fillbook::do_fill( const int odes )
 
 bool Fillbook::read_buffer( const int ides )
   {
-  const int rd = readblock( ides, iobuf(), softbs(), 0 );
-  if( rd <= 0 ) return false;
+  const int rd = readblock( ides, iobuf(), softbs() );
+  if( rd <= 0 || errno != 0 ) return false;
   for( int i = rd; i < softbs(); i *= 2 )
     {
     const int size = std::min( i, softbs() - i );

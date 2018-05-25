@@ -54,11 +54,29 @@ printf "testing ddrescue-%s..." "$2"
 [ $? = 1 ] || test_failed $LINENO
 "${DDRESCUE}" -q -a 1K ${in} out
 [ $? = 1 ] || test_failed $LINENO
+"${DDRESCUE}" -q -a 1BB ${in} out
+[ $? = 1 ] || test_failed $LINENO
+"${DDRESCUE}" -q -a 1Bi ${in} out
+[ $? = 1 ] || test_failed $LINENO
+"${DDRESCUE}" -q -a 1Bk ${in} out
+[ $? = 1 ] || test_failed $LINENO
+"${DDRESCUE}" -q -a 1Bs ${in} out
+[ $? = 1 ] || test_failed $LINENO
+"${DDRESCUE}" -q -a 1iB ${in} out
+[ $? = 1 ] || test_failed $LINENO
+"${DDRESCUE}" -q -a 1ii ${in} out
+[ $? = 1 ] || test_failed $LINENO
+"${DDRESCUE}" -q -a 1ik ${in} out
+[ $? = 1 ] || test_failed $LINENO
+"${DDRESCUE}" -q -a 1is ${in} out
+[ $? = 1 ] || test_failed $LINENO
 "${DDRESCUE}" -q -a 1kk ${in} out
 [ $? = 1 ] || test_failed $LINENO
-"${DDRESCUE}" -q -a 1sk ${in} out
+"${DDRESCUE}" -q -a 1sB ${in} out
 [ $? = 1 ] || test_failed $LINENO
 "${DDRESCUE}" -q -a 1si ${in} out
+[ $? = 1 ] || test_failed $LINENO
+"${DDRESCUE}" -q -a 1sk ${in} out
 [ $? = 1 ] || test_failed $LINENO
 "${DDRESCUE}" -q -a 1ss ${in} out
 [ $? = 1 ] || test_failed $LINENO

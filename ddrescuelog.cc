@@ -204,7 +204,7 @@ int do_logic_ops( Domain & domain, const char * const mapname,
   mapfile.compact_sblock_vector();
   mapfile.write_mapfile( stdout );
   if( std::fclose( stdout ) != 0 )
-    { show_error( "Can't close stdout", errno ); return 1; }
+    { show_error( "Error closing stdout", errno ); return 1; }
   return 0;
   }
 
@@ -218,7 +218,7 @@ int annotate_mapfile( Domain & domain, const char * const mapname )
   mapfile.split_by_domain_borders( domain );
   mapfile.write_mapfile( stdout, false, false, &domain );
   if( std::fclose( stdout ) != 0 )
-    { show_error( "Can't close stdout", errno ); return 1; }
+    { show_error( "Error closing stdout", errno ); return 1; }
   return 0;
   }
 
@@ -244,7 +244,7 @@ int change_types( Domain & domain, const char * const mapname,
   mapfile.compact_sblock_vector();
   mapfile.write_mapfile( stdout );
   if( std::fclose( stdout ) != 0 )
-    { show_error( "Can't close stdout", errno ); return 1; }
+    { show_error( "Error closing stdout", errno ); return 1; }
   return 0;
   }
 
@@ -316,7 +316,7 @@ int complete_mapfile( const char * const mapname,
   mapfile.compact_sblock_vector();
   mapfile.write_mapfile( stdout );
   if( std::fclose( stdout ) != 0 )
-    { show_error( "Can't close stdout", errno ); return 1; }
+    { show_error( "Error closing stdout", errno ); return 1; }
   return 0;
   }
 
@@ -359,7 +359,7 @@ int create_mapfile( Domain & domain, const char * const mapname,
   mapfile.truncate_vector( domain.end(), true );
   if( !mapfile.write_mapfile( to_stdout ? stdout : 0 ) ) return 1;
   if( to_stdout && std::fclose( stdout ) != 0 )
-    { show_error( "Can't close stdout", errno ); return 1; }
+    { show_error( "Error closing stdout", errno ); return 1; }
   return 0;
   }
 
@@ -419,7 +419,7 @@ int shift_blocks( const long long ipos, const long long opos,
   mapfile.compact_sblock_vector();
   mapfile.write_mapfile( stdout );
   if( std::fclose( stdout ) != 0 )
-    { show_error( "Can't close stdout", errno ); return 1; }
+    { show_error( "Error closing stdout", errno ); return 1; }
   return 0;
   }
 

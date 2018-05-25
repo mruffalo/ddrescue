@@ -7,3 +7,10 @@ The new option '--shift' has been added to ddrescuelog. It shifts the
 positions of all the blocks in 'mapfile' by the offset
 ('--output-position' - '--input-position'), and writes the resulting
 mapfile to standard output.
+
+In fill mode, the location data is now written as one line without
+final newline to ease finding it with simple text search tools.
+
+Fill mode no longer requires a seekable infile. Commands like
+  ddrescue -F- <(printf "BAD-SECTOR ") outfile mapfile
+are now possible.
