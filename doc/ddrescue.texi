@@ -6,8 +6,8 @@
 @finalout
 @c %**end of header
 
-@set UPDATED 3 February 2017
-@set VERSION 1.22
+@set UPDATED 9 March 2017
+@set VERSION 1.23-pre1
 
 @dircategory GNU Packages
 @direntry
@@ -806,6 +806,13 @@ Reset the slow reads counter every time the read rate reaches or
 surpasses @samp{--min-read-rate}. With this option, ddrescue only exits
 after the read rate has remained below @samp{--min-read-rate} for at
 least as many seconds as the argument given to @samp{--max-slow-reads}.
+
+@item --same-file
+Allow @var{infile} and @var{outfile} to be the same file or device. This
+can be used to test the writing ability of a drive. It can also be used
+to copy part of a file to another location inside or beyond the end of
+the same file if @samp{--input-position} and @samp{--output-position}
+are different.
 
 @end table
 

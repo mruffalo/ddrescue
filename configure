@@ -6,7 +6,7 @@
 # to copy, distribute and modify it.
 
 pkgname=ddrescue
-pkgversion=1.22
+pkgversion=1.23-pre1
 progname=ddrescue
 use_non_posix=
 srctrigger=doc/${pkgname}.texi
@@ -30,7 +30,7 @@ LDFLAGS=
 /bin/sh -c "${CXX} --version" > /dev/null 2>&1 ||
 	{
 	CXX=c++
-	CXXFLAGS='-W -O2'
+	CXXFLAGS=-O2
 	}
 
 # Loop over all args
@@ -53,7 +53,10 @@ while [ $# != 0 ] ; do
 	# Process the options
 	case ${option} in
 	--help | -h)
-		echo "Usage: configure [options]"
+		echo "Usage: $0 [OPTION]... [VAR=VALUE]..."
+		echo
+		echo "To assign makefile variables (e.g., CXX, CXXFLAGS...), specify them as"
+		echo "arguments to configure in the form VAR=VALUE."
 		echo
 		echo "Options: [defaults in brackets]"
 		echo "  -h, --help            display this help and exit"

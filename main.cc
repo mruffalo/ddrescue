@@ -131,7 +131,8 @@ void show_help( const int cluster, const int hardbs )
                "      --max-slow-reads=<n>         maximum number of slow reads allowed\n"
                "      --pause-on-error=<interval>  time to wait after each read error [0]\n"
                "      --pause-on-pass=<interval>   time to wait between passes [0]\n"
-               "      --reset-slow                 reset slow reads if rate rises above min\n"
+               "      --reset-slow               reset slow reads if rate rises above min\n"
+               "      --same-file                allow infile and outfile to be the same file\n"
                "Numbers may be in decimal, hexadecimal or octal, and may be followed by a\n"
                "multiplier: s = sectors, k = 1000, Ki = 1024, M = 10^6, Mi = 2^20, etc...\n"
                "Time intervals have the format 1[.5][smhd] or 1/2[smhd].\n"
@@ -181,7 +182,7 @@ int parse_time_interval( const char * const ptr, const bool comma = false )
 
 
 bool check_identical( const char * const iname, const char * const oname,
-                      const char * const mapname )
+                      const char * const mapname, const bool same_file )
   {
   struct stat istat, ostat, mapstat;
   bool iexists = false, oexists = false, mapexists = false;
@@ -193,7 +194,7 @@ bool check_identical( const char * const iname, const char * const oname,
     if( iexists && oexists && istat.st_ino == ostat.st_ino &&
         istat.st_dev == ostat.st_dev ) same = true;
     }
-  if( same )
+  if( same && !same_file )
     { show_error( "Infile and outfile are the same." ); return true; }
   if( mapname )
     {
@@ -216,17 +217,17 @@ bool check_identical( const char * const iname, const char * const oname,
 
 
 bool check_files( const char * const iname, const char * const oname,
-                  const char * const mapname,
-                  const long long min_outfile_size, const bool force,
-                  const bool generate, const bool preallocate,
-                  const bool sparse )
+                  const char * const mapname, const Rb_options & rb_opts,
+                  const bool force, const bool generate,
+                  const bool preallocate )
   {
   if( !iname || !oname )
     {
     show_error( "Both input and output files must be specified.", 0, true );
     return false;
     }
-  if( check_identical( iname, oname, mapname ) ) return false;
+  if( check_identical( iname, oname, mapname, rb_opts.same_file ) )
+    return false;
   if( mapname )
     {
     struct stat st;
@@ -236,7 +237,8 @@ bool check_files( const char * const iname, const char * const oname,
       return false;
       }
     }
-  if( !generate && ( min_outfile_size > 0 || !force || preallocate || sparse ) )
+  if( !generate && ( rb_opts.min_outfile_size > 0 || !force ||
+      preallocate || rb_opts.sparse ) )
     {
     struct stat st;
     if( stat( oname, &st ) == 0 && !S_ISREG( st.st_mode ) )
@@ -246,11 +248,11 @@ bool check_files( const char * const iname, const char * const oname,
         show_error( "Use '--force' if you really want to overwrite it, but be\n"
                     "          aware that all existing data in the output file will be lost.",
                     0, true );
-      else if( min_outfile_size > 0 )
+      else if( rb_opts.min_outfile_size > 0 )
         show_error( "Only regular files can be extended.", 0, true );
       else if( preallocate )
         show_error( "Only regular files can be preallocated.", 0, true );
-      else if( sparse )
+      else if( rb_opts.sparse )
         show_error( "Only regular files can be sparse.", 0, true );
       return false;
       }
@@ -431,6 +433,12 @@ int do_rescue( const long long offset, Domain & domain,
                const int o_trunc, const bool ask, const bool preallocate,
                const bool synchronous, const bool verify_input_size )
   {
+  if( rb_opts.same_file && o_trunc )
+    {
+    show_error( "Option '--same-file' is incompatible with '--truncate'.", 0, true );
+    return 1;
+    }
+
   // use same flags as reopen_infile
   const int ides = open( iname, O_RDONLY | rb_opts.o_direct_in | O_BINARY );
   if( ides < 0 )
@@ -481,7 +489,8 @@ int do_rescue( const long long offset, Domain & domain,
     { show_error( "Can't open output file", errno ); return 1; }
   if( lseek( odes, 0, SEEK_SET ) )
     { show_error( "Output file is not seekable." ); return 1; }
-  if( preallocate )
+  if( preallocate && lseek( odes, 0, SEEK_END ) - rescuebook.offset() <
+                     rescuebook.domain().end() )
     {
 #if defined _POSIX_ADVISORY_INFO && _POSIX_ADVISORY_INFO > 0
     if( posix_fallocate( odes, rescuebook.domain().pos() + rescuebook.offset(),
@@ -716,7 +725,8 @@ int main( const int argc, const char * const argv[] )
     { command_line += ' '; command_line += argv[i]; }
 
   enum Optcode { opt_ask = 256, opt_cpa, opt_ds, opt_eoe, opt_eve, opt_mi,
-                 opt_msr, opt_poe, opt_pop, opt_rat, opt_rea, opt_rs };
+                 opt_msr, opt_poe, opt_pop, opt_rat, opt_rea, opt_rs,
+                 opt_sf };
   const Arg_parser::Option options[] =
     {
     { 'a', "min-read-rate",        Arg_parser::yes },
@@ -778,6 +788,7 @@ int main( const int argc, const char * const argv[] )
     { opt_rat, "log-rates",        Arg_parser::yes },
     { opt_rea, "log-reads",        Arg_parser::yes },
     { opt_rs,  "reset-slow",       Arg_parser::no  },
+    { opt_sf,  "same-file",        Arg_parser::no  },
     {  0 , 0,                      Arg_parser::no  } };
 
   const Arg_parser parser( argc, argv, options );
@@ -860,6 +871,7 @@ int main( const int argc, const char * const argv[] )
             show_error( "Reads logfile exists and is not a regular file." );
             return 1;
       case opt_rs:  rb_opts.reset_slow = true; break;
+      case opt_sf:  rb_opts.same_file = true; break;
       default : internal_error( "uncaught option." );
       }
     } // end process options
@@ -879,8 +891,8 @@ int main( const int argc, const char * const argv[] )
 
   // end scan arguments
 
-  if( !check_files( iname, oname, mapname, rb_opts.min_outfile_size, force,
-                    program_mode == m_generate, preallocate, rb_opts.sparse ) )
+  if( !check_files( iname, oname, mapname, rb_opts, force,
+                    program_mode == m_generate, preallocate ) )
     return 1;
 
   Domain domain( ipos, max_size, domain_mapfile_name, loose );
@@ -891,6 +903,9 @@ int main( const int argc, const char * const argv[] )
       if( ask )
         { show_error( "Option '--ask' is incompatible with fill mode.", 0, true );
           return 1; }
+      if( rb_opts.same_file )
+        { show_error( "Option '--same-file' is incompatible with fill mode.", 0, true );
+        return 1; }
       if( rb_opts != Rb_options() || test_mode_mapfile_name ||
           verify_input_size || preallocate || o_trunc )
         show_error( "warning: Options -aACdeEHIJKlMnOpPrRStTuxX are ignored in fill mode." );

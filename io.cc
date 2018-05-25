@@ -20,6 +20,7 @@
 #include <cerrno>
 #include <climits>
 #include <csignal>
+#include <cstdio>
 #include <string>
 #include <vector>
 #include <stdint.h>

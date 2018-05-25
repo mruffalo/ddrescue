@@ -73,6 +73,7 @@ struct Rb_options
   bool reset_slow;
   bool retrim;
   bool reverse;
+  bool same_file;
   bool simulated_poe;
   bool sparse;
   bool try_again;
@@ -89,8 +90,8 @@ struct Rb_options
       timeout( -1 ), complete_only( false ), new_bad_areas_only( false ),
       noscrape( false ), notrim( false ), reopen_on_error( false ),
       reset_slow( false ), retrim( false ), reverse( false ),
-      simulated_poe( false ), sparse( false ), try_again( false ),
-      unidirectional( false ), verify_on_error( false )
+      same_file( false ), simulated_poe( false ), sparse( false ),
+      try_again( false ), unidirectional( false ), verify_on_error( false )
       {}
 
   bool operator==( const Rb_options & o ) const
@@ -115,6 +116,7 @@ struct Rb_options
                reopen_on_error == o.reopen_on_error &&
                reset_slow == o.reset_slow &&
                retrim == o.retrim && reverse == o.reverse &&
+               same_file == o.same_file &&
                simulated_poe == o.simulated_poe &&
                sparse == o.sparse && try_again == o.try_again &&
                unidirectional == o.unidirectional &&

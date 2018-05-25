@@ -68,6 +68,8 @@ printf "testing ddrescue-%s..." "$2"
 [ $? = 1 ] || test_failed $LINENO
 "${DDRESCUE}" -q -F- --ask ${in} out mapfile
 [ $? = 1 ] || test_failed $LINENO
+"${DDRESCUE}" -q -F- --same-file ${in} out mapfile
+[ $? = 1 ] || test_failed $LINENO
 "${DDRESCUE}" -q -G --ask ${in} out mapfile
 [ $? = 1 ] || test_failed $LINENO
 "${DDRESCUE}" -q -G ${in} out
@@ -115,6 +117,8 @@ printf "testing ddrescue-%s..." "$2"
 "${DDRESCUE}" -q --mapfile-interval=30,60, ${in} out
 [ $? = 1 ] || test_failed $LINENO
 "${DDRESCUE}" -q --mapfile-interval=30,60s, ${in} out
+[ $? = 1 ] || test_failed $LINENO
+"${DDRESCUE}" -q --same-file -t ${in} out
 [ $? = 1 ] || test_failed $LINENO
 
 rm -f mapfile
@@ -227,6 +231,19 @@ cat ${in2} > out || framework_failure
 "${DDRESCUE}" -q -G ${in} out mapfile || test_failed $LINENO
 "${DDRESCUE}" -q -R -T1.5d copy out mapfile || test_failed $LINENO
 cmp ${in} out || test_failed $LINENO
+
+"${DDRESCUE}" -q --same-file out out || test_failed $LINENO
+cmp ${in} out || test_failed $LINENO
+
+"${DDRESCUE}" -q -t ${in} out || test_failed $LINENO
+"${DDRESCUE}" -q --same-file -o 72776 out out || test_failed $LINENO
+cat ${in} ${in} | cmp out - || test_failed $LINENO
+
+rm -f out
+"${DDRESCUE}" -q ${in} out || test_failed $LINENO
+"${DDRESCUE}" -q --same-file -o 145552 -S out out || test_failed $LINENO
+"${DDRESCUE}" -q --same-file -i 145552 -o 72776 out out || test_failed $LINENO
+cat ${in} ${in} ${in} | cmp out - || test_failed $LINENO
 
 printf "\ntesting ddrescuelog-%s..." "$2"
 
