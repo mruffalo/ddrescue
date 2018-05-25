@@ -1,5 +1,5 @@
 /*  GNU ddrescue - Data recovery tool
-    Copyright (C) 2004-2017 Antonio Diaz Diaz.
+    Copyright (C) 2004-2018 Antonio Diaz Diaz.
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -731,9 +731,8 @@ int main( const int argc, const char * const argv[] )
   for( int i = 1; i < argc; ++i )
     { command_line += ' '; command_line += argv[i]; }
 
-  enum Optcode { opt_ask = 256, opt_cpa, opt_ds, opt_eoe, opt_eve, opt_mi,
-                 opt_msr, opt_poe, opt_pop, opt_rat, opt_rea, opt_rs,
-                 opt_sf };
+  enum { opt_ask = 256, opt_cpa, opt_ds, opt_eoe, opt_eve, opt_mi,
+         opt_msr, opt_poe, opt_pop, opt_rat, opt_rea, opt_rs, opt_sf };
   const Arg_parser::Option options[] =
     {
     { 'a', "min-read-rate",        Arg_parser::yes },

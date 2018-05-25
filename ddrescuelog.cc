@@ -1,5 +1,5 @@
 /*  GNU ddrescuelog - Tool for ddrescue mapfiles
-    Copyright (C) 2011-2017 Antonio Diaz Diaz.
+    Copyright (C) 2011-2018 Antonio Diaz Diaz.
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by

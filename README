@@ -15,7 +15,7 @@ have to wait for an error, stop the program, restart it from a new
 position, etc.
 
 If you use the mapfile feature of ddrescue, the data is rescued very
-efficiently, (only the needed blocks are read). Also you can interrupt
+efficiently, (only the needed blocks are read). Also you may interrupt
 the rescue at any time and resume it later at the same point. The
 mapfile is an essential part of ddrescue's effectiveness. Use it unless
 you know what you are doing.
@@ -47,12 +47,13 @@ with read errors growing from the outer media region towards the inside.
 Just make two (or more) copies of every important CD-ROM/DVD you burn so
 that you can later recover them with ddrescue.
 
-The mapfile is periodically saved to disc. So in case of a crash you can
-resume the rescue with little recopying.
+The mapfile is periodically saved to disc, as well as when ddrescue
+finishes or is interrupted. So in case of a crash you can resume the
+rescue with little recopying.
 
 Also, the same mapfile can be used for multiple commands that copy
-different areas of the file, and for multiple recovery attempts over
-different subsets.
+different areas of the input file, and for multiple recovery attempts
+over different subsets.
 
 Because ddrescue needs to read and write at random places, it only works
 on seekable (random access) input and output files.
@@ -77,7 +78,7 @@ SATA, SCSI, old MFM drives, floppy discs, or even flash media cards like
 SD).
 
 
-Copyright (C) 2004-2017 Antonio Diaz Diaz.
+Copyright (C) 2004-2018 Antonio Diaz Diaz.
 
 This file is free documentation: you have unlimited permission to copy,
 distribute and modify it.

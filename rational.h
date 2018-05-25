@@ -1,5 +1,5 @@
 /*  Rational - Rational number class with overflow detection
-    Copyright (C) 2005-2017 Antonio Diaz Diaz.
+    Copyright (C) 2005-2018 Antonio Diaz Diaz.
 
     This library is free software. Redistribution and use in source and
     binary forms, with or without modification, are permitted provided
@@ -111,12 +111,14 @@ public:
     { return ( den > 0 && r.den > 0 &&
                (long long)num * r.den < (long long)r.num * den ); }
   bool operator<=( const Rational & r ) const
-    { return ( *this < r || *this == r ); }
+    { return ( den > 0 && r.den > 0 &&
+               (long long)num * r.den <= (long long)r.num * den ); }
   bool operator> ( const Rational & r ) const
     { return ( den > 0 && r.den > 0 &&
                (long long)num * r.den > (long long)r.num * den ); }
   bool operator>=( const Rational & r ) const
-    { return ( *this > r || *this == r ); }
+    { return ( den > 0 && r.den > 0 &&
+               (long long)num * r.den >= (long long)r.num * den ); }
 
   bool operator< ( const int n ) const { return operator< ( Rational( n ) ); }
   bool operator<=( const int n ) const { return operator<=( Rational( n ) ); }

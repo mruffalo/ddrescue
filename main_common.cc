@@ -1,5 +1,5 @@
 /*  GNU ddrescue - Data recovery tool
-    Copyright (C) 2004-2017 Antonio Diaz Diaz.
+    Copyright (C) 2004-2018 Antonio Diaz Diaz.
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -19,7 +19,7 @@ int verbosity = 0;
 
 namespace {
 
-const char * const program_year = "2017";
+const char * const program_year = "2018";
 std::string command_line;
 
 

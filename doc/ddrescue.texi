@@ -6,8 +6,8 @@
 @finalout
 @c %**end of header
 
-@set UPDATED 28 October 2017
-@set VERSION 1.23-pre3
+@set UPDATED 18 January 2018
+@set VERSION 1.23-rc1
 
 @dircategory GNU Packages
 @direntry
@@ -39,6 +39,7 @@ This manual is for GNU ddrescue (version @value{VERSION}, @value{UPDATED}).
 * Basic concepts::        Blocks, clusters, devices, files, sectors, etc
 * Important advice::      Read this or risk losing your data
 * Algorithm::             How ddrescue recovers the data
+* Output::                Meaning of ddrescue's screen output
 * Invoking ddrescue::     Command line interface
 * Mapfile structure::     Detailed format of the mapfile
 * Emergency save::        Saving the mapfile in case of trouble
@@ -54,7 +55,7 @@ This manual is for GNU ddrescue (version @value{VERSION}, @value{UPDATED}).
 @end menu
 
 @sp 1
-Copyright @copyright{} 2004-2017 Antonio Diaz Diaz.
+Copyright @copyright{} 2004-2018 Antonio Diaz Diaz.
 
 This manual is free documentation: you have unlimited permission
 to copy, distribute and modify it.
@@ -73,7 +74,7 @@ have to wait for an error, stop the program, restart it from a new
 position, etc.
 
 If you use the mapfile feature of ddrescue, the data is rescued very
-efficiently, (only the needed blocks are read). Also you can interrupt
+efficiently, (only the needed blocks are read). Also you may interrupt
 the rescue at any time and resume it later at the same point. The
 mapfile is an essential part of ddrescue's effectiveness. Use it unless
 you know what you are doing.
@@ -152,7 +153,7 @@ CDs can't, "video CDs"[1] maybe.@* [1]
 http://en.wikipedia.org/wiki/Video_CD
 
 @item Rescue domain
-Block or set of blocks to be acted upon (rescued, listed, etc). You can
+Block or set of blocks to be acted upon (rescued, listed, etc). You may
 define it with the options @samp{--input-position}, @samp{--size} and
 @samp{--domain-mapfile}. The rescue domain defaults to the whole input
 file or mapfile. If ddrescue can't determine the size of the input file,
@@ -192,7 +193,7 @@ probably lose even more data.
 If you use a device or a partition as destination, any data stored there
 will be overwritten.
 
-Some systems may change device names on reboot (eg. udev enabled
+Some systems may change device names on reboot (e.g. udev enabled
 systems). If you reboot, check the device names before restarting
 ddrescue.
 
@@ -234,20 +235,21 @@ for a long time until the kernel gives up):
 previously interrupted rescue. If no mapfile is specified or is empty or
 does not exist, mark all the rescue domain as non-tried.
 
-2) (First phase; Copying) Read the non-tried parts of the input file,
-marking the failed blocks as non-trimmed and skipping beyond them. Skip
-also beyond slow areas. The skipped areas are tried later in four
-additional passes (before trimming), reversing the direction after each
-pass until all the rescue domain is tried.
+2) (First phase; Copying) Copying is done in up to five passes. The
+first pass reads the non-tried parts of the input file, marking the
+failed blocks as non-trimmed and skipping beyond them. The second pass
+delimits the blocks skipped by the first pass. The first two passes also
+skip beyond slow areas. The skipped areas are tried later in one or
+three additional passes (before trimming). The copying direction is
+reversed after each pass until all the rescue domain is tried.
 
-The second pass delimits the blocks skipped by the first pass. The third
-and fourth passes read the blocks skipped due to slow areas (if any) by
-the first two passes, in the same direction that each block was skipped.
-For each block, passes 2 to 4 skip the rest of the block after finding
-the first error in the block. The last pass is a sweeping pass, with
-skipping disabled. The purpose of the multiple passes is to delimit
-large bad areas fast, recover the most promising areas first, keep the
-mapfile small, and produce good starting points for trimming.
+The third and fourth passes read the blocks skipped due to slow areas
+(if any) by the first two passes, in the same direction that each block
+was skipped. For each block, passes 2 to 4 skip the rest of the block
+after finding the first error in the block. The last pass is a sweeping
+pass, with skipping disabled. The purpose of the multiple passes is to
+delimit large bad areas fast, recover the most promising areas first,
+keep the mapfile small, and produce good starting points for trimming.
 
 Only non-tried areas are read in large blocks. Trimming, scraping and
 retrying are done sector by sector. Each sector is tried at most two
@@ -277,26 +279,6 @@ be eventually read after some retries.
 6) Optionally write a mapfile for later use.
 
 @sp 1
-The total error size is the sum of the sizes of all the bad-sector
-blocks. It increases during the trimming and scraping phases, and may
-decrease during the retrying phase. A sector is not marked as bad-sector
-and considered part of a bad area until it has been tried individually
-instead of as part of a large block read. Non-trimmed and non-scraped
-blocks are not considered bad areas. Note that as ddrescue retries the
-bad-sector blocks, the good data found may divide them into smaller
-blocks, decreasing the total error size but increasing the number of bad
-areas.
-
-The @samp{remaining time} is calculated using the average rate of the
-last 30 seconds and does not take into account that some parts may be
-excluded from the rescue (for example with @samp{--no-trim}), or that
-some areas may be unrecoverable. Therefore it may be very imprecise, may
-vary widely during the rescue, and may show a non-zero value at the end
-of the rescue. In particular it may go down to a few seconds at the end
-of the first pass, just to grow to hours or days in the following
-passes. Such is the nature of ddrescue; the good parts are usually
-recovered fast, while the rest may take a long time.
-
 The mapfile is periodically saved to disc, as well as when ddrescue
 finishes or is interrupted. So in case of a crash you can resume the
 rescue with little recopying. The default interval between saves varies
@@ -330,6 +312,116 @@ ddrescue -d -r3 /dev/sdc hdimage mapfile
 @end example
 
 
+@node Output
+@chapter Meaning of ddrescue's screen output
+@cindex output
+
+The output of ddrescue looks like this:
+
+@example
+GNU ddrescue @value{VERSION}
+Press Ctrl-C to interrupt
+Initial status (read from mapfile)
+rescued: 1665 MB, tried: 0 B, bad-sector: 0 B, bad areas: 0
+
+Current status
+     ipos:    2874 MB, non-trimmed:        0 B,  current rate:  21479 kB/s
+     opos:    2874 MB, non-scraped:        0 B,  average rate:  21023 kB/s
+non-tried:   13603 MB,  bad-sector:        0 B,    error rate:       0 B/s
+  rescued:    2401 MB,   bad areas:        0,        run time:         35s
+pct rescued:   15.00%, read errors:        0,  remaining time:         10m
+ slow reads:        5,        time since last successful read:          0s
+Copying non-tried blocks... Pass 1 (forwards)
+@end example
+
+The meaning of each field is as follows:
+
+@table @code
+@item ipos
+Input position. The position in the input file where data is being
+currently read from.
+
+@item opos
+Output position. The position in the output file where data is being
+currently written to.
+
+@item non-tried
+Size of the part of the rescue domain pending to be tried. This is the
+sum of the sizes of all the non-tried blocks.
+
+@item rescued
+Size of the part of the rescue domain already successfully recovered.
+This is the sum of the sizes of all the finished blocks.
+
+@item pct rescued
+Percentage of the rescue domain that has been successfully recovered.
+
+@item slow reads
+Number of times that the read rate fell below @samp{--min-read-rate}
+during the first two passes of the copying phase. @xref{--min-read-rate}.
+
+@item tried
+Size of the part of the rescue domain already tried but not yet rescued.
+This is the sum of the sizes of all the non-trimmed, non-scraped and
+bad-sector blocks.
+
+@item non-trimmed
+Size of the part of the rescue domain pending to be trimmed. This is the
+sum of the sizes of all the non-trimmed blocks.
+
+@item non-scraped
+Size of the part of the rescue domain pending to be scraped. This is the
+sum of the sizes of all the non-scraped blocks.
+
+@item bad-sector
+Total error size. This is the size of the part of the rescue domain
+formed by known bad sectors. The total error size is the sum of the
+sizes of all the bad-sector blocks. It increases during the trimming and
+scraping phases, and may decrease during the retrying phase. A sector is
+not marked as bad-sector and considered part of a bad area until it has
+been tried individually instead of as part of a large block read. Note
+that as ddrescue retries the bad-sector blocks, the good data found may
+divide them into smaller blocks, decreasing the total error size but
+increasing the number of bad areas.
+
+@item bad areas
+Number of separate bad-sector blocks inside the rescue domain.
+Non-trimmed and non-scraped blocks are not considered bad areas.
+@xref{--max-bad-areas}.
+
+@item read errors
+Number of failed read attempts. @xref{--max-error-rate}.
+
+@item current rate
+The read rate measured during the last second.
+
+@item average rate
+The average read rate measured during the current run.
+
+@item error rate
+The read error rate measured during the last second.
+
+@item run time
+Time elapsed since the beginning of the current run.
+
+@item remaining time
+Estimated remaining time to rescue all the data in the rescue domain.
+The remaining time is calculated using the average rate of the last 30
+seconds and does not take into account that some parts of the rescue
+domain may be excluded from the rescue (for example with
+@samp{--no-trim}), or that some areas may be unrecoverable. Therefore it
+may be very imprecise, may vary widely during the rescue, and may show a
+non-zero value at the end of the rescue. In particular it may go down to
+a few seconds at the end of the first pass, just to grow to hours or
+days in the following passes. Such is the nature of ddrescue; the good
+parts are usually recovered fast, while the rest may take a long time.
+
+@item time since last successful read
+Time elapsed since the last successful read attempt.
+
+@end table
+
+
 @node Invoking ddrescue
 @chapter Invoking ddrescue
 @cindex invoking ddrescue
@@ -361,12 +453,14 @@ Print an informative help message describing the options and exit.
 @itemx --version
 Print the version number of ddrescue on the standard output and exit.
 
+@anchor{--min-read-rate}
 @item -a @var{bytes}
 @itemx --min-read-rate=@var{bytes}
 Minimum read rate of good non-tried areas, in bytes per second. If the
-read rate falls below this value, ddrescue will skip ahead a variable
-amount depending on rate and error histories. The skipped blocks are
-tried in additional passes (before trimming).
+read rate falls below this value during the first two passes of the
+copying phase, ddrescue will skip ahead a variable amount depending on
+rate and error histories. The skipped blocks are tried in additional
+passes (before trimming).
 
 If @var{bytes} is 0 (auto), the minimum read rate is recalculated every
 second as @w{(average_rate / 10)}.
@@ -428,6 +522,7 @@ and no data will be rescued. Some OSs have a bug that prevents them from
 detecting write errors properly (or at all) on some devices if direct
 disc access is not used for @var{outfile}.
 
+@anchor{--max-bad-areas}
 @item -e [+]@var{n}
 @itemx --max-bad-areas=[+]@var{n}
 Maximum number of bad areas allowed before giving up. Defaults to
@@ -435,6 +530,7 @@ infinity. If @var{n} is preceded by @samp{+} the number refers to new
 bad areas found in this run, not counting those already present in the
 @var{mapfile}.
 
+@anchor{--max-error-rate}
 @item -E @var{bytes}
 @itemx --max-error-rate=@var{bytes}
 Maximum rate of read errors allowed before giving up, in bytes per
@@ -527,10 +623,10 @@ skipping entirely.
 
 If ddrescue is having difficulties skipping away from a large area with
 scattered errors, or if the device has large bad areas at regular
-intervals, you can increase the initial skip size with this option.
+intervals, you may increase the initial skip size with this option.
 Inversely, if ddrescue is skipping too much, leaving large non-tried
 areas behind each error (which will be read later in the usually slower
-backwards direction), you can reduce the maximum skip size, or disable
+backwards direction), you may reduce the maximum skip size, or disable
 skipping.
 
 @samp{--skip-size} is independent from @samp{--cluster-size}. The size
@@ -551,7 +647,10 @@ involved in making all data blocks contiguous again.
 Restrict the rescue domain to the blocks marked as finished in the
 mapfile @var{file}. This is useful for merging partially recovered
 images of backups, or if the destination drive fails during the rescue.
-Use @samp{-} as @var{file} to read from standard input.
+Use @samp{-} as @var{file} to read the domain mapfile from standard input.
+Specialized tools like ddrutility or partclone can produce a domain
+mapfile listing all the used blocks in a partition, making the rescue
+more efficient.
 
 @item -M
 @itemx --retrim
@@ -579,13 +678,14 @@ are set to 0.
 
 @item -O
 @itemx --reopen-on-error
-Close @var{infile} and then reopen it after every read error and, if
-@samp{--min-read-rate} is set, after every slow read encountered both
-during the copying phase. Use this option if you notice a permanent drop
-in transfer rate after finding read errors or slow areas. But be warned
-that most probably the slowing-down is intentionally caused by the
-kernel in an attempt to increase the probability of reading data from
-the device.
+Close @var{infile} and then reopen it after every read error encountered
+during the copying phase. If @samp{--min-read-rate} is set, also close
+and reopen @var{infile} after every slow read encountered during the
+first two passes of the copying phase. Use this option if you notice a
+permanent drop in transfer rate after finding read errors or slow areas.
+But be warned that most probably the slowing-down is intentionally
+caused by the kernel in an attempt to increase the probability of
+reading data from the device.
 
 @item -p
 @itemx --preallocate
@@ -623,7 +723,7 @@ tried.
 
 @item -s @var{bytes}
 @itemx --size=@var{bytes}
-Maximum size of the rescue domain, in bytes. It limits the amount of
+Maximum size of the rescue domain in bytes. It limits the amount of
 input data to be copied. If ddrescue can't determine the size of the
 input file, you may need to specify it with this option. Note that this
 option does not specify the size of the resulting @var{outfile}. For
@@ -672,9 +772,9 @@ sectors of a failing drive. Fill mode normally writes to @var{outfile}
 one cluster at a time. With this option, after the first write error is
 found in an area, the rest of that area is filled sector by sector.
 
-Note that in rescue mode a write error is fatal and forces to repeat the
-rescue or to copy @var{outfile} to a third drive using @var{mapfile} as
-domain (@pxref{--domain-mapfile}).
+Note that in rescue mode a write error is fatal, which means that the
+rescue needs to be repeated or else @var{outfile} needs to be copied to
+a third drive using @var{mapfile} as domain (@pxref{--domain-mapfile}).
 
 @item -x @var{bytes}
 @itemx --extend-outfile=@var{bytes}
@@ -785,8 +885,8 @@ above.
 @item --max-slow-reads=@var{n}
 Maximum number of slow reads allowed before giving up. Defaults to
 infinity. Exit with status 1 if more than @var{n} slow reads are
-encountered during the copying phase. Only works if a minimum read rate
-has been set with @samp{--min-read-rate}.
+encountered during the first two passes of the copying phase. Only works
+if a minimum read rate has been set with @samp{--min-read-rate}.
 
 @item --pause-on-error=@var{interval}
 Time to wait after each read error or slow read. Defaults to 0.
@@ -809,10 +909,12 @@ least as many seconds as the argument given to @samp{--max-slow-reads}.
 
 @item --same-file
 Allow @var{infile} and @var{outfile} to be the same file or device. This
-can be used to test the writing ability of a drive. It can also be used
+may be used to test the writing ability of a drive. It may also be used
 to copy part of a file to another location inside or beyond the end of
-the same file if @samp{--input-position} and @samp{--output-position}
-are different.
+the same file by setting different values for @samp{--input-position}
+and @samp{--output-position}. If the data to be copied overlap with the
+destination, the right copying direction must be chosen to avoid
+overwriting the overlapping part before it is copied.
 
 @end table
 
@@ -979,9 +1081,10 @@ potentially losing data. Also dd may create an image larger than the
 original if the @samp{sync} conversion and a block size larger than the
 sector size are specified.
 
-In some cases, a specialized tool like dvdisaster may be a better option
-than ddrescue for recovering data from CD-ROMs because dvdisaster can
-read and analyze raw CD sectors, which ddrescue can't.
+In the special case of reading CD-ROMs (but not DVDs), the specialized
+tool dvdisaster may be a better option than ddrescue for recovering data
+because dvdisaster can read and analyze raw CD sectors, which ddrescue
+can't.
 
 Recordable CD and DVD media keep their data only for a finite time
 (typically for some years). After that time, data loss develops slowly
@@ -1135,7 +1238,7 @@ e2fsck -v -f /dev/sdb2
 @sp 1
 @noindent
 Example 2: Rescue an ext2 partition in /dev/sda2 to /dev/sdb2.@*
-Note: you need to create the hdb2 partition with fdisk first. hdb2
+Note: you need to create the sdb2 partition with fdisk first. sdb2
 should be of appropriate type and size.
 
 @example
@@ -1179,26 +1282,57 @@ Example 5: While rescuing a partition in /dev/sda1 to the file hdimage,
 ddrescue to mark the rest of the partition as non-scraped.
 
 @example
-ddrescue -f -n /dev/sda1 hdimage mapfile     <-- /dev/sda1 fails here
+ddrescue -n /dev/sda1 hdimage mapfile        <-- /dev/sda1 fails here
   (restart /dev/sda or reboot computer)
-ddrescue -f -n -A -i<pos> /dev/sda1 hdimage mapfile
+ddrescue -n -A -i<pos> -O /dev/sda1 hdimage mapfile
   (if /dev/sda1 fails again, restart /dev/sda or reboot computer and
    then repeat the above command as many times as needed until it
-   succeeds. <pos> is the position of the last block marked as
-   non-scraped in the mapfile)
-ddrescue -d -f -r3 /dev/sda1 hdimage mapfile
+   succeeds. <pos> is the position where the drive stopped responding)
+ddrescue -d -r3 /dev/sda1 hdimage mapfile
 @end example
 
 @sp 1
 @noindent
 Example 6: While rescuing a partition in /dev/sda1 to the file hdimage,
-/dev/sda1 disappears from /dev.
+sda1 disappears from /dev.
 
 @example
-ddrescue -f -n /dev/sda1 hdimage mapfile     <-- /dev/sda1 fails here
+ddrescue -n /dev/sda1 hdimage mapfile        <-- /dev/sda1 fails here
   (restart /dev/sda or reboot computer and then repeat the above
    command as many times as needed until it succeeds)
-ddrescue -d -f -r3 /dev/sda1 hdimage mapfile
+ddrescue -d -r3 /dev/sda1 hdimage mapfile
+@end example
+
+@sp 1
+@noindent
+Example 7: While rescuing a partition in /dev/sda1 to the file hdimage,
+the partition table of /dev/sda becomes unreadable and the OS no longer
+shows sda1 in /dev. The solution is to shift the mapfile and read the
+rest of the partition sda1 from /dev/sda.
+Note: you need to know the offset of the partition sda1 in the drive sda
+and the size of sda1.
+
+@example
+ddrescue /dev/sda1 hdimage mapfile     <-- partition table fails here
+ddrescuelog --shift -o<offset> mapfile > shifted_mapfile
+ddrescue -i<offset> -o0 -s<size> /dev/sda hdimage shifted_mapfile
+@end example
+
+@sp 1
+@noindent
+Example 8: After rescuing a partition in /dev/sda1 to the file hdimage,
+expand hdimage to copy the whole drive in /dev/sda without recopying the
+already copied partition /dev/sda1. The solution is to shift the
+mapfile, move the data of sda1 to its final position in hdimage, and
+then read the rest of the data from /dev/sda.
+Note: you need to know the offset of the partition sda1 in the drive sda
+and the size of sda1.
+
+@example
+ddrescue /dev/sda1 hdimage mapfile           <-- rescue partition
+ddrescuelog --shift -o<offset> mapfile > shifted_mapfile
+ddrescue --same-file -o<offset> -s<size> --reverse hdimage hdimage
+ddrescue /dev/sda hdimage shifted_mapfile    <-- rescue rest of drive
 @end example
 
 
@@ -1662,7 +1796,7 @@ Quiet operation. Suppress all messages.
 
 @item -s @var{bytes}
 @itemx --size=@var{bytes}
-Maximum size of the rescue domain, in bytes. It refers to a size in the
+Maximum size of the rescue domain in bytes. It refers to a size in the
 original @var{infile}.
 
 @item -t

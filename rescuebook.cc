@@ -1,5 +1,5 @@
 /*  GNU ddrescue - Data recovery tool
-    Copyright (C) 2004-2017 Antonio Diaz Diaz.
+    Copyright (C) 2004-2018 Antonio Diaz Diaz.
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -647,7 +647,7 @@ bool Rescuebook::update_rates( const bool force )
     rates_updated = true;
     if( verbosity >= 0 )
       {
-      std::fputs( "\n\n\n\n\n", stdout );
+      std::fputs( "\n\n\n\n\n\n", stdout );
       if( preview_lines > 0 )
         for( int i = -2; i < preview_lines; ++i ) std::fputc( '\n', stdout );
       }

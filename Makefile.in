@@ -144,6 +144,7 @@ dist : doc
 	  $(DISTNAME)/*.h \
 	  $(DISTNAME)/*.cc \
 	  $(DISTNAME)/testsuite/check.sh \
+	  $(DISTNAME)/testsuite/fox \
 	  $(DISTNAME)/testsuite/mapfile[1-5] \
 	  $(DISTNAME)/testsuite/mapfile2i \
 	  $(DISTNAME)/testsuite/mapfile_blank \

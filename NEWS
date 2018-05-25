@@ -14,3 +14,6 @@ final newline to ease finding it with simple text search tools.
 Fill mode no longer requires a seekable infile. Commands like
   ddrescue -F- <(printf "BAD-SECTOR ") outfile mapfile
 are now possible.
+
+The new chapter "Meaning of ddrescue's screen output" has been added to
+the manual.

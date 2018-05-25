@@ -1,6 +1,6 @@
 #! /bin/sh
 # check script for GNU ddrescue - Data recovery tool
-# Copyright (C) 2009-2017 Antonio Diaz Diaz.
+# Copyright (C) 2009-2018 Antonio Diaz Diaz.
 #
 # This script is free software: you have unlimited permission
 # to copy, distribute and modify it.
@@ -22,6 +22,7 @@ if [ -d tmp ] ; then rm -rf tmp ; fi
 mkdir tmp
 cd "${objdir}"/tmp || framework_failure
 
+fox="${testdir}"/fox
 in="${testdir}"/test.txt
 in1="${testdir}"/test1.txt
 in2="${testdir}"/test2.txt
@@ -296,14 +297,14 @@ cmp out copy || test_failed $LINENO
 "${DDRESCUELOG}" -q -p ${map1} mapfile
 [ $? = 1 ] || test_failed $LINENO
 "${DDRESCUELOG}" -P ${map1} mapfile || test_failed $LINENO
-"${DDRESCUELOG}" -b2048 -s72776 -f -c?+ mapfile < out || test_failed $LINENO
+"${DDRESCUELOG}" -b2048 -s72776 -f '-c?+' mapfile < out || test_failed $LINENO
 "${DDRESCUELOG}" -p ${map2} - < mapfile || test_failed $LINENO
-"${DDRESCUELOG}" -b2048 -f -c?+ mapfile < out || test_failed $LINENO
+"${DDRESCUELOG}" -b2048 -f '-c?+' mapfile < out || test_failed $LINENO
 "${DDRESCUELOG}" -s72776 -p ${map2} mapfile || test_failed $LINENO
 "${DDRESCUELOG}" -q -s72777 -p ${map2} mapfile
 [ $? = 1 ] || test_failed $LINENO
 
-printf "10\n12\n14\n16\n" | "${DDRESCUELOG}" -b2048 -f -c+? mapfile ||
+printf "10\n12\n14\n16\n" | "${DDRESCUELOG}" -b2048 -f '-c+?' mapfile ||
 	test_failed $LINENO
 "${DDRESCUELOG}" -q -p mapfile ${map1}
 [ $? = 1 ] || test_failed $LINENO
@@ -332,7 +333,7 @@ cat ${map2} > mapfile || framework_failure
 "${DDRESCUELOG}" -b2048 -l+ ${map1} > out || test_failed $LINENO
 printf "0\n2\n4\n6\n8\n10\n12\n14\n16\n18\n20\n22\n24\n26\n28\n30\n32\n34\n" > copy || framework_failure
 cmp out copy || test_failed $LINENO
-"${DDRESCUELOG}" -b2048 -l?- ${map1} > out || test_failed $LINENO
+"${DDRESCUELOG}" -b2048 '-l?-' ${map1} > out || test_failed $LINENO
 printf "1\n3\n5\n7\n9\n11\n13\n15\n17\n19\n21\n23\n25\n27\n29\n31\n33\n35\n" > copy || framework_failure
 cmp out copy || test_failed $LINENO
 "${DDRESCUELOG}" -b2048 -l+ -i0x1800 -o0 -s0x4000 ${map1} > out ||
@@ -344,7 +345,7 @@ cmp out copy || test_failed $LINENO
 "${DDRESCUELOG}" -b2048 -l+ mapfile > out || test_failed $LINENO
 printf "0\n2\n4\n6\n8\n10\n12\n14\n16\n18\n20\n22\n24\n26\n28\n30\n32\n34\n" > copy || framework_failure
 cmp out copy || test_failed $LINENO
-"${DDRESCUELOG}" -b2048 -l?- mapfile > out || test_failed $LINENO
+"${DDRESCUELOG}" -b2048 '-l?-' mapfile > out || test_failed $LINENO
 printf "1\n3\n5\n7\n9\n11\n13\n15\n17\n19\n21\n23\n25\n27\n29\n31\n33\n35\n" > copy || framework_failure
 cmp out copy || test_failed $LINENO
 "${DDRESCUELOG}" -b2048 -l+ -i2048 -o0 -s0x4000 mapfile > out ||
@@ -443,7 +444,7 @@ done
 "${DDRESCUELOG}" -b2048 -l+ ${map1} > out || test_failed $LINENO
 "${DDRESCUELOG}" -y ${map1} - < ${map2} > mapfile || test_failed $LINENO
 "${DDRESCUELOG}" -P ${blank} mapfile || test_failed $LINENO
-"${DDRESCUELOG}" -b2048 -l? mapfile > copy || test_failed $LINENO
+"${DDRESCUELOG}" -b2048 '-l?' mapfile > copy || test_failed $LINENO
 cmp out copy || test_failed $LINENO
 "${DDRESCUELOG}" -y ${map2} ${map1} > mapfile || test_failed $LINENO
 "${DDRESCUELOG}" -P ${blank} mapfile || test_failed $LINENO
@@ -565,6 +566,17 @@ done
 "${DDRESCUELOG}" --shift -o0x488 copy > out || test_failed $LINENO
 "${DDRESCUELOG}" --shift -o0x378 out > copy || test_failed $LINENO
 "${DDRESCUELOG}" -p ${map2} copy || test_failed $LINENO
+
+printf "\ntesting combined rescue..."
+
+rm -f mapfile
+"${DDRESCUE}" -q ${in} out mapfile		# rescue partition
+"${DDRESCUELOG}" --shift -o45 mapfile > shifted_mapfile
+"${DDRESCUE}" -q --same-file -o45 -s72776 --reverse out out
+"${DDRESCUE}" -q -C ${fox} out shifted_mapfile	# rescue rest of drive
+cat ${fox} ${in} | cmp out - || test_failed $LINENO
+"${DDRESCUELOG}" -d mapfile || test_failed $LINENO
+"${DDRESCUELOG}" -d shifted_mapfile || test_failed $LINENO
 
 echo
 if [ ${fail} = 0 ] ; then
