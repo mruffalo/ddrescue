@@ -257,6 +257,8 @@ printf "\ntesting ddrescuelog-%s..." "$2"
 [ $? = 1 ] || test_failed $LINENO
 "${DDRESCUELOG}" -q -m ${map2i} -t mapfile
 [ $? = 2 ] || test_failed $LINENO
+"${DDRESCUELOG}" -q --shift -i20 mapfile
+[ $? = 1 ] || test_failed $LINENO
 
 "${DDRESCUELOG}" -a '?,+' -i3072 - < ${map1} > mapfile
 "${DDRESCUELOG}" -D - < mapfile
@@ -524,6 +526,27 @@ for i in ${map1} ${map2} ${map3} ${map4} ${map5} ; do
 		"${DDRESCUELOG}" -P out copy || test_failed $LINENO "$i $j"
 	done
 done
+
+"${DDRESCUELOG}" --shift -o0x800 -s0x11448 ${map1} > out || test_failed $LINENO
+"${DDRESCUELOG}" -p ${map2} out || test_failed $LINENO
+
+"${DDRESCUELOG}" --shift -o0x400 ${map1} > out || test_failed $LINENO
+"${DDRESCUELOG}" --shift -o0x400 -s0x11848 out > copy || test_failed $LINENO
+"${DDRESCUELOG}" -p ${map2} copy || test_failed $LINENO
+
+"${DDRESCUELOG}" --shift -o0x400 ${map2} > out || test_failed $LINENO
+"${DDRESCUELOG}" --shift -i0x400 -o0 out > copy || test_failed $LINENO
+"${DDRESCUELOG}" -p ${map2} copy || test_failed $LINENO
+
+"${DDRESCUELOG}" --shift -o0x900 ${map1} > copy || test_failed $LINENO
+"${DDRESCUELOG}" --shift -i0x300 -o0 copy > out || test_failed $LINENO
+"${DDRESCUELOG}" --shift -i0x600 -o0 out > copy || test_failed $LINENO
+"${DDRESCUELOG}" -p ${map1} copy || test_failed $LINENO
+
+"${DDRESCUELOG}" --shift -i0x800 -o0 ${map2} > copy || test_failed $LINENO
+"${DDRESCUELOG}" --shift -o0x488 copy > out || test_failed $LINENO
+"${DDRESCUELOG}" --shift -o0x378 out > copy || test_failed $LINENO
+"${DDRESCUELOG}" -p ${map2} copy || test_failed $LINENO
 
 echo
 if [ ${fail} = 0 ] ; then

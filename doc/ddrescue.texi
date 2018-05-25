@@ -6,8 +6,8 @@
 @finalout
 @c %**end of header
 
-@set UPDATED 9 March 2017
-@set VERSION 1.23-pre1
+@set UPDATED 30 June 2017
+@set VERSION 1.23-pre2
 
 @dircategory GNU Packages
 @direntry
@@ -1698,6 +1698,14 @@ Perform a logical OR operation between the finished blocks in @var{file}
 and those in @var{mapfile}, and write the resulting mapfile to standard
 output. In other words, in the resulting mapfile a block is shown as
 finished if it was finished in either of the two input mapfiles.
+
+@item --shift
+Shift the positions of all the blocks in @var{mapfile} by the offset
+(@samp{--output-position} - @samp{--input-position}), and write the
+resulting mapfile to standard output. Either @samp{--input-position} or
+@samp{--output-position} must be 0. If the offset is positive, a
+non-tried block is inserted before the first block. Any blocks beyond
+the end of the rescue domain are removed before performing the shift.
 
 @end table
 

@@ -45,7 +45,17 @@ public:
   void pos( const long long p )
     { pos_ = std::max( p, 0LL );
       if( size_ > LLONG_MAX - pos_ ) size_ = LLONG_MAX - pos_; }
+  void shift( const long long offset )
+    { if( offset >= 0 )
+        { pos_ += std::min( offset, LLONG_MAX - pos_ );
+          if( size_ > LLONG_MAX - pos_ ) size_ = LLONG_MAX - pos_; }
+      else if( ( pos_ += offset ) < 0 )
+        { size_ = std::max( size_ + pos_, 0LL ); pos_ = 0; } }
   void size( const long long s ) { size_ = s; fix_size(); }
+  void enlarge( long long s )
+    { if( s < 0 ) s = LLONG_MAX;
+      if( s > LLONG_MAX - pos_ - size_ ) s = LLONG_MAX - pos_ - size_;
+      size_ += s; }
   void end( long long e )
     { if( e < 0 ) e = LLONG_MAX;
       if( size_ <= e ) pos_ = e - size_; else { pos_ = 0; size_ = e; } }
@@ -77,7 +87,7 @@ public:
 
   void crop( const Block & b );
   bool join( const Block & b );
-  void shift( Block & b, const long long pos );
+  void shift_boundary( Block & b, const long long pos );
   Block split( long long pos, const int hardbs = 1 );
   };
 
@@ -212,6 +222,7 @@ public:
 
   void compact_sblock_vector();
   void extend_sblock_vector( const long long isize );
+  void shift_blocks( const long long offset );
   bool truncate_vector( const long long end, const bool force = false );
   void set_to_status( const Sblock::Status st )
     { sblock_vector.assign( 1, Sblock( 0, -1, st ) ); }

@@ -12,7 +12,7 @@ File: ddrescue.info,  Node: Top,  Next: Introduction,  Up: (dir)
 GNU ddrescue Manual
 *******************
 
-This manual is for GNU ddrescue (version 1.23-pre1, 9 March 2017).
+This manual is for GNU ddrescue (version 1.23-pre2, 30 June 2017).
 
 * Menu:
 
@@ -875,7 +875,7 @@ Character   Meaning
 
 And here is an example mapfile:
 
-     # Mapfile. Created by GNU ddrescue version 1.23-pre1
+     # Mapfile. Created by GNU ddrescue version 1.23-pre2
      # Command line: ddrescue -d -c18 /dev/fd0 fdimage mapfile
      # Start time:   2015-07-21 09:37:44
      # Current time: 2015-07-21 09:38:19
@@ -1588,6 +1588,15 @@ by '--create-mapfile' to standard output.
      output. In other words, in the resulting mapfile a block is shown
      as finished if it was finished in either of the two input mapfiles.
 
+'--shift'
+     Shift the positions of all the blocks in MAPFILE by the offset
+     ('--output-position' - '--input-position'), and write the
+     resulting mapfile to standard output. Either '--input-position' or
+     '--output-position' must be 0. If the offset is positive, a
+     non-tried block is inserted before the first block. Any blocks
+     beyond the end of the rescue domain are removed before performing
+     the shift.
+
 
    Exit status: 0 for a normal exit, 1 for environmental problems (file
 not found, invalid flags, I/O errors, etc), 2 to indicate a corrupt or
@@ -1659,8 +1668,8 @@ Node: Fill mode50927
 Node: Generate mode55986
 Node: Ddrescuelog57927
 Node: Invoking ddrescuelog60221
-Node: Problems67661
-Node: Concept index68218
+Node: Problems68095
+Node: Concept index68652
 
 End Tag Table
 

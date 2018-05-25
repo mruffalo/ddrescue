@@ -2,3 +2,8 @@ Changes in version 1.23:
 
 The new option '--same-file' has been added. It allows infile and
 outfile to be the same file or device.
+
+The new option '--shift' has been added to ddrescuelog. It shifts the
+positions of all the blocks in 'mapfile' by the offset
+('--output-position' - '--input-position'), and writes the resulting
+mapfile to standard output.

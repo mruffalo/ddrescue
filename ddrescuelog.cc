@@ -44,7 +44,7 @@ const char * invocation_name = 0;
 
 enum Mode { m_none, m_and, m_annotate, m_change, m_compare, m_complete,
             m_create, m_delete, m_done_st, m_invert, m_list, m_or,
-            m_status, m_xor };
+            m_shift, m_status, m_xor };
 
 
 void show_help( const int hardbs )
@@ -82,6 +82,7 @@ void show_help( const int hardbs )
                "  -x, --xor-mapfile=<file>        XOR the finished blocks in file with mapfile\n"
                "  -y, --and-mapfile=<file>        AND the finished blocks in file with mapfile\n"
                "  -z, --or-mapfile=<file>         OR the finished blocks in file with mapfile\n"
+               "      --shift                     shift all block positions by (opos - ipos)\n"
                "Use '-' to read a mapfile from standard input or to write the mapfile\n"
                "created by '--create-mapfile' to standard output.\n"
                "Numbers may be in decimal, hexadecimal or octal, and may be followed by a\n"
@@ -403,6 +404,26 @@ int test_if_done( Domain & domain, const char * const mapname, const bool del )
   }
 
 
+int shift_blocks( const long long ipos, const long long opos,
+                  Domain & domain, const char * const mapname )
+  {
+  if( ipos != 0 && opos != 0 )
+    { show_error( "Either '-i' or '-o' must be 0" ); return 1; }
+  const long long offset = opos - ipos;
+  Mapfile mapfile( mapname );
+  if( !mapfile.read_mapfile() ) return not_readable( mapname );
+  domain.crop( mapfile.extent() );
+  if( domain.empty() ) return empty_domain();
+  mapfile.truncate_vector( domain.end(), true );
+  mapfile.shift_blocks( offset );
+  mapfile.compact_sblock_vector();
+  mapfile.write_mapfile( stdout );
+  if( std::fclose( stdout ) != 0 )
+    { show_error( "Can't close stdout", errno ); return 1; }
+  return 0;
+  }
+
+
 int to_badblocks( const long long offset, Domain & domain,
                   const char * const mapname, const int hardbs,
                   const std::string & blocktypes )
@@ -530,6 +551,7 @@ int main( const int argc, const char * const argv[] )
   for( int i = 1; i < argc; ++i )
     { command_line += ' '; command_line += argv[i]; }
 
+  enum Optcode { opt_shi = 256 };
   const Arg_parser::Option options[] =
     {
     { 'a', "change-types",        Arg_parser::yes },
@@ -568,6 +590,7 @@ int main( const int argc, const char * const argv[] )
     { 'y', "and-logfile",         Arg_parser::yes },
     { 'z', "or-mapfile",          Arg_parser::yes },
     { 'z', "or-logfile",          Arg_parser::yes },
+    { opt_shi, "shift",           Arg_parser::no  },
     {  0 , 0,                     Arg_parser::no  } };
 
   const Arg_parser parser( argc, argv, options );
@@ -617,6 +640,7 @@ int main( const int argc, const char * const argv[] )
                 second_mapname = ptr; break;
       case 'z': set_mode( program_mode, m_or );
                 second_mapname = ptr; break;
+      case opt_shi: set_mode( program_mode, m_shift ); break;
       default : internal_error( "uncaught option." );
       }
     } // end process options
@@ -669,6 +693,8 @@ int main( const int argc, const char * const argv[] )
       case m_invert: return change_types( domain, mapname, "?*/-+", "++++-" );
       case m_list:
         return to_badblocks( opos - ipos, domain, mapname, hardbs, types1 );
+      case m_shift:
+        return shift_blocks( ipos, opos, domain, mapname );
       case m_status:
         retval = std::max( retval, do_show_status( domain, mapname, loose ) );
       }

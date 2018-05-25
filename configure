@@ -6,7 +6,7 @@
 # to copy, distribute and modify it.
 
 pkgname=ddrescue
-pkgversion=1.23-pre1
+pkgversion=1.23-pre2
 progname=ddrescue
 use_non_posix=
 srctrigger=doc/${pkgname}.texi
@@ -58,7 +58,7 @@ while [ $# != 0 ] ; do
 		echo "To assign makefile variables (e.g., CXX, CXXFLAGS...), specify them as"
 		echo "arguments to configure in the form VAR=VALUE."
 		echo
-		echo "Options: [defaults in brackets]"
+		echo "Options and variables: [defaults in brackets]"
 		echo "  -h, --help            display this help and exit"
 		echo "  -V, --version         output version information and exit"
 		echo "  --srcdir=DIR          find the sources in DIR [. or ..]"

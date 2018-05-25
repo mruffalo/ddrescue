@@ -140,6 +140,38 @@ void Mapfile::extend_sblock_vector( const long long isize )
   }
 
 
+void Mapfile::shift_blocks( const long long offset )
+  {
+  if( sblock_vector.empty() ) return;
+  if( offset > 0 )
+    {
+    if( sblock_vector.front().status() == Sblock::non_tried )
+      sblock_vector.front().enlarge( offset );
+    else
+      insert_sblock( 0, Sblock( 0, offset, Sblock::non_tried ) );
+    for( unsigned long i = 1; i < sblock_vector.size(); ++i )
+      {
+      sblock_vector[i].shift( offset );
+      if( sblock_vector[i].size() <= 0 )
+        { sblock_vector.erase( sblock_vector.begin() + i, sblock_vector.end() );
+          break; }
+      }
+    }
+  else if( offset < 0 )
+    {
+    for( unsigned long i = 0; i < sblock_vector.size(); ++i )
+      if( sblock_vector[i].end() + offset > 0 )
+        {
+        if( i > 0 )
+          sblock_vector.erase( sblock_vector.begin(), sblock_vector.begin() + i );
+        break;
+        }
+    for( unsigned long i = 0; i < sblock_vector.size(); ++i )
+      sblock_vector[i].shift( offset );
+    }
+  }
+
+
 // Returns false only if truncation would remove finished blocks and
 // force is false.
 //
@@ -451,7 +483,7 @@ int Mapfile::change_chunk_status( const Block & b, const Sblock::Status st,
         index_ + 1 < sblocks() && sblock_vector[index_+1].status() == st &&
         domain.includes( sblock_vector[index_+1] ) )
       {
-      sblock_vector[index_].shift( sblock_vector[index_+1], b.pos() );
+      sblock_vector[index_].shift_boundary( sblock_vector[index_+1], b.pos() );
       return 0;
       }
     insert_sblock( index_, sblock_vector[index_].split( b.pos() ) );
@@ -462,7 +494,7 @@ int Mapfile::change_chunk_status( const Block & b, const Sblock::Status st,
     {
     if( index_ > 0 && sblock_vector[index_-1].status() == st &&
         domain.includes( sblock_vector[index_-1] ) )
-      sblock_vector[index_-1].shift( sblock_vector[index_], b.end() );
+      sblock_vector[index_-1].shift_boundary( sblock_vector[index_], b.end() );
     else
       insert_sblock( index_,
                      Sblock( sblock_vector[index_].split( b.end() ), st ) );

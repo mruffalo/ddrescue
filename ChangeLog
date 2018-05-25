@@ -1,3 +1,8 @@
+2017-06-30  Antonio Diaz Diaz  <antonio@gnu.org>
+
+	* Version 1.23-pre2 released.
+	* Added new option '--shift' to ddrescuelog.
+
 2017-03-09  Antonio Diaz Diaz  <antonio@gnu.org>
 
 	* Version 1.23-pre1 released.
