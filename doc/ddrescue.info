@@ -12,7 +12,7 @@ File: ddrescue.info,  Node: Top,  Next: Introduction,  Up: (dir)
 GNU ddrescue Manual
 *******************
 
-This manual is for GNU ddrescue (version 1.23-rc2, 6 February 2018).
+This manual is for GNU ddrescue (version 1.23, 13 February 2018).
 
 * Menu:
 
@@ -295,7 +295,7 @@ File: ddrescue.info,  Node: Output,  Next: Invoking ddrescue,  Prev: Algorithm, 
 
 The output of ddrescue looks like this:
 
-     GNU ddrescue 1.23-rc2
+     GNU ddrescue 1.23
      Press Ctrl-C to interrupt
      Initial status (read from mapfile)
      rescued: 1665 MB, tried: 0 B, bad-sector: 0 B, bad areas: 0
@@ -978,7 +978,7 @@ Character   Meaning
 
 And here is an example mapfile:
 
-     # Mapfile. Created by GNU ddrescue version 1.23-rc2
+     # Mapfile. Created by GNU ddrescue version 1.23
      # Command line: ddrescue -d -c18 /dev/fd0 fdimage mapfile
      # Start time:   2015-07-21 09:37:44
      # Current time: 2015-07-21 09:38:19
@@ -1779,28 +1779,28 @@ Concept index
 
 Tag Table:
 Node: Top201
-Node: Introduction1502
-Node: Basic concepts4222
-Node: Important advice6479
-Node: Algorithm7555
-Node: Output12595
-Node: Invoking ddrescue16887
-Ref: --min-read-rate17660
-Ref: --max-bad-areas20587
-Ref: --max-error-rate20846
-Ref: --domain-mapfile26148
-Node: Mapfile structure39579
-Node: Emergency save42763
-Node: Optical media44219
-Ref: lziprecover-example47410
-Node: Examples48189
-Node: Direct disc access53795
-Node: Fill mode56017
-Node: Generate mode61093
-Node: Ddrescuelog63034
-Node: Invoking ddrescuelog65328
-Node: Problems73201
-Node: Concept index73758
+Node: Introduction1499
+Node: Basic concepts4219
+Node: Important advice6476
+Node: Algorithm7552
+Node: Output12592
+Node: Invoking ddrescue16880
+Ref: --min-read-rate17653
+Ref: --max-bad-areas20580
+Ref: --max-error-rate20839
+Ref: --domain-mapfile26141
+Node: Mapfile structure39572
+Node: Emergency save42752
+Node: Optical media44208
+Ref: lziprecover-example47399
+Node: Examples48178
+Node: Direct disc access53784
+Node: Fill mode56006
+Node: Generate mode61082
+Node: Ddrescuelog63023
+Node: Invoking ddrescuelog65317
+Node: Problems73190
+Node: Concept index73747
 
 End Tag Table
 

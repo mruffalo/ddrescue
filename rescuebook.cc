@@ -448,8 +448,6 @@ int Rescuebook::trim_errors()
           break;
         ++i; continue; }
     if( sb.status() != Sblock::non_trimmed ) { ++i; continue; }
-    long long pos = sb.pos();
-    long long end = sb.end();
     const bool lbad = ( idx > 0 &&
                         sblock( idx - 1 ).status() == Sblock::bad_sector );
     const bool rbad = ( idx + 1 < sblocks() &&
@@ -457,6 +455,8 @@ int Rescuebook::trim_errors()
     if( lbad && rbad )		// leave block for the scraping phase
       { change_sblock_status( idx, Sblock::non_scraped ); ++i; continue; }
     bool error_found = lbad;
+    long long pos = sb.pos();
+    long long end = sb.end();
     while( pos < end && !error_found )		// trim leading edge
       {
       Block b( pos, std::min( (long long)hardbs(), end - pos ) );
@@ -472,7 +472,7 @@ int Rescuebook::trim_errors()
       if( !update_mapfile( odes_ ) ) return -2;
       }
     error_found = rbad;
-    while( end > pos && !error_found )		// trim trailing edge
+    while( pos < end && !error_found )		// trim trailing edge
       {
       const int size = std::min( (long long)hardbs(), end - pos );
       Block b( end - size, size );
@@ -487,7 +487,7 @@ int Rescuebook::trim_errors()
         { error_found = true; if( pause_on_error > 0 ) do_pause_on_error(); }
       if( !update_mapfile( odes_ ) ) return -2;
       }
-    if( end > pos )
+    if( pos < end )
       {
       const long index = find_index( end - 1 );
       if( index >= 0 && domain().includes( sblock( index ) ) &&

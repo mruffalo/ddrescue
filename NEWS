@@ -1,7 +1,7 @@
 Changes in version 1.23:
 
 A bug has been fixed that sometimes marked the wrong block as
-non-scraped when running in reverse direction.
+non-scraped when running in reverse direction. (Bug introduced in 1.22).
 Thanks to Arthur Lesuisse for reporting this.
 
 The new option '--same-file' has been added. It allows infile and
