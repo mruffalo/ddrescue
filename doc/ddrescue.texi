@@ -6,8 +6,8 @@
 @finalout
 @c %**end of header
 
-@set UPDATED 18 January 2018
-@set VERSION 1.23-rc1
+@set UPDATED 6 February 2018
+@set VERSION 1.23-rc2
 
 @dircategory GNU Packages
 @direntry

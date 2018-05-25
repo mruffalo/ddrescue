@@ -1,3 +1,8 @@
+2018-02-06  Antonio Diaz Diaz  <antonio@gnu.org>
+
+	* Version 1.23-rc2 released.
+	* rescuebook.cc (trim_errors): Fix status change to non-scraped.
+
 2018-01-18  Antonio Diaz Diaz  <antonio@gnu.org>
 
 	* Version 1.23-rc1 released.

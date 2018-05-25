@@ -441,7 +441,8 @@ int Rescuebook::trim_errors()
 
   for( long i = 0; i < sblocks(); )
     {
-    const Sblock sb = sblock( reverse ? sblocks() - i - 1 : i );
+    const long idx = reverse ? sblocks() - 1 - i : i;
+    const Sblock sb = sblock( idx );
     if( !domain().includes( sb ) )
       { if( ( !reverse && domain() < sb ) || ( reverse && domain() > sb ) )
           break;
@@ -449,11 +450,12 @@ int Rescuebook::trim_errors()
     if( sb.status() != Sblock::non_trimmed ) { ++i; continue; }
     long long pos = sb.pos();
     long long end = sb.end();
-    const bool lbad = ( i > 0 && sblock( i - 1 ).status() == Sblock::bad_sector );
-    const bool rbad = ( i + 1 < sblocks() &&
-                        sblock( i + 1 ).status() == Sblock::bad_sector );
+    const bool lbad = ( idx > 0 &&
+                        sblock( idx - 1 ).status() == Sblock::bad_sector );
+    const bool rbad = ( idx + 1 < sblocks() &&
+                        sblock( idx + 1 ).status() == Sblock::bad_sector );
     if( lbad && rbad )		// leave block for the scraping phase
-      { change_sblock_status( i, Sblock::non_scraped ); ++i; continue; }
+      { change_sblock_status( idx, Sblock::non_scraped ); ++i; continue; }
     bool error_found = lbad;
     while( pos < end && !error_found )		// trim leading edge
       {
@@ -508,7 +510,7 @@ int Rescuebook::scrape_errors()
 
   for( long i = 0; i < sblocks(); )
     {
-    const Sblock sb = sblock( reverse ? sblocks() - i - 1 : i );
+    const Sblock sb = sblock( reverse ? sblocks() - 1 - i : i );
     if( !domain().includes( sb ) )
       { if( ( !reverse && domain() < sb ) || ( reverse && domain() > sb ) )
           break;
