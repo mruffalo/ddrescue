@@ -33,6 +33,7 @@
 namespace {
 
 int volatile signum_ = 0;		// user pressed Ctrl-C or similar
+
 extern "C" void sighandler( int signum )
   { if( signum_ == 0 && signum > 0 ) signum_ = signum; }
 

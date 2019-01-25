@@ -27,7 +27,7 @@ struct Mb_options
 class Mapbook : public Mapfile, public Mb_options
   {
   const long long offset_;		// outfile offset (opos - ipos);
-  long long mapfile_isize_;
+  long long mapfile_insize_;
   Domain & domain_;			// rescue domain
   uint8_t *iobuf_base;			// alignment + iobuf + iobuf_aux
   uint8_t *iobuf_;			// buffer aligned to page and hardbs
@@ -39,13 +39,15 @@ class Mapbook : public Mapfile, public Mb_options
   bool mapfile_exists_;
 
   bool save_mapfile( const char * const name );
-  bool emergency_save();
 
   Mapbook( const Mapbook & );		// declared as private
   void operator=( const Mapbook & );	// declared as private
 
+protected:
+  bool emergency_save();
+
 public:
-  Mapbook( const long long offset, const long long isize,
+  Mapbook( const long long offset, const long long insize,
            Domain & dom, const Mb_options & mb_opts,
            const char * const mapname, const int cluster,
            const int hardbs, const bool complete_only );
@@ -64,7 +66,7 @@ public:
   const std::string & final_msg() const { return final_msg_; }
   int final_errno() const { return final_errno_; }
   bool mapfile_exists() const { return mapfile_exists_; }
-  long long mapfile_isize() const { return mapfile_isize_; }
+  long long mapfile_insize() const { return mapfile_insize_; }
 
   void final_msg( const std::string & msg, const int e = 0 )
     { final_msg_ = msg; final_errno_ = e; }
@@ -141,10 +143,10 @@ class Genbook : public Mapbook
   void show_status( const long long ipos, const char * const msg = 0,
                     bool force = false );
 public:
-  Genbook( const long long offset, const long long isize,
+  Genbook( const long long offset, const long long insize,
            Domain & dom, const Mb_options & mb_opts,
            const char * const mapname, const int cluster, const int hardbs )
-    : Mapbook( offset, isize, dom, mb_opts, mapname, cluster, hardbs, false ),
+    : Mapbook( offset, insize, dom, mb_opts, mapname, cluster, hardbs, false ),
       a_rate( 0 ), c_rate( 0 ), first_size( 0 ), last_size( 0 ),
       last_ipos( 0 ), t0( 0 ), t1( 0 ), oldlen( 0 )
       {}

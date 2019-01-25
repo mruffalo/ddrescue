@@ -35,12 +35,12 @@
 
 namespace {
 
-void input_pos_error( const long long pos, const long long isize )
+void input_pos_error( const long long pos, const long long insize )
   {
   char buf[128];
   snprintf( buf, sizeof buf,
             "Can't start reading at pos %lld.\n"
-            "          Input file is only %lld bytes long.", pos, isize );
+            "          Input file is only %lld bytes long.", pos, insize );
   show_error( buf );
   }
 
@@ -84,12 +84,12 @@ bool Mapbook::emergency_save()
   }
 
 
-Mapbook::Mapbook( const long long offset, const long long isize,
+Mapbook::Mapbook( const long long offset, const long long insize,
                   Domain & dom, const Mb_options & mb_opts,
                   const char * const mapname, const int cluster,
                   const int hardbs, const bool complete_only )
   : Mapfile( mapname ), Mb_options( mb_opts ), offset_( offset ),
-    mapfile_isize_( 0 ), domain_( dom ), hardbs_( hardbs ),
+    mapfile_insize_( 0 ), domain_( dom ), hardbs_( hardbs ),
     softbs_( cluster * hardbs_ ),
     iobuf_size_( softbs_ + hardbs_ ),	// +hardbs for direct unaligned reads
     final_errno_( 0 ), um_t1( 0 ), um_t1s( 0 ), mapfile_exists_( false )
@@ -105,18 +105,18 @@ Mapbook::Mapbook( const long long offset, const long long isize,
     if( disp > 0 && disp < alignment ) iobuf_ += disp;
     }
 
-  if( isize > 0 )
+  if( insize > 0 )
     {
-    if( domain_.pos() >= isize )
-      { input_pos_error( domain_.pos(), isize ); std::exit( 1 ); }
-    domain_.crop_by_file_size( isize );
+    if( domain_.pos() >= insize )
+      { input_pos_error( domain_.pos(), insize ); std::exit( 1 ); }
+    domain_.crop_by_file_size( insize );
     }
   if( filename() )
     {
     mapfile_exists_ = read_mapfile( 0, false );
-    if( mapfile_exists_ ) mapfile_isize_ = extent().end();
+    if( mapfile_exists_ ) mapfile_insize_ = extent().end();
     }
-  if( !complete_only ) extend_sblock_vector( isize );
+  if( !complete_only ) extend_sblock_vector( insize );
   else domain_.crop( extent() );  // limit domain to blocks read from mapfile
   compact_sblock_vector();
   split_by_domain_borders( domain_ );

@@ -6,8 +6,8 @@
 @finalout
 @c %**end of header
 
-@set UPDATED 13 February 2018
-@set VERSION 1.23
+@set UPDATED 22 December 2018
+@set VERSION 1.24-pre1
 
 @dircategory GNU Packages
 @direntry
@@ -46,6 +46,7 @@ This manual is for GNU ddrescue (version @value{VERSION}, @value{UPDATED}).
 * Optical media::         Copying CD-ROMs and DVDs
 * Examples::              A small tutorial with examples
 * Direct disc access::    Bypassing the kernel cache
+* Command mode::          Copying parts of the input file on demand
 * Fill mode::             Selectively overwriting the output file
 * Generate mode::         Generating an approximate mapfile
 * Ddrescuelog::           Tool for ddrescue mapfiles
@@ -279,6 +280,12 @@ be eventually read after some retries.
 6) Optionally write a mapfile for later use.
 
 @sp 1
+When ddrescue finishes the steps above, any areas marked as bad-sector will
+remain untouched in the output file. If the output file is a regular file
+created by ddrescue, the areas marked as bad-sector will contain zeros. If
+it is a device or a previously existing file, the areas marked as bad-sector
+will still contain the data previously present there.
+
 The mapfile is periodically saved to disc, as well as when ddrescue
 finishes or is interrupted. So in case of a crash you can resume the
 rescue with little recopying. The default interval between saves varies
@@ -452,6 +459,7 @@ Print an informative help message describing the options and exit.
 @item -V
 @itemx --version
 Print the version number of ddrescue on the standard output and exit.
+This version number should be included in all bug reports.
 
 @anchor{--min-read-rate}
 @item -a @var{bytes}
@@ -820,6 +828,13 @@ the input and output devices. Ddrescue also shows the size in bytes of
 the corresponding file or device if it exists. The format used is
 @w{[@var{model}::@var{serial_number}] (@var{size})}
 
+@item --command-mode
+Read commands from the standard input and execute them, copying parts of the
+input file on demand. Command line arguments controling the display (like
+@samp{--data-preview}) or the automatic algorithm (like @samp{--max-errors}
+or @samp{--reverse}) have no effect in command mode. @xref{Command mode},
+for a complete description of the command mode.
+
 @item --cpass=@var{range}
 Select what pass(es) to run during the copying phase. Valid pass values
 range from 1 to 5. To run only the given pass(es), specify also
@@ -872,15 +887,14 @@ quickly. Use lzip to compress @var{file} if you need to store or
 transmit it.
 
 @item --mapfile-interval=[@var{save_interval}][,@var{sync_interval}]
-Change the interval at which ddrescue saves and fsyncs the mapfile. At
-least one of @var{save_interval} or @var{sync_interval} must be
-specified. A @var{save_interval} of -1 chooses the default automatic
-interval (from 30 seconds to 5 minutes depending on mapfile size). A
-@var{save_interval} of 0 saves the mapfile after every read (use with
-caution). @var{sync_interval} is the interval between fsync calls.
-Default @var{sync_interval} is 5 minutes. Minimum @var{sync_interval} is
-5 seconds. Intervals are formatted as in the option @samp{--timeout}
-above.
+Change the interval at which ddrescue saves and fsyncs the @var{mapfile}. At
+least one of @var{save_interval} or @var{sync_interval} must be specified. A
+@var{save_interval} of -1 chooses the default automatic interval (from 30
+seconds to 5 minutes depending on mapfile size). A @var{save_interval} of 0
+saves the @var{mapfile} after every read (use with caution).
+@var{sync_interval} is the interval between fsync calls. Default
+@var{sync_interval} is 5 minutes. Minimum @var{sync_interval} is 5 seconds.
+Intervals are formatted as in the option @samp{--timeout} above.
 
 @item --max-slow-reads=@var{n}
 Maximum number of slow reads allowed before giving up. Defaults to
@@ -1158,13 +1172,13 @@ ddrescue -m mapfile3 dvdimage3 dvdimage mapfile
 Example 5: Rescue a lzip compressed backup from two copies on CD-ROM
 with error-checked merging of copies.
 @ifnothtml
-(@xref{Top,lziprecover manual,,lziprecover},
+@xref{Top,lziprecover manual,,lziprecover},
 @end ifnothtml
 @ifhtml
-(See the
+See the
 @uref{http://www.nongnu.org/lzip/manual/lziprecover_manual.html,,lziprecover manual}
 @end ifhtml
-for details about lziprecover).
+for details about lziprecover.
 
 @example
 ddrescue -d -r1 -b2048 /dev/cdrom cdimage1 mapfile1
@@ -1396,6 +1410,64 @@ raw /dev/raw/raw1 0 0
 e2fsck -v -f /dev/sdc1
 mount -t ext2 -o ro /dev/sdc1 /mnt
 @end example
+
+
+@node Command mode
+@chapter Copying parts of the input file on demand
+@cindex command mode
+
+The command mode of ddrescue implements a scripting interface similar to
+the one of @uref{http://www.gnu.org/ed/manual/ed_manual.html,,ed}.
+@ifnothtml
+@xref{Top,ed manual,,ed}.
+@end ifnothtml
+In this mode commands are read from the standard input and executed to copy
+parts of the input file to the output file, retrieve information from the
+mapfile or write the mapfile to disc. Ddrescue's responses are written to
+standard output. "done\n" for a successfully executed command, "error\n" for
+a failed command (for example because of wrong arguments), and
+@w{"error: @var{error message}\n"} for serious or fatal errors like write
+errors.
+
+If end-of-file is detected on standard input, ddrescue discards any partial
+command being read and executes a @code{f} command.
+
+All ddrescue commands are single characters, though some require additonal
+parameters separated by spaces. Only one command is allowed per line.
+Ddrescue recognizes the following commands:
+
+@table @code
+
+@item c @var{pos} @var{size}
+Copy command. Copies a block of data from @var{infile} to @var{outfile} and
+updates the internal copy of the mapfile. The areas already marked as
+finished in the mapfile are not copied again.
+
+@item f
+Finish command. Compacts the internal copy of the mapfile and writes it to
+@var{mapfile} (if it was specified in the command line). Then prints
+"done\n" to standard output and quits. On startup, the mapfile is first
+compacted and then split following the rescue domain borders. The finish
+command compacts the mapfile again before exiting. If writing @var{mapfile}
+to disc fails, a non-interactive emergency save is tried before exiting.
+@xref{Emergency save}.
+
+@item q
+Quit command. Exits ddrescue. Does not update the mapfile.
+
+@item s @var{pos} @var{size}
+Status command. Writes to standard output one or more lines in mapfile
+format (@pxref{Mapfile structure}), showing the status of the areas included
+in the block requested. A line consisting of the string "done" marks the end
+of the list.
+
+@item u
+Update mapfile command. Writes the internal copy of the mapfile to
+@var{mapfile} (if it was specified in the command line). If update mapfile
+fails, you may try to fix the problem, for example deleting some files to
+make room for @var{mapfile}, before trying to update it again.
+
+@end table
 
 
 @node Fill mode
@@ -1666,6 +1738,7 @@ Print an informative help message describing the options and exit.
 @item -V
 @itemx --version
 Print the version number of ddrescuelog on the standard output and exit.
+This version number should be included in all bug reports.
 
 @item -a @var{old_types},@var{new_types}
 @itemx --change-types=@var{old_types},@var{new_types}
