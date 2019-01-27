@@ -1,5 +1,5 @@
 /*  GNU ddrescue - Data recovery tool
-    Copyright (C) 2004-2018 Antonio Diaz Diaz.
+    Copyright (C) 2004-2019 Antonio Diaz Diaz.
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -67,17 +67,17 @@ const mode_t outmode = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH
 
 void show_help( const int cluster, const int hardbs )
   {
-  std::printf( "%s - Data recovery tool.\n", Program_name );
-  std::printf( "Copies data from one file or block device to another,\n"
-               "trying to rescue the good parts first in case of read errors.\n"
-               "\nUsage: %s [options] infile outfile [mapfile]\n", invocation_name );
-  std::printf( "\nAlways use a mapfile unless you know you won't need it. Without a\n"
+  std::printf( "GNU ddrescue is a data recovery tool. It copies data from one file or block\n"
+               "device (hard disc, cdrom, etc) to another, trying to rescue the good parts\n"
+               "first in case of read errors.\n"
+               "\nAlways use a mapfile unless you know you won't need it. Without a\n"
                "mapfile, ddrescue can't resume a rescue, only reinitiate it.\n"
                "NOTE: In versions of ddrescue prior to 1.20 the mapfile was called\n"
                "'logfile'. The format is the same; only the name has changed.\n"
                "\nIf you reboot, check the device names before restarting ddrescue.\n"
                "Don't use options '-F' or '-G' without reading the manual first.\n"
-               "\nOptions:\n"
+               "\nUsage: %s [options] infile outfile [mapfile]\n", invocation_name );
+  std::printf( "\nOptions:\n"
                "  -h, --help                     display this help and exit\n"
                "  -V, --version                  output version information and exit\n"
                "  -a, --min-read-rate=<bytes>    minimum read rate of good areas in bytes/s\n"
@@ -183,7 +183,8 @@ int parse_time_interval( const char * const ptr, const bool comma = false )
 
 
 bool check_identical( const char * const iname, const char * const oname,
-                      const char * const mapname, const bool same_file )
+                      const char * const mapname,
+                      const std::string & mapname_bak, const bool same_file )
   {
   struct stat istat, ostat, mapstat;
   bool iexists = false, oexists = false, mapexists = false;
@@ -212,6 +213,11 @@ bool check_identical( const char * const iname, const char * const oname,
         ( oexists && mapexists && ostat.st_ino == mapstat.st_ino &&
           ostat.st_dev == mapstat.st_dev ) )
       { show_error( "Outfile and mapfile are the same." ); return true; }
+    // just compare names because std::remove will break existing links
+    if( mapname_bak == iname )
+      { show_error( "Infile and <mapfile>.bak are the same." ); return true; }
+    if( mapname_bak == oname )
+      { show_error( "Outfile and <mapfile>.bak are the same." ); return true; }
     }
   return false;
   }
@@ -227,16 +233,19 @@ bool check_files( const char * const iname, const char * const oname,
     show_error( "Both input and output files must be specified.", 0, true );
     return false;
     }
-  if( check_identical( iname, oname, mapname, rb_opts.same_file ) )
+  std::string mapname_bak;
+  if( mapname ) { mapname_bak = mapname; mapname_bak += ".bak"; }
+  if( check_identical( iname, oname, mapname, mapname_bak, rb_opts.same_file ) )
     return false;
   if( mapname )
     {
     struct stat st;
     if( stat( mapname, &st ) == 0 && !S_ISREG( st.st_mode ) )
-      {
-      show_error( "Mapfile exists and is not a regular file." );
-      return false;
-      }
+      { show_error( "Mapfile exists and is not a regular file." );
+        return false; }
+    if( stat( mapname_bak.c_str(), &st ) == 0 && !S_ISREG( st.st_mode ) )
+      { show_error( "<mapfile>.bak exists and is not a regular file." );
+        return false; }
     }
   if( !generate && ( rb_opts.min_outfile_size > 0 || !force ||
       preallocate || rb_opts.sparse ) )

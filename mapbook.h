@@ -1,5 +1,5 @@
 /*  GNU ddrescue - Data recovery tool
-    Copyright (C) 2004-2018 Antonio Diaz Diaz.
+    Copyright (C) 2004-2019 Antonio Diaz Diaz.
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -36,6 +36,7 @@ class Mapbook : public Mapfile, public Mb_options
   std::string final_msg_;
   int final_errno_;
   long um_t1, um_t1s;			// variables for update_mapfile
+  bool um_prev_mf_sync;
   bool mapfile_exists_;
 
   bool save_mapfile( const char * const name );

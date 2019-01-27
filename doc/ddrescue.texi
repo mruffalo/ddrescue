@@ -6,8 +6,8 @@
 @finalout
 @c %**end of header
 
-@set UPDATED 22 December 2018
-@set VERSION 1.24-pre1
+@set UPDATED 24 January 2019
+@set VERSION 1.24-rc1
 
 @dircategory GNU Packages
 @direntry
@@ -56,7 +56,7 @@ This manual is for GNU ddrescue (version @value{VERSION}, @value{UPDATED}).
 @end menu
 
 @sp 1
-Copyright @copyright{} 2004-2018 Antonio Diaz Diaz.
+Copyright @copyright{} 2004-2019 Antonio Diaz Diaz.
 
 This manual is free documentation: you have unlimited permission
 to copy, distribute and modify it.
@@ -66,57 +66,53 @@ to copy, distribute and modify it.
 @chapter Introduction
 @cindex introduction
 
-GNU ddrescue is a data recovery tool. It copies data from one file or
-block device (hard disc, cdrom, etc) to another, trying to rescue the
-good parts first in case of read errors.
+GNU ddrescue is a data recovery tool. It copies data from one file or block
+device (hard disc, cdrom, etc) to another, trying to rescue the good parts
+first in case of read errors.
 
-The basic operation of ddrescue is fully automatic. That is, you don't
-have to wait for an error, stop the program, restart it from a new
-position, etc.
+The basic operation of ddrescue is fully automatic. That is, you don't have
+to wait for an error, stop the program, restart it from a new position, etc.
 
 If you use the mapfile feature of ddrescue, the data is rescued very
-efficiently, (only the needed blocks are read). Also you may interrupt
-the rescue at any time and resume it later at the same point. The
-mapfile is an essential part of ddrescue's effectiveness. Use it unless
-you know what you are doing.
+efficiently, (only the needed blocks are read). Also you may interrupt the
+rescue at any time and resume it later at the same point. The mapfile is an
+essential part of ddrescue's effectiveness. Use it unless you know what you
+are doing.
 
-Ddrescue does not write zeros to the output when it finds bad sectors in
-the input, and does not truncate the output file if not asked to. So,
-every time you run it on the same output file, it tries to fill in the
-gaps without wiping out the data already rescued.
+Ddrescue does not write zeros to the output when it finds bad sectors in the
+input, and does not truncate the output file if not asked to. So, every time
+you run it on the same output file, it tries to fill in the gaps without
+wiping out the data already rescued.
 
-Automatic merging of backups: If you have two or more damaged copies of
-a file, cdrom, etc, and run ddrescue on all of them, one at a time, with
-the same output file, you will probably obtain a complete and error-free
-file. This is so because the probability of having the same area damaged
-in all copies is low (if the errors are randomly located). Using the
-mapfile, only the needed blocks are read from the second and successive
-copies.
+Automatic merging of backups: If you have two or more damaged copies of a
+file, cdrom, etc, and run ddrescue on all of them, one at a time, with the
+same output file, you will probably obtain a complete and error-free file.
+This is so because the probability of having the same area damaged in all
+copies is low (if the errors are randomly located). Using the mapfile, only
+the needed blocks are read from the second and successive copies.
 
-Ddrescue recommends lzip for compression of backups because the lzip
-format is designed for long-term archiving and provides data recovery
-capabilities which nicely complement those of ddrescue. (Ddrescue fills
-unreadable sectors with data from other copies, while lziprecover
-corrects corrupt sectors with data from other copies). If the cause of
-file corruption is damaged media, the combination ddrescue + lziprecover
-is the best option for recovering data from multiple damaged copies.
-@xref{lziprecover-example}, for an example.
+Ddrescue recommends lzip for compression of backups because the lzip format
+is designed for long-term archiving and provides data recovery capabilities
+which nicely complement those of ddrescue. (Ddrescue fills unreadable
+sectors with data from other copies, while lziprecover corrects corrupt
+sectors with data from other copies). If the cause of file corruption is
+damaged media, the combination @w{ddrescue + lziprecover} is the best option
+for recovering data from multiple damaged copies.
+@xref{lziprecover-example}.
 
-Because ddrescue needs to read and write at random places, it only works
-on seekable (random access) input and output files.
+Because ddrescue needs to read and write at random places, it only works on
+seekable (random access) input and output files.
 
-If your system supports it, ddrescue can use direct disc access to read
-the input file, bypassing the kernel cache.
+If your system supports it, ddrescue can use direct disc access to read the
+input file, bypassing the kernel cache.
 
-Ddrescue also features a "fill mode" able to selectively overwrite parts
-of the output file, which has a number of interesting uses like wiping
-data, marking bad areas or even, in some cases, "repair" damaged
-sectors.
+Ddrescue also features a 'fill mode' able to selectively overwrite parts of
+the output file, which has a number of interesting uses like wiping data,
+marking bad areas or even, in some cases, "repair" damaged sectors.
 
-One of the great strengths of ddrescue is that it is interface-agnostic,
-and so can be used for any kind of device supported by your kernel (ATA,
-SATA, SCSI, old MFM drives, floppy discs, or even flash media cards like
-SD).
+One of the great strengths of ddrescue is that it is interface-agnostic, and
+so can be used for any kind of device supported by your kernel (ATA, SATA,
+SCSI, old MFM drives, floppy discs, or even flash media cards like SD).
 
 
 @node Basic concepts
@@ -286,16 +282,17 @@ created by ddrescue, the areas marked as bad-sector will contain zeros. If
 it is a device or a previously existing file, the areas marked as bad-sector
 will still contain the data previously present there.
 
-The mapfile is periodically saved to disc, as well as when ddrescue
-finishes or is interrupted. So in case of a crash you can resume the
-rescue with little recopying. The default interval between saves varies
-from 30 seconds to 5 minutes depending on mapfile size (larger mapfiles
-are saved at longer intervals), but may be overriden with
-@samp{--mapfile-interval}.
+The mapfile is periodically saved to disc, as well as when ddrescue finishes
+or is interrupted. A backup copy of the mapfile with the extension
+@samp{.bak} is also periodically created (if possible). So in case of a
+crash you can resume the rescue with little recopying. The default interval
+between saves varies from 30 seconds to 5 minutes depending on mapfile size
+(larger mapfiles are saved at longer intervals), but may be overriden.
+@xref{--mapfile-interval}.
 
-Also, the same mapfile can be used for multiple commands that copy
-different areas of the input file, and for multiple recovery attempts
-over different subsets. See this example:
+The same mapfile can be used for multiple commands that copy different areas
+of the input file, and for multiple recovery attempts over different
+subsets. See this example:
 
 @noindent
 Rescue the most important part of the disc first.
@@ -443,11 +440,15 @@ ddrescue [@var{options}] @var{infile} @var{outfile} [@var{mapfile}]
 @end example
 
 @var{infile} and @var{outfile} may be files, devices or partitions.
-@var{mapfile} is a regular file and must be placed in an existing
-directory. If @var{mapfile} does not exist, ddrescue will create it.
+@var{mapfile} is a regular file and must be placed in an existing directory.
+If @var{mapfile} does not exist, ddrescue will create it.
 
-Always use a mapfile unless you know you won't need it. Without a
-mapfile, ddrescue can't resume a rescue, only reinitiate it.
+Ddrescue tries to create a backup copy of the mapfile, with the name
+@var{mapfile}.bak, every time it is going to overwrite a fsynced
+@var{mapfile}. @xref{--mapfile-interval}.
+
+Always use a mapfile unless you know you won't need it. Without a mapfile,
+ddrescue can't resume a rescue, only reinitiate it.
 
 ddrescue supports the following options:
 
@@ -886,6 +887,7 @@ option with caution because @var{file} may become very large very
 quickly. Use lzip to compress @var{file} if you need to store or
 transmit it.
 
+@anchor{--mapfile-interval}
 @item --mapfile-interval=[@var{save_interval}][,@var{sync_interval}]
 Change the interval at which ddrescue saves and fsyncs the @var{mapfile}. At
 least one of @var{save_interval} or @var{sync_interval} must be specified. A
@@ -1101,10 +1103,10 @@ because dvdisaster can read and analyze raw CD sectors, which ddrescue
 can't.
 
 Recordable CD and DVD media keep their data only for a finite time
-(typically for some years). After that time, data loss develops slowly
-with read errors growing from the outer media region towards the inside.
-Just make two (or more) copies of every important CD-ROM/DVD you burn so
-that you can later recover them with ddrescue.
+(typically for some years). After that time, data loss develops slowly with
+read errors growing from the outer media region towards the inside. It is a
+good idea to make two (or more) copies of every important CD-ROM/DVD you
+burn so that you can later recover them with ddrescue.
 
 If you have only one copy of a CD-ROM or DVD that fails when being
 copied, and if you have access to multiple optical media drives, you
@@ -1374,12 +1376,11 @@ documentation to find how to bind a raw device to a regular block
 device. Some OSs provide raw access through especial device names, like
 /dev/rdisk.
 
-Ddrescue aligns its I/O buffer to the sector size so that it can be used
-for direct disc access or to read from raw devices. For efficiency
-reasons, also aligns it to the memory page size if page size is a
-multiple of sector size. On some systems, ddrescue can't determine the
-size of a raw device, so an explicit @samp{--size} or
-@samp{--complete-only} option may be needed.
+Ddrescue aligns its I/O buffer to the sector size so that it can be used for
+direct disc access or to read from raw devices. For efficiency reasons, also
+aligns it to the memory page size if page size is a multiple of sector size.
+On some systems, ddrescue can't determine the size of a raw device, so an
+explicit @samp{--size} or @samp{--complete-only} option may be needed.
 
 Using direct disc access, or reading from a raw device, may be slower or
 faster than normal cached reading depending on your OS and hardware. In
@@ -1655,16 +1656,16 @@ rescue run.
 @cindex ddrescuelog
 
 Ddrescuelog is a tool that manipulates ddrescue mapfiles, shows mapfile
-contents, converts mapfiles to/from other formats, compares mapfiles,
-tests rescue status, and can delete a mapfile if the rescue is done.
-Ddrescuelog operations can be restricted to one or several parts of the
-mapfile if the domain setting options are used.
+contents, converts mapfiles to/from other formats, compares mapfiles, tests
+rescue status, and can delete a mapfile if the rescue is done. Ddrescuelog
+operations can be restricted to one or several parts of the mapfile if the
+domain setting options are used.
 
 When performing logic operations (AND, OR, XOR) on mapfiles of different
 extension, only the blocks present in both files are processed.
 
-Here are some examples of how to use ddrescuelog, alone or in
-combination with other tools.
+Here are some examples of how to use ddrescuelog, alone or in combination
+with other tools.
 
 @sp 1
 @noindent

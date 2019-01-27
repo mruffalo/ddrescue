@@ -12,7 +12,7 @@ File: ddrescue.info,  Node: Top,  Next: Introduction,  Up: (dir)
 GNU ddrescue Manual
 *******************
 
-This manual is for GNU ddrescue (version 1.24-pre1, 22 December 2018).
+This manual is for GNU ddrescue (version 1.24-rc1, 24 January 2019).
 
 * Menu:
 
@@ -36,7 +36,7 @@ This manual is for GNU ddrescue (version 1.24-pre1, 22 December 2018).
 * Concept index::         Index of concepts
 
 
-   Copyright (C) 2004-2018 Antonio Diaz Diaz.
+   Copyright (C) 2004-2019 Antonio Diaz Diaz.
 
    This manual is free documentation: you have unlimited permission to
 copy, distribute and modify it.
@@ -52,8 +52,8 @@ block device (hard disc, cdrom, etc) to another, trying to rescue the
 good parts first in case of read errors.
 
    The basic operation of ddrescue is fully automatic. That is, you
-don't have to wait for an error, stop the program, restart it from a new
-position, etc.
+don't have to wait for an error, stop the program, restart it from a
+new position, etc.
 
    If you use the mapfile feature of ddrescue, the data is rescued very
 efficiently, (only the needed blocks are read). Also you may interrupt
@@ -69,7 +69,7 @@ to fill in the gaps without wiping out the data already rescued.
    Automatic merging of backups: If you have two or more damaged copies
 of a file, cdrom, etc, and run ddrescue on all of them, one at a time,
 with the same output file, you will probably obtain a complete and
-error-free file. This is so because the probability of having the same
+error-free file.  This is so because the probability of having the same
 area damaged in all copies is low (if the errors are randomly located).
 Using the mapfile, only the needed blocks are read from the second and
 successive copies.
@@ -79,9 +79,9 @@ format is designed for long-term archiving and provides data recovery
 capabilities which nicely complement those of ddrescue. (Ddrescue fills
 unreadable sectors with data from other copies, while lziprecover
 corrects corrupt sectors with data from other copies). If the cause of
-file corruption is damaged media, the combination ddrescue + lziprecover
-is the best option for recovering data from multiple damaged copies.
-*Note lziprecover-example::, for an example.
+file corruption is damaged media, the combination
+ddrescue + lziprecover is the best option for recovering data from
+multiple damaged copies.  *Note lziprecover-example::.
 
    Because ddrescue needs to read and write at random places, it only
 works on seekable (random access) input and output files.
@@ -89,7 +89,7 @@ works on seekable (random access) input and output files.
    If your system supports it, ddrescue can use direct disc access to
 read the input file, bypassing the kernel cache.
 
-   Ddrescue also features a "fill mode" able to selectively overwrite
+   Ddrescue also features a 'fill mode' able to selectively overwrite
 parts of the output file, which has a number of interesting uses like
 wiping data, marking bad areas or even, in some cases, "repair" damaged
 sectors.
@@ -273,13 +273,14 @@ the areas marked as bad-sector will still contain the data previously
 present there.
 
    The mapfile is periodically saved to disc, as well as when ddrescue
-finishes or is interrupted. So in case of a crash you can resume the
-rescue with little recopying. The default interval between saves varies
-from 30 seconds to 5 minutes depending on mapfile size (larger mapfiles
-are saved at longer intervals), but may be overriden with
-'--mapfile-interval'.
+finishes or is interrupted. A backup copy of the mapfile with the
+extension '.bak' is also periodically created (if possible). So in case
+of a crash you can resume the rescue with little recopying. The default
+interval between saves varies from 30 seconds to 5 minutes depending on
+mapfile size (larger mapfiles are saved at longer intervals), but may
+be overriden.  *Note --mapfile-interval::.
 
-   Also, the same mapfile can be used for multiple commands that copy
+   The same mapfile can be used for multiple commands that copy
 different areas of the input file, and for multiple recovery attempts
 over different subsets. See this example:
 
@@ -303,7 +304,7 @@ File: ddrescue.info,  Node: Output,  Next: Invoking ddrescue,  Prev: Algorithm, 
 
 The output of ddrescue looks like this:
 
-     GNU ddrescue 1.24-pre1
+     GNU ddrescue 1.24-rc1
      Press Ctrl-C to interrupt
      Initial status (read from mapfile)
      rescued: 1665 MB, tried: 0 B, bad-sector: 0 B, bad areas: 0
@@ -418,8 +419,12 @@ The format for running ddrescue is:
      ddrescue [OPTIONS] INFILE OUTFILE [MAPFILE]
 
    INFILE and OUTFILE may be files, devices or partitions.  MAPFILE is
-a regular file and must be placed in an existing directory. If MAPFILE
+a regular file and must be placed in an existing directory.  If MAPFILE
 does not exist, ddrescue will create it.
+
+   Ddrescue tries to create a backup copy of the mapfile, with the name
+MAPFILE.bak, every time it is going to overwrite a fsynced MAPFILE.
+*Note --mapfile-interval::.
 
    Always use a mapfile unless you know you won't need it. Without a
 mapfile, ddrescue can't resume a rescue, only reinitiate it.
@@ -994,7 +999,7 @@ Character   Meaning
 
 And here is an example mapfile:
 
-     # Mapfile. Created by GNU ddrescue version 1.24-pre1
+     # Mapfile. Created by GNU ddrescue version 1.24-rc1
      # Command line: ddrescue -d -c18 /dev/fd0 fdimage mapfile
      # Start time:   2015-07-21 09:37:44
      # Current time: 2015-07-21 09:38:19
@@ -1065,9 +1070,10 @@ which ddrescue can't.
 
    Recordable CD and DVD media keep their data only for a finite time
 (typically for some years). After that time, data loss develops slowly
-with read errors growing from the outer media region towards the inside.
-Just make two (or more) copies of every important CD-ROM/DVD you burn so
-that you can later recover them with ddrescue.
+with read errors growing from the outer media region towards the
+inside. It is a good idea to make two (or more) copies of every
+important CD-ROM/DVD you burn so that you can later recover them with
+ddrescue.
 
    If you have only one copy of a CD-ROM or DVD that fails when being
 copied, and if you have access to multiple optical media drives, you
@@ -1293,7 +1299,7 @@ device. Some OSs provide raw access through especial device names, like
    Ddrescue aligns its I/O buffer to the sector size so that it can be
 used for direct disc access or to read from raw devices. For efficiency
 reasons, also aligns it to the memory page size if page size is a
-multiple of sector size. On some systems, ddrescue can't determine the
+multiple of sector size.  On some systems, ddrescue can't determine the
 size of a raw device, so an explicit '--size' or '--complete-only'
 option may be needed.
 
@@ -1850,29 +1856,30 @@ Concept index
 
 Tag Table:
 Node: Top201
-Node: Introduction1572
-Node: Basic concepts4292
-Node: Important advice6549
-Node: Algorithm7625
-Node: Output13025
-Node: Invoking ddrescue17318
-Ref: --min-read-rate18151
-Ref: --max-bad-areas21078
-Ref: --max-error-rate21337
-Ref: --domain-mapfile26639
-Node: Mapfile structure40455
-Node: Emergency save43640
-Node: Optical media45096
-Ref: lziprecover-example48287
-Node: Examples49064
-Node: Direct disc access54670
-Node: Command mode56895
-Node: Fill mode59303
-Node: Generate mode64373
-Node: Ddrescuelog66314
-Node: Invoking ddrescuelog68608
-Node: Problems76541
-Node: Concept index77098
+Node: Introduction1570
+Node: Basic concepts4276
+Node: Important advice6533
+Node: Algorithm7609
+Node: Output13105
+Node: Invoking ddrescue17397
+Ref: --min-read-rate18400
+Ref: --max-bad-areas21327
+Ref: --max-error-rate21586
+Ref: --domain-mapfile26888
+Ref: --mapfile-interval36933
+Node: Mapfile structure40704
+Node: Emergency save43888
+Node: Optical media45344
+Ref: lziprecover-example48551
+Node: Examples49328
+Node: Direct disc access54934
+Node: Command mode57160
+Node: Fill mode59568
+Node: Generate mode64638
+Node: Ddrescuelog66579
+Node: Invoking ddrescuelog68873
+Node: Problems76806
+Node: Concept index77363
 
 End Tag Table
 

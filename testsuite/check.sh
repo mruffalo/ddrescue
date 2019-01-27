@@ -1,6 +1,6 @@
 #! /bin/sh
 # check script for GNU ddrescue - Data recovery tool
-# Copyright (C) 2009-2018 Antonio Diaz Diaz.
+# Copyright (C) 2009-2019 Antonio Diaz Diaz.
 #
 # This script is free software: you have unlimited permission
 # to copy, distribute and modify it.
@@ -60,7 +60,11 @@ printf "testing ddrescue-%s..." "$2"
 [ $? = 1 ] || test_failed $LINENO
 "${DDRESCUE}" -q ${in} out ${in}
 [ $? = 1 ] || test_failed $LINENO
+"${DDRESCUE}" -q ${in}.bak out ${in}
+[ $? = 1 ] || test_failed $LINENO
 "${DDRESCUE}" -q ${in} out out
+[ $? = 1 ] || test_failed $LINENO
+"${DDRESCUE}" -q ${in} out.bak out
 [ $? = 1 ] || test_failed $LINENO
 "${DDRESCUE}" -q -a 1ki ${in} out
 [ $? = 1 ] || test_failed $LINENO

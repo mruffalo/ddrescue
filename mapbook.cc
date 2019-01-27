@@ -1,5 +1,5 @@
 /*  GNU ddrescue - Data recovery tool
-    Copyright (C) 2004-2018 Antonio Diaz Diaz.
+    Copyright (C) 2004-2019 Antonio Diaz Diaz.
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -92,7 +92,8 @@ Mapbook::Mapbook( const long long offset, const long long insize,
     mapfile_insize_( 0 ), domain_( dom ), hardbs_( hardbs ),
     softbs_( cluster * hardbs_ ),
     iobuf_size_( softbs_ + hardbs_ ),	// +hardbs for direct unaligned reads
-    final_errno_( 0 ), um_t1( 0 ), um_t1s( 0 ), mapfile_exists_( false )
+    final_errno_( 0 ), um_t1( 0 ), um_t1s( 0 ), um_prev_mf_sync( false ),
+    mapfile_exists_( false )
   {
   long alignment = sysconf( _SC_PAGESIZE );
   if( alignment < hardbs_ || alignment % hardbs_ ) alignment = hardbs_;
@@ -139,6 +140,13 @@ bool Mapbook::update_mapfile( const int odes, const bool force )
   const bool mf_sync = ( force || t2 - um_t1s >= mapfile_sync_interval );
   if( mf_sync ) um_t1s = t2;
   if( odes >= 0 ) fsync( odes );
+  if( um_prev_mf_sync )
+    {
+    std::string mapname_bak( filename() ); mapname_bak += ".bak";
+    std::remove( mapname_bak.c_str() );		// break possible hard link
+    std::rename( filename(), mapname_bak.c_str() );
+    }
+  um_prev_mf_sync = mf_sync;
 
   while( true )
     {
