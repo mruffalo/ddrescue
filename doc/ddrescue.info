@@ -12,7 +12,7 @@ File: ddrescue.info,  Node: Top,  Next: Introduction,  Up: (dir)
 GNU ddrescue Manual
 *******************
 
-This manual is for GNU ddrescue (version 1.24-rc1, 24 January 2019).
+This manual is for GNU ddrescue (version 1.24, 24 February 2019).
 
 * Menu:
 
@@ -55,7 +55,7 @@ good parts first in case of read errors.
 don't have to wait for an error, stop the program, restart it from a
 new position, etc.
 
-   If you use the mapfile feature of ddrescue, the data is rescued very
+   If you use the mapfile feature of ddrescue, the data are rescued very
 efficiently, (only the needed blocks are read). Also you may interrupt
 the rescue at any time and resume it later at the same point. The
 mapfile is an essential part of ddrescue's effectiveness. Use it unless
@@ -81,7 +81,7 @@ unreadable sectors with data from other copies, while lziprecover
 corrects corrupt sectors with data from other copies). If the cause of
 file corruption is damaged media, the combination
 ddrescue + lziprecover is the best option for recovering data from
-multiple damaged copies.  *Note lziprecover-example::.
+multiple damaged copies. *Note lziprecover-example::.
 
    Because ddrescue needs to read and write at random places, it only
 works on seekable (random access) input and output files.
@@ -304,7 +304,7 @@ File: ddrescue.info,  Node: Output,  Next: Invoking ddrescue,  Prev: Algorithm, 
 
 The output of ddrescue looks like this:
 
-     GNU ddrescue 1.24-rc1
+     GNU ddrescue 1.24
      Press Ctrl-C to interrupt
      Initial status (read from mapfile)
      rescued: 1665 MB, tried: 0 B, bad-sector: 0 B, bad areas: 0
@@ -321,11 +321,11 @@ The output of ddrescue looks like this:
    The meaning of each field is as follows:
 
 'ipos'
-     Input position. The position in the input file where data is being
+     Input position. The position in the input file where data are being
      currently read from.
 
 'opos'
-     Output position. The position in the output file where data is
+     Output position. The position in the output file where data are
      being currently written to.
 
 'non-tried'
@@ -602,7 +602,7 @@ mapfile, ddrescue can't resume a rescue, only reinitiate it.
      multiple of sector size. The skip size will be doubled for each
      read error or slow read until it reaches MAX or, if MAX is
      omitted, 1% of the size of INFILE, and will be reset to INITIAL
-     when good data is found. Valid values range from 64 KiB to 1 EiB.
+     when good data are found. Valid values range from 64 KiB to 1 EiB.
      INITIAL defaults to INFILE_SIZE / 100_000 with a minimum value of
      64 KiB. An INITIAL value of 0 disables skipping entirely.
 
@@ -999,7 +999,7 @@ Character   Meaning
 
 And here is an example mapfile:
 
-     # Mapfile. Created by GNU ddrescue version 1.24-rc1
+     # Mapfile. Created by GNU ddrescue version 1.24
      # Command line: ddrescue -d -c18 /dev/fd0 fdimage mapfile
      # Start time:   2015-07-21 09:37:44
      # Current time: 2015-07-21 09:38:19
@@ -1159,9 +1159,9 @@ damaged drive powers up and is able to output some data, it may be the
 very last time that it ever will.
 
    You should make a copy of the failing drive with ddrescue, and then
-try to repair the copy. If your data is really important, use the first
-copy as a master for a second copy, and try to repair the second copy.
-If something goes wrong, you have the master intact to try again.
+try to repair the copy. If your data are really important, use the
+first copy as a master for a second copy, and try to repair the second
+copy. If something goes wrong, you have the master intact to try again.
 
    If you are trying to rescue a whole partition, first repair the copy
 with e2fsck or some other tool appropriate for the type of partition you
@@ -1856,30 +1856,30 @@ Concept index
 
 Tag Table:
 Node: Top201
-Node: Introduction1570
-Node: Basic concepts4276
-Node: Important advice6533
-Node: Algorithm7609
-Node: Output13105
-Node: Invoking ddrescue17397
-Ref: --min-read-rate18400
-Ref: --max-bad-areas21327
-Ref: --max-error-rate21586
-Ref: --domain-mapfile26888
-Ref: --mapfile-interval36933
-Node: Mapfile structure40704
-Node: Emergency save43888
-Node: Optical media45344
-Ref: lziprecover-example48551
-Node: Examples49328
-Node: Direct disc access54934
-Node: Command mode57160
-Node: Fill mode59568
-Node: Generate mode64638
-Node: Ddrescuelog66579
-Node: Invoking ddrescuelog68873
-Node: Problems76806
-Node: Concept index77363
+Node: Introduction1567
+Node: Basic concepts4273
+Node: Important advice6530
+Node: Algorithm7606
+Node: Output13102
+Node: Invoking ddrescue17392
+Ref: --min-read-rate18395
+Ref: --max-bad-areas21322
+Ref: --max-error-rate21581
+Ref: --domain-mapfile26884
+Ref: --mapfile-interval36929
+Node: Mapfile structure40700
+Node: Emergency save43880
+Node: Optical media45336
+Ref: lziprecover-example48543
+Node: Examples49320
+Node: Direct disc access54927
+Node: Command mode57153
+Node: Fill mode59561
+Node: Generate mode64631
+Node: Ddrescuelog66572
+Node: Invoking ddrescuelog68866
+Node: Problems76799
+Node: Concept index77356
 
 End Tag Table
 

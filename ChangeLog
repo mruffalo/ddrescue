@@ -1,12 +1,8 @@
-2019-01-24  Antonio Diaz Diaz  <antonio@gnu.org>
+2019-02-24  Antonio Diaz Diaz  <antonio@gnu.org>
 
-	* Version 1.24-rc1 released.
-	* Implemented mapfile backup.
-
-2018-12-22  Antonio Diaz Diaz  <antonio@gnu.org>
-
-	* Version 1.24-pre1 released.
+	* Version 1.24 released.
 	* Added new option '--command-mode'.
+	* Implemented mapfile backup.
 	* ddrescue.texi: Documented final contents of bad areas in outfile.
 	* configure: Accept appending to CXXFLAGS, 'CXXFLAGS+=OPTIONS'.
 

@@ -13,7 +13,7 @@ domain setting options are used.
 The basic operation of ddrescue is fully automatic. That is, you don't have
 to wait for an error, stop the program, restart it from a new position, etc.
 
-If you use the mapfile feature of ddrescue, the data is rescued very
+If you use the mapfile feature of ddrescue, the data are rescued very
 efficiently, (only the needed blocks are read). Also you may interrupt the
 rescue at any time and resume it later at the same point. The mapfile is an
 essential part of ddrescue's effectiveness. Use it unless you know what you
