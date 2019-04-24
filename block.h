@@ -35,6 +35,7 @@ class Block
     { if( size_ < 0 || size_ > LLONG_MAX - pos_ ) size_ = LLONG_MAX - pos_; }
 
 public:
+  Block() {}					// default constructor
   Block( const long long p, const long long s ) : pos_( p ), size_( s )
     { if( p < 0 ) { pos_ = 0; if( s > 0 ) size_ -= std::min( s, -p ); }
       fix_size(); }
@@ -103,6 +104,7 @@ private:
   Status status_;
 
 public:
+  Sblock() {}					// default constructor
   Sblock( const Block & b, const Status st )
     : Block( b ), status_( st ) {}
   Sblock( const long long p, const long long s, const Status st )

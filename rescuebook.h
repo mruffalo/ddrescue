@@ -21,7 +21,7 @@ class Sliding_average		// Calculates the average of the last N terms
   std::vector<long long> data;
 
 public:
-  Sliding_average( const unsigned terms ) : index( terms )
+  explicit Sliding_average( const unsigned terms ) : index( terms )
     { data.reserve( terms ); }
 
   void reset() { if( index < data.size() ) index = data.size(); data.clear(); }
@@ -186,6 +186,7 @@ class Rescuebook : public Mapbook, public Rb_options
                     const bool force = false );
   int copy_command( const char * const command );
   int status_command( const char * const command ) const;
+
 public:
   Rescuebook( const long long offset, const long long insize,
               Domain & dom, const Domain * const test_dom,

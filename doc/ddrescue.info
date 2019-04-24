@@ -12,7 +12,7 @@ File: ddrescue.info,  Node: Top,  Next: Introduction,  Up: (dir)
 GNU ddrescue Manual
 *******************
 
-This manual is for GNU ddrescue (version 1.24, 24 February 2019).
+This manual is for GNU ddrescue (version 1.25-pre1, 12 April 2019).
 
 * Menu:
 
@@ -304,7 +304,7 @@ File: ddrescue.info,  Node: Output,  Next: Invoking ddrescue,  Prev: Algorithm, 
 
 The output of ddrescue looks like this:
 
-     GNU ddrescue 1.24
+     GNU ddrescue 1.25-pre1
      Press Ctrl-C to interrupt
      Initial status (read from mapfile)
      rescued: 1665 MB, tried: 0 B, bad-sector: 0 B, bad areas: 0
@@ -999,7 +999,7 @@ Character   Meaning
 
 And here is an example mapfile:
 
-     # Mapfile. Created by GNU ddrescue version 1.24
+     # Mapfile. Created by GNU ddrescue version 1.25-pre1
      # Command line: ddrescue -d -c18 /dev/fd0 fdimage mapfile
      # Start time:   2015-07-21 09:37:44
      # Current time: 2015-07-21 09:38:19
@@ -1856,30 +1856,30 @@ Concept index
 
 Tag Table:
 Node: Top201
-Node: Introduction1567
-Node: Basic concepts4273
-Node: Important advice6530
-Node: Algorithm7606
-Node: Output13102
-Node: Invoking ddrescue17392
-Ref: --min-read-rate18395
-Ref: --max-bad-areas21322
-Ref: --max-error-rate21581
-Ref: --domain-mapfile26884
-Ref: --mapfile-interval36929
-Node: Mapfile structure40700
-Node: Emergency save43880
-Node: Optical media45336
-Ref: lziprecover-example48543
-Node: Examples49320
-Node: Direct disc access54927
-Node: Command mode57153
-Node: Fill mode59561
-Node: Generate mode64631
-Node: Ddrescuelog66572
-Node: Invoking ddrescuelog68866
-Node: Problems76799
-Node: Concept index77356
+Node: Introduction1569
+Node: Basic concepts4275
+Node: Important advice6532
+Node: Algorithm7608
+Node: Output13104
+Node: Invoking ddrescue17399
+Ref: --min-read-rate18402
+Ref: --max-bad-areas21329
+Ref: --max-error-rate21588
+Ref: --domain-mapfile26891
+Ref: --mapfile-interval36936
+Node: Mapfile structure40707
+Node: Emergency save43892
+Node: Optical media45348
+Ref: lziprecover-example48555
+Node: Examples49332
+Node: Direct disc access54939
+Node: Command mode57165
+Node: Fill mode59573
+Node: Generate mode64643
+Node: Ddrescuelog66584
+Node: Invoking ddrescuelog68878
+Node: Problems76811
+Node: Concept index77368
 
 End Tag Table
 

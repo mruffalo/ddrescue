@@ -1,3 +1,10 @@
+2019-04-12  Antonio Diaz Diaz  <antonio@gnu.org>
+
+	* Version 1.25-pre1 released.
+	* block.h: Add default constructors to classes Block and Sblock.
+	  (Reported by Rosen Penev).
+	* rescuebook.cc (extend_outfile_size): Use ftruncate if it works.
+
 2019-02-24  Antonio Diaz Diaz  <antonio@gnu.org>
 
 	* Version 1.24 released.

@@ -18,6 +18,7 @@
 #define _FILE_OFFSET_BITS 64
 
 #include <algorithm>
+#include <cctype>
 #include <cerrno>
 #include <climits>
 #include <cstdio>

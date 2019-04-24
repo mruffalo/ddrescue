@@ -94,8 +94,14 @@ bool Rescuebook::extend_outfile_size()
     if( size < 0 ) return false;
     if( min_size > size )
       {
-      const uint8_t zero = 0;
-      if( writeblockp( odes_, &zero, 1, min_size - 1 ) != 1 ) return false;
+      int ret;
+      do ret = ftruncate( odes_, min_size );
+        while( ret != 0 && errno == EINTR );
+      if( ret != 0 || lseek( odes_, 0, SEEK_END ) != min_size )
+        {
+        const uint8_t zero = 0;		// if ftruncate fails, write a zero
+        if( writeblockp( odes_, &zero, 1, min_size - 1 ) != 1 ) return false;
+        }
       fsync( odes_ );
       }
     }
@@ -442,7 +448,7 @@ int Rescuebook::trim_errors()
   for( long i = 0; i < sblocks(); )
     {
     const long idx = reverse ? sblocks() - 1 - i : i;
-    const Sblock sb = sblock( idx );
+    const Sblock sb( sblock( idx ) );
     if( !domain().includes( sb ) )
       { if( ( !reverse && domain() < sb ) || ( reverse && domain() > sb ) )
           break;
@@ -510,7 +516,7 @@ int Rescuebook::scrape_errors()
 
   for( long i = 0; i < sblocks(); )
     {
-    const Sblock sb = sblock( reverse ? sblocks() - 1 - i : i );
+    const Sblock sb( sblock( reverse ? sblocks() - 1 - i : i ) );
     if( !domain().includes( sb ) )
       { if( ( !reverse && domain() < sb ) || ( reverse && domain() > sb ) )
           break;

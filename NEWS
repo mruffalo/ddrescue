@@ -1,16 +1,7 @@
-Changes in version 1.24:
+Changes in version 1.25:
 
-The new option '--command-mode' has been added. It activates a scripting
-interface similar to the one of ed which reads commands from the standard
-input and executes them, copying parts of the input file on demand.
+Default constructors have been added to classes Block and Sblock.
+(Reported by Rosen Penev).
 
-Ddrescue now tries to create a backup copy of the mapfile, with the name
-<mapfile>.bak, every time it is going to overwrite a fsynced mapfile. On
-startup, ddrescue verifies that the backup mapfile (if it exists) is not a
-non-regular file, and that its name is not the same as infile or outfile.
-
-It has been documented that when ddrescue finishes, the contents of any
-areas marked as bad-sector remain untouched in the output file.
-
-The configure script now accepts appending options to CXXFLAGS using the
-syntax 'CXXFLAGS+=OPTIONS'.
+Ddrescue now extends the output file using 'ftruncate' if it works, because
+it is slightly more efficient.

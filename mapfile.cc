@@ -87,7 +87,7 @@ void Mapfile::compact_sblock_vector()
   std::vector< Sblock > new_vector;
   for( l = 0; l < sblock_vector.size(); )
     {
-    Sblock run = sblock_vector[l];
+    Sblock run( sblock_vector[l] );
     unsigned long r = l + 1;
     while( r < sblock_vector.size() &&
            sblock_vector[r].status() == run.status() ) ++r;
