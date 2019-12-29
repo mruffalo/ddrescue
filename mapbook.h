@@ -51,7 +51,7 @@ public:
   Mapbook( const long long offset, const long long insize,
            Domain & dom, const Mb_options & mb_opts,
            const char * const mapname, const int cluster,
-           const int hardbs, const bool complete_only );
+           const int hardbs, const bool complete_only, const bool rescue );
   ~Mapbook() { delete[] iobuf_base; }
 
   bool update_mapfile( const int odes = -1, const bool force = false );
@@ -117,7 +117,7 @@ public:
   Fillbook( const long long offset, Domain & dom, const Fb_options & fb_opts,
             const Mb_options & mb_opts, const char * const mapname,
             const int cluster, const int hardbs, const bool synchronous )
-    : Mapbook( offset, 0, dom, mb_opts, mapname, cluster, hardbs, true ),
+    : Mapbook( offset, 0, dom, mb_opts, mapname, cluster, hardbs, true, false ),
       Fb_options( fb_opts ),
       synchronous_( synchronous ),
       a_rate( 0 ), c_rate( 0 ), first_size( 0 ), last_size( 0 ),
@@ -147,7 +147,8 @@ public:
   Genbook( const long long offset, const long long insize,
            Domain & dom, const Mb_options & mb_opts,
            const char * const mapname, const int cluster, const int hardbs )
-    : Mapbook( offset, insize, dom, mb_opts, mapname, cluster, hardbs, false ),
+    : Mapbook( offset, insize, dom, mb_opts, mapname, cluster, hardbs, false,
+               false ),
       a_rate( 0 ), c_rate( 0 ), first_size( 0 ), last_size( 0 ),
       last_ipos( 0 ), t0( 0 ), t1( 0 ), oldlen( 0 )
       {}

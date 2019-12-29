@@ -14,7 +14,7 @@ The basic operation of ddrescue is fully automatic. That is, you don't have
 to wait for an error, stop the program, restart it from a new position, etc.
 
 If you use the mapfile feature of ddrescue, the data are rescued very
-efficiently, (only the needed blocks are read). Also you may interrupt the
+efficiently, (only the blocks needed are read). Also you may interrupt the
 rescue at any time and resume it later at the same point. The mapfile is an
 essential part of ddrescue's effectiveness. Use it unless you know what you
 are doing.
@@ -29,7 +29,7 @@ file, cdrom, etc, and run ddrescue on all of them, one at a time, with the
 same output file, you will probably obtain a complete and error-free file.
 This is so because the probability of having the same area damaged in all
 copies is low (if the errors are randomly located). Using the mapfile, only
-the needed blocks are read from the second and successive copies.
+the blocks needed are read from the second and successive copies.
 
 Ddrescue recommends lzip for compression of backups because the lzip format
 is designed for long-term archiving and provides data recovery capabilities
@@ -68,7 +68,7 @@ ddrescue.
 
 Ddrescue also features a 'fill mode' able to selectively overwrite parts of
 the output file, which has a number of interesting uses like wiping data,
-marking bad areas or even, in some cases, "repair" damaged sectors.
+marking bad areas, or even, in some cases, "repair" damaged sectors.
 
 One of the great strengths of ddrescue is that it is interface-agnostic, and
 so can be used for any kind of device supported by your kernel (ATA, SATA,
@@ -78,7 +78,7 @@ SCSI, old MFM drives, floppy discs, or even flash media cards like SD).
 Copyright (C) 2004-2019 Antonio Diaz Diaz.
 
 This file is free documentation: you have unlimited permission to copy,
-distribute and modify it.
+distribute, and modify it.
 
 The file Makefile.in is a data file used by configure to produce the
 Makefile. It has the same copyright owner and permissions that configure

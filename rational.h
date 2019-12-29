@@ -6,10 +6,10 @@
     that the following conditions are met:
 
     1. Redistributions of source code must retain the above copyright
-    notice, this list of conditions and the following disclaimer.
+    notice, this list of conditions, and the following disclaimer.
 
     2. Redistributions in binary form must reproduce the above copyright
-    notice, this list of conditions and the following disclaimer in the
+    notice, this list of conditions, and the following disclaimer in the
     documentation and/or other materials provided with the distribution.
 
     This library is distributed in the hope that it will be useful,
@@ -22,7 +22,7 @@
 // Range extends from INT_MAX to -INT_MAX.
 // Maximum resolution is 1 / INT_MAX.
 // In case of domain error or overflow, den is set to 0 and num is set
-// to >0, <0 or 0, meaning +INF, -INF and NAN respectively. This error
+// to >0, <0, or 0, meaning +INF, -INF, and NAN respectively. This error
 // condition can be tested with the 'error' function, and can only be
 // cleared assigning a new value to the Rational.
 // While in error state, arithmetic operators become no ops and
@@ -130,8 +130,8 @@ public:
     { if( den > 0 ) return ( num / den ); else return num; }
 
   int parse( const char * const s );		// returns parsed size
-  const std::string to_decimal( const unsigned iwidth = 1, int prec = -2 ) const;
-  const std::string to_fraction( const unsigned width = 1 ) const;
+  std::string to_decimal( const unsigned iwidth = 1, int prec = -2 ) const;
+  std::string to_fraction( const unsigned width = 1 ) const;
   };
 
 

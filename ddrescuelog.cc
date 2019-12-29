@@ -30,7 +30,6 @@
 #include <ctime>
 #include <string>
 #include <vector>
-#include <stdint.h>
 
 #include "arg_parser.h"
 #include "block.h"
@@ -40,7 +39,7 @@ namespace {
 
 const char * const Program_name = "GNU ddrescuelog";
 const char * const program_name = "ddrescuelog";
-const char * invocation_name = 0;
+const char * invocation_name = program_name;		// default value
 
 enum Mode { m_none, m_and, m_annotate, m_change, m_compare, m_complete,
             m_create, m_delete, m_done_st, m_invert, m_list, m_or,
@@ -85,9 +84,9 @@ void show_help( const int hardbs )
                "  -y, --and-mapfile=<file>        AND the finished blocks in file with mapfile\n"
                "  -z, --or-mapfile=<file>         OR the finished blocks in file with mapfile\n"
                "      --shift                     shift all block positions by (opos - ipos)\n"
-               "Use '-' to read a mapfile from standard input or to write the mapfile\n"
+               "\nUse '-' to read a mapfile from standard input or to write the mapfile\n"
                "created by '--create-mapfile' to standard output.\n"
-               "Numbers may be in decimal, hexadecimal or octal, and may be followed by a\n"
+               "Numbers may be in decimal, hexadecimal, or octal, and may be followed by a\n"
                "multiplier: s = sectors, k = 1000, Ki = 1024, M = 10^6, Mi = 2^20, etc...\n"
                "\nExit status: 0 for a normal exit, 1 for environmental problems (file\n"
                "not found, invalid flags, I/O errors, etc), 2 to indicate a corrupt or\n"
@@ -498,7 +497,7 @@ int do_show_status( Domain & domain, const char * const mapname,
   if( verbosity >= 1 ) std::printf( "\n%s", mapname );
   std::printf( "\n   current pos: %9sB,  current status: %s\n",
                format_num( mapfile.current_pos() ),
-               mapfile.status_name( mapfile.current_status() ) );
+               Mapfile::status_name( mapfile.current_status() ) );
   std::printf( "mapfile extent: %9sB,  in %6ld area(s)\n",
                format_num( extent.size() ), true_sblocks );
   if( domain.pos() > 0 || domain.end() < extent.end() || domain.blocks() > 1 )
@@ -548,8 +547,8 @@ int main( const int argc, const char * const argv[] )
   std::string types1, types2;
   Sblock::Status type1 = Sblock::finished, type2 = Sblock::bad_sector;
   Sblock::Status complete_type = Sblock::non_tried;
-  invocation_name = argv[0];
-  command_line = argv[0];
+  if( argc > 0 ) invocation_name = argv[0];
+  command_line = invocation_name;
   for( int i = 1; i < argc; ++i )
     { command_line += ' '; command_line += argv[i]; }
 

@@ -59,7 +59,7 @@ namespace {
 
 const char * const Program_name = "GNU ddrescue";
 const char * const program_name = "ddrescue";
-const char * invocation_name = 0;
+const char * invocation_name = program_name;		// default value
 
 enum Mode { m_none, m_command, m_fill, m_generate };
 const mode_t outmode = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH;
@@ -134,7 +134,7 @@ void show_help( const int cluster, const int hardbs )
                "      --pause-on-pass=<interval>   time to wait between passes [0]\n"
                "      --reset-slow               reset slow reads if rate rises above min\n"
                "      --same-file                allow infile and outfile to be the same file\n"
-               "Numbers may be in decimal, hexadecimal or octal, and may be followed by a\n"
+               "\nNumbers may be in decimal, hexadecimal, or octal, and may be followed by a\n"
                "multiplier: s = sectors, k = 1000, Ki = 1024, M = 10^6, Mi = 2^20, etc...\n"
                "Time intervals have the format 1[.5][smhd] or 1/2[smhd].\n"
                "\nExit status: 0 for a normal exit, 1 for environmental problems (file\n"
@@ -148,7 +148,7 @@ void show_help( const int cluster, const int hardbs )
 
 
 // Recognized formats: <rational_number>[unit]
-// Where the optional "unit" is one of 's', 'm', 'h' or 'd'.
+// Where the optional "unit" is one of 's', 'm', 'h', or 'd'.
 // Returns the number of seconds, or exits with 1 status if error.
 //
 Rational parse_rational_time( const char * const ptr, const bool comma = false,
@@ -305,7 +305,7 @@ int do_fill( const long long offset, Domain & domain,
     std::printf( "%s %s\n", Program_name, PROGVERSION );
   if( verbosity >= 1 )
     {
-    std::printf( "About to fill with data from %s blocks of %s marked %s\n",
+    std::printf( "About to fill with data from '%s' blocks of '%s' marked '%s'\n",
                  iname, oname, fb_opts.filltypes.c_str() );
     std::printf( "    Maximum size to fill: %sBytes\n",
                  format_num( fillbook.domain().in_size() ) );
@@ -358,7 +358,7 @@ int do_generate( const long long offset, Domain & domain,
     std::printf( "%s %s\n", Program_name, PROGVERSION );
   if( verbosity >= 1 )
     {
-    std::printf( "About to generate an approximate mapfile for %s and %s\n",
+    std::printf( "About to generate an approximate mapfile for '%s' and '%s'\n",
                  iname, oname );
     std::printf( "    Starting positions: infile = %sB,  outfile = %sB\n",
                  format_num( genbook.domain().pos() ),
@@ -379,9 +379,7 @@ void device_id_and_size( const long long size, const int fd,
     if( device_id( fd, id_str ) ) { id_str.insert( 0, " [" ); id_str += ']'; }
     else id_str = " [UNKNOWN]";
     }
-  char buf[32];
-  snprintf( buf, sizeof buf, " (%lld)", size );
-  id_str += buf;
+  id_str += " ("; id_str += format_num3( size ); id_str += ')';
   }
 
 
@@ -470,7 +468,7 @@ int do_rescue( const long long offset, Domain & domain,
         rescuebook.mapfile_insize() >= LLONG_MAX )
       {
       show_error( "Can't verify input file size.\n"
-                  "          Mapfile is unfinished or missing or size is invalid." );
+                  "          Mapfile is unfinished or missing, or size is invalid." );
       return 1;
       }
     if( rescuebook.mapfile_insize() != insize )
@@ -715,6 +713,30 @@ bool Rescuebook::reopen_infile()
   }
 
 
+// separates large numbers in groups of 3 digits using '_'
+const char * format_num3( long long num )
+  {
+  enum { buffers = 8, bufsize = 4 * sizeof (long long) };
+  static char buffer[buffers][bufsize];	// circle of static buffers for printf
+  static int current = 0;
+
+  char * const buf = buffer[current++]; current %= buffers;
+  char * p = buf + bufsize - 1;		// fill the buffer backwards
+  *p = 0;	// terminator
+  const bool negative = num < 0;
+  if( negative ) num = -num;
+  const bool split = num >= 100000;
+
+  for( int i = 0; ; )
+    {
+    *(--p) = num % 10 + '0'; num /= 10; if( num == 0 ) break;
+    if( split && ++i >= 3 ) { i = 0; *(--p) = '_'; }
+    }
+  if( negative ) *(--p) = '-';
+  return p;
+  }
+
+
 int main( const int argc, const char * const argv[] )
   {
   long long ipos = 0;
@@ -739,8 +761,8 @@ int main( const int argc, const char * const argv[] )
   bool preallocate = false;
   bool synchronous = false;
   bool verify_input_size = false;
-  invocation_name = argv[0];
-  command_line = argv[0];
+  if( argc > 0 ) invocation_name = argv[0];
+  command_line = invocation_name;
   for( int i = 1; i < argc; ++i )
     { command_line += ' '; command_line += argv[i]; }
 

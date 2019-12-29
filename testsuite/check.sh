@@ -3,7 +3,7 @@
 # Copyright (C) 2009-2019 Antonio Diaz Diaz.
 #
 # This script is free software: you have unlimited permission
-# to copy, distribute and modify it.
+# to copy, distribute, and modify it.
 
 LC_ALL=C
 export LC_ALL
@@ -36,6 +36,8 @@ map2i="${testdir}"/mapfile2i
 map3="${testdir}"/mapfile3
 map4="${testdir}"/mapfile4
 map5="${testdir}"/mapfile5
+map6="${testdir}"/mapfile6
+map6j="${testdir}"/mapfile6j
 fail=0
 test_failed() { fail=1 ; printf " $1" ; [ -z "$2" ] || printf "($2)" ; }
 
@@ -48,6 +50,8 @@ test_failed() { fail=1 ; printf " $1" ; [ -z "$2" ] || printf "($2)" ; }
 # mapfile2i    : mapfile2 without the non-tried blocks
 # mapfile3     : Alternating finished/non-tried blocks of 0x800/0x1000 bytes
 # mapfile[45]  : Triphasic complement to mapfile3
+# mapfile6     : mapfile1 with non-finished subsectors smaller than 512 bytes
+# mapfile6j    : mapfile6 with the subsectors joined to the right blocks
 # mapfile_blank: non-tried mapfile cut to the lenght of test.txt (72776)
 
 printf "testing ddrescue-%s..." "$2"
@@ -231,6 +235,41 @@ cat ${map2} > mapfile || framework_failure
 "${DDRESCUE}" -q -R -C ${in1} out mapfile || test_failed $LINENO
 cmp ${in} out || test_failed $LINENO
 
+# test joining non-finished subsectors
+rm -f out || framework_failure
+cat ${map2} > mapfile || framework_failure
+"${DDRESCUE}" -q ${in} out mapfile || test_failed $LINENO
+cmp ${in1} out || test_failed $LINENO
+cat ${map6} > mapfile || framework_failure
+"${DDRESCUE}" -q -s0x800 ${in2} out mapfile || test_failed $LINENO
+"${DDRESCUELOG}" -p ${map6j} mapfile || test_failed $LINENO
+cmp ${in1} out || test_failed $LINENO
+"${DDRESCUE}" -q ${in2} out mapfile || test_failed $LINENO
+cmp -s ${in} out && test_failed $LINENO
+"${DDRESCUELOG}" -d mapfile && test_failed $LINENO
+"${DDRESCUE}" -q -r1 ${in2} out mapfile || test_failed $LINENO
+cmp ${in} out || test_failed $LINENO
+"${DDRESCUELOG}" -d mapfile || test_failed $LINENO
+
+cat ${in1} > out || framework_failure
+cat ${map6} > mapfile || framework_failure
+"${DDRESCUE}" -q -b0x80 ${in2} out mapfile || test_failed $LINENO
+cmp -s ${in} out && test_failed $LINENO
+"${DDRESCUELOG}" -d mapfile && test_failed $LINENO
+"${DDRESCUE}" -q -b0x80 -r1 ${in2} out mapfile || test_failed $LINENO
+cmp ${in} out || test_failed $LINENO
+"${DDRESCUELOG}" -d mapfile || test_failed $LINENO
+
+cat ${in1} > out || framework_failure
+cat ${map6} > mapfile || framework_failure
+"${DDRESCUE}" -q -b4096 -s0x800 ${in2} out mapfile || test_failed $LINENO
+"${DDRESCUELOG}" -P ${map1} mapfile || test_failed $LINENO
+"${DDRESCUELOG}" -q -p ${map1} mapfile && test_failed $LINENO
+cmp ${in1} out || test_failed $LINENO
+"${DDRESCUE}" -q -b4096 ${in2} out mapfile || test_failed $LINENO
+cmp ${in} out || test_failed $LINENO
+"${DDRESCUELOG}" -d mapfile || test_failed $LINENO
+
 rm -f out || framework_failure
 for i in 0 8000 16000 24000 32000 40000 48000 56000 64000 72000 ; do
 	"${DDRESCUE}" -q -i$i -s4000 -m ${map1} ${in} out ||
@@ -340,8 +379,7 @@ printf "\ntesting ddrescuelog-%s..." "$2"
 "${DDRESCUELOG}" -a '?,+' -i2048 -s1024 mapfile > mapfile2
 "${DDRESCUELOG}" -q -d - < mapfile2
 [ $? = 1 ] || test_failed $LINENO
-"${DDRESCUELOG}" -d mapfile2
-[ $? = 0 ] || test_failed $LINENO
+"${DDRESCUELOG}" -d mapfile2 || test_failed $LINENO
 
 "${DDRESCUELOG}" -b2048 -l+ - < ${map1} > out || test_failed $LINENO
 "${DDRESCUELOG}" -b2048 -c - < out > mapfile || test_failed $LINENO
@@ -525,8 +563,7 @@ cmp out copy || test_failed $LINENO
 [ $? = 1 ] || test_failed $LINENO
 "${DDRESCUELOG}" -i0x2000 -s0x2C00 -D mapfile
 [ $? = 1 ] || test_failed $LINENO
-"${DDRESCUELOG}" -i0x2000 -s0x2800 -d mapfile
-[ $? = 0 ] || test_failed $LINENO
+"${DDRESCUELOG}" -i0x2000 -s0x2800 -d mapfile || test_failed $LINENO
 
 # test OR
 for i in ${map1} ${map2} ${map3} ${map4} ${map5} ; do

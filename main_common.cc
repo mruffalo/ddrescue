@@ -114,7 +114,7 @@ bool check_types( std::string & types, const char * const opt_name,
     if( !Sblock::isstatus( types[i] ) )
       { error = true; break; }
     }
-  if( !types.size() || error )
+  if( types.empty() || error )
     {
     char buf[80];
     snprintf( buf, sizeof buf, "Invalid type for '%s' option.", opt_name );
@@ -273,7 +273,7 @@ const char * format_num( long long num, long long limit,
 
 
 // Shows the fraction "num/den" as a percentage with "prec" decimals.
-// If 'prec' is negative, only the needed decimals are shown.
+// If 'prec' is negative, only the decimals needed are shown.
 //
 const char * format_percentage( long long num, long long den,
                                 const int iwidth, int prec )
@@ -304,7 +304,7 @@ const char * format_percentage( long long num, long long den,
       {
       buf[i++] = '.';
       while( prec > 0 && ( rest > 0 || !trunc ) && i < sizeof( buf ) - 2 )
-        { rest *= 10; buf[i++] = (char)( rest / den ) + '0';
+        { rest *= 10; buf[i++] = ( rest / den ) + '0';
           rest %= den; --prec; }
       }
     }

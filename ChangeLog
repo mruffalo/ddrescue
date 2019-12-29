@@ -1,9 +1,19 @@
+2019-12-17  Antonio Diaz Diaz  <antonio@gnu.org>
+
+	* Version 1.25-rc1 released.
+	* In rescue mode, join non-finished subsectors read from mapfile.
+	  (Reported by David Burton).
+	* mapbook.cc (update_mapfile): Exclude writing time from intervals.
+	  (Reported by David Burton).
+	* Print large numbers in groups of 3 digits separated by underscores.
+	* main.cc: Set a valid invocation_name even if argc == 0.
+
 2019-04-12  Antonio Diaz Diaz  <antonio@gnu.org>
 
 	* Version 1.25-pre1 released.
+	* rescuebook.cc (extend_outfile_size): Use ftruncate if it works.
 	* block.h: Add default constructors to classes Block and Sblock.
 	  (Reported by Rosen Penev).
-	* rescuebook.cc (extend_outfile_size): Use ftruncate if it works.
 
 2019-02-24  Antonio Diaz Diaz  <antonio@gnu.org>
 
@@ -438,5 +448,5 @@
 Copyright (C) 2004-2019 Antonio Diaz Diaz.
 
 This file is a collection of facts, and thus it is not copyrightable,
-but just in case, you have unlimited permission to copy, distribute and
+but just in case, you have unlimited permission to copy, distribute, and
 modify it.

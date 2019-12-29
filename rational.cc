@@ -6,10 +6,10 @@
     that the following conditions are met:
 
     1. Redistributions of source code must retain the above copyright
-    notice, this list of conditions and the following disclaimer.
+    notice, this list of conditions, and the following disclaimer.
 
     2. Redistributions in binary form must reproduce the above copyright
-    notice, this list of conditions and the following disclaimer in the
+    notice, this list of conditions, and the following disclaimer in the
     documentation and/or other materials provided with the distribution.
 
     This library is distributed in the hope that it will be useful,
@@ -51,7 +51,7 @@ long long gcd( long long n, long long m )	// Greatest Common Divisor
   }
 
 
-const std::string overflow_string( const int n )
+std::string overflow_string( const int n )
   { if( n > 0 ) return "+INF"; if( n < 0 ) return "-INF"; return "NAN"; }
 
 int overflow_value( const long long n, const bool negate = false )
@@ -118,10 +118,10 @@ Rational & Rational::operator+=( const Rational & r )
   if( den <= 0 ) return *this;			// no op on error
   if( r.den <= 0 ) { num = r.num; den = 0; return *this; }	// set error
 
-  const long long new_den = (long long)den * r.den;
-  const long long new_num = ( (long long)num * r.den ) +
-                            ( (long long)r.num * den );
-  normalize( new_num, new_den );
+  long long new_den = den; new_den *= r.den;
+  long long new_num1 = num; new_num1 *= r.den;
+  long long new_num2 = r.num; new_num2 *= den;
+  normalize( new_num1 + new_num2, new_den );
   return *this;
   }
 
@@ -131,8 +131,8 @@ Rational & Rational::operator*=( const Rational & r )
   if( den <= 0 ) return *this;			// no op on error
   if( r.den <= 0 ) { num = r.num; den = 0; return *this; }	// set error
 
-  const long long new_num = (long long)num * r.num;
-  const long long new_den = (long long)den * r.den;
+  long long new_num = num; new_num *= r.num;
+  long long new_den = den; new_den *= r.den;
   normalize( new_num, new_den );
   return *this;
   }
@@ -213,9 +213,9 @@ int Rational::parse( const char * const s )
 // format with 'prec' decimals.
 // 'iwidth' is the minimum width of the integer part, prefixed with
 // spaces if needed.
-// If 'prec' is negative, only the needed decimals are produced.
+// If 'prec' is negative, only the decimals needed are produced.
 //
-const std::string Rational::to_decimal( const unsigned iwidth, int prec ) const
+std::string Rational::to_decimal( const unsigned iwidth, int prec ) const
   {
   if( den <= 0 ) return overflow_string( num );
 
@@ -243,7 +243,7 @@ const std::string Rational::to_decimal( const unsigned iwidth, int prec ) const
 // 'width' is the minimum width to be produced, prefixed with spaces if
 // needed.
 //
-const std::string Rational::to_fraction( const unsigned width ) const
+std::string Rational::to_fraction( const unsigned width ) const
   {
   if( den <= 0 ) return overflow_string( num );
 

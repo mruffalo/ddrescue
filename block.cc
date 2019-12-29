@@ -23,7 +23,6 @@
 #include <cstdlib>
 #include <string>
 #include <vector>
-#include <stdint.h>
 
 #include "block.h"
 

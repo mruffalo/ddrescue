@@ -71,7 +71,7 @@ const char * my_fgets( FILE * const f, int & linenum )
 void show_mapfile_error( const char * const mapname, const int linenum )
   {
   char buf[80];
-  snprintf( buf, sizeof buf, "error in mapfile %s, line %d.", mapname, linenum );
+  snprintf( buf, sizeof buf, "error in mapfile '%s', line %d.", mapname, linenum );
   show_error( buf );
   }
 
@@ -99,6 +99,36 @@ void Mapfile::compact_sblock_vector()
   }
 
 
+void Mapfile::join_subsectors( const int hardbs )
+  {
+  for( unsigned long i = 0; i + 1 < sblock_vector.size(); )
+    {
+    const long long boundary = sblock_vector[i].end();
+    const int rest = boundary % hardbs;		// size of subsector in sb1
+    if( rest <= 0 ) { ++i; continue; }
+    Sblock & sb1 = sblock_vector[i];
+    Sblock & sb2 = sblock_vector[i+1];
+    const Sblock::Status st1 = sb1.status();
+    const Sblock::Status st2 = sb2.status();
+    if( st1 == Sblock::finished || st2 == Sblock::finished ) { ++i; continue; }
+    // move subsector to the block with the less processed state
+    if( Sblock::processed_state( st1 ) <= Sblock::processed_state( st2 ) )
+      {
+      if( sb2.size() > hardbs - rest )		// move subsector to sb1
+        { sb1.shift_boundary( sb2, boundary + hardbs - rest ); ++i; continue; }
+      }
+    else
+      {
+      if( sb1.size() > rest )			// move subsector to sb2
+        { sb1.shift_boundary( sb2, boundary - rest ); ++i; continue; }
+      sb1.status( st2 );			// keep status of sb2
+      }
+    sb1.enlarge( sb2.size() );			// join both blocks
+    sblock_vector.erase( sblock_vector.begin() + i + 1 );
+    }
+  }
+
+
 void Mapfile::extend_sblock_vector( const long long insize )
   {
   if( sblock_vector.empty() )
@@ -109,7 +139,8 @@ void Mapfile::extend_sblock_vector( const long long insize )
     }
   Sblock & front = sblock_vector.front();
   if( front.pos() > 0 )
-    sblock_vector.insert( sblock_vector.begin(), Sblock( 0, front.pos(), Sblock::non_tried ) );
+    sblock_vector.insert( sblock_vector.begin(), Sblock( 0, front.pos(),
+                                                         Sblock::non_tried ) );
   Sblock & back = sblock_vector.back();
   const long long end = back.end();
   if( insize > 0 )
@@ -266,9 +297,9 @@ bool Mapfile::read_mapfile( const int default_sblock_status, const bool ro )
   }
 
 
-int Mapfile::write_mapfile( FILE * f, const bool timestamp,
-                            const bool mf_sync,
-                            const Domain * const annotate_domainp ) const
+bool Mapfile::write_mapfile( FILE * f, const bool timestamp,
+                             const bool mf_sync,
+                             const Domain * const annotate_domainp ) const
   {
   const bool f_given = ( f != 0 );
 

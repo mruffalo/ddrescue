@@ -40,8 +40,9 @@ void input_pos_error( const long long pos, const long long insize )
   {
   char buf[128];
   snprintf( buf, sizeof buf,
-            "Can't start reading at pos %lld.\n"
-            "          Input file is only %lld bytes long.", pos, insize );
+            "Can't start reading at pos %s.\n"
+            "          Input file is only %s bytes long.",
+            format_num3( pos ), format_num3( insize ) );
   show_error( buf );
   }
 
@@ -88,7 +89,8 @@ bool Mapbook::emergency_save()
 Mapbook::Mapbook( const long long offset, const long long insize,
                   Domain & dom, const Mb_options & mb_opts,
                   const char * const mapname, const int cluster,
-                  const int hardbs, const bool complete_only )
+                  const int hardbs, const bool complete_only,
+                  const bool rescue )
   : Mapfile( mapname ), Mb_options( mb_opts ), offset_( offset ),
     mapfile_insize_( 0 ), domain_( dom ), hardbs_( hardbs ),
     softbs_( cluster * hardbs_ ),
@@ -121,6 +123,7 @@ Mapbook::Mapbook( const long long offset, const long long insize,
   if( !complete_only ) extend_sblock_vector( insize );
   else domain_.crop( extent() );  // limit domain to blocks read from mapfile
   compact_sblock_vector();
+  if( rescue ) join_subsectors( hardbs_ );
   split_by_domain_borders( domain_ );
   if( sblocks() == 0 ) domain_.clear();
   }
@@ -137,9 +140,7 @@ bool Mapbook::update_mapfile( const int odes, const bool force )
   const long t2 = std::time( 0 );
   if( um_t1 == 0 || um_t1 > t2 ) um_t1 = um_t1s = t2;	// initialize
   if( !force && t2 - um_t1 < interval ) return true;
-  um_t1 = t2;
   const bool mf_sync = ( force || t2 - um_t1s >= mapfile_sync_interval );
-  if( mf_sync ) um_t1s = t2;
   if( odes >= 0 ) fsync( odes );
   if( um_prev_mf_sync )
     {
@@ -152,7 +153,9 @@ bool Mapbook::update_mapfile( const int odes, const bool force )
   while( true )
     {
     errno = 0;
-    if( write_mapfile( 0, true, mf_sync ) ) return true;
+    if( write_mapfile( 0, true, mf_sync ) )
+      // update times here to exclude writing time from intervals
+      { um_t1 = std::time( 0 ); if( mf_sync ) um_t1s = um_t1; return true; }
     if( verbosity < 0 ) return false;
     const int saved_errno = errno;
     std::fputc( '\n', stderr );

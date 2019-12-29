@@ -6,10 +6,10 @@
     that the following conditions are met:
 
     1. Redistributions of source code must retain the above copyright
-    notice, this list of conditions and the following disclaimer.
+    notice, this list of conditions, and the following disclaimer.
 
     2. Redistributions in binary form must reproduce the above copyright
-    notice, this list of conditions and the following disclaimer in the
+    notice, this list of conditions, and the following disclaimer in the
     documentation and/or other materials provided with the distribution.
 
     This library is distributed in the hope that it will be useful,
@@ -18,7 +18,7 @@
 */
 
 /*  Arg_parser reads the arguments in 'argv' and creates a number of
-    option codes, option arguments and non-option arguments.
+    option codes, option arguments, and non-option arguments.
 
     In case of error, 'error' returns a non-empty error message.
 
@@ -61,6 +61,7 @@ private:
     explicit Record( const char * const arg ) : code( 0 ), argument( arg ) {}
     };
 
+  const std::string empty_arg;
   std::string error_;
   std::vector< Record > data;
 
@@ -93,6 +94,6 @@ public:
   const std::string & argument( const int i ) const
     {
     if( i >= 0 && i < arguments() ) return data[i].argument;
-    else return error_;
+    else return empty_arg;
     }
   };
