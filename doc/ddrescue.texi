@@ -6,8 +6,8 @@
 @finalout
 @c %**end of header
 
-@set UPDATED 17 December 2019
-@set VERSION 1.25-rc1
+@set UPDATED 21 February 2020
+@set VERSION 1.25
 
 @dircategory GNU Packages
 @direntry
@@ -56,7 +56,7 @@ This manual is for GNU ddrescue (version @value{VERSION}, @value{UPDATED}).
 @end menu
 
 @sp 1
-Copyright @copyright{} 2004-2019 Antonio Diaz Diaz.
+Copyright @copyright{} 2004-2020 Antonio Diaz Diaz.
 
 This manual is free documentation: you have unlimited permission to copy,
 distribute, and modify it.
@@ -208,6 +208,11 @@ except in that both can be used for copying data from one device to
 another. The key difference is that ddrescue uses a sophisticated
 algorithm to copy data from failing drives causing them as little
 additional damage as possible.
+
+Versions of ddrescue prior to 1.19 used a divide-and-conquer strategy to
+rescue the difficult parts of the drive. But that caused a lot of head
+movement, which is bad for the drive. Therefore, newer versions try to
+minimize head movement to minimize drive damage.
 
 Ddrescue manages efficiently the status of the rescue in progress and
 tries to rescue the good parts first, scheduling reads inside bad (or
@@ -441,7 +446,8 @@ ddrescue [@var{options}] @var{infile} @var{outfile} [@var{mapfile}]
 
 @var{infile} and @var{outfile} may be files, devices, or partitions.
 @var{mapfile} is a regular file and must be placed in an existing directory.
-If @var{mapfile} does not exist, ddrescue will create it.
+If @var{mapfile} does not exist, ddrescue will create it. Be careful to not
+specify by mistake an old @var{mapfile} from an unrelated rescue.
 
 Ddrescue tries to create a backup copy of the mapfile, with the name
 @var{mapfile}.bak, every time it is going to overwrite a fsynced
@@ -492,7 +498,7 @@ In rescue mode, any non-finished subsector that is found during the initial
 read of the mapfile will be joined to its corresponding sector (if it is
 also not finished), marking the whole sector with the less processed state,
 so as to make sure that sub-sector data will not be discarded from a
-succesful read during the rescue. (A subsector is a block smaller than
+successful read during the rescue. (A subsector is a block smaller than
 sector size). Subsector joining is performed in all the mapfile, not only in
 the rescue domain.
 
@@ -514,13 +520,13 @@ read new data beyond @var{mapfile} limits. This is useful when reading
 from devices of undefined size (like raw devices), when the drive
 returns an incorrect size, or when reading from a partial copy. It can
 only be used after a first rescue attempt, possibly limited with the
-@samp{--size} option, has produced a complete @var{mapfile}.
+option @samp{--size}, has produced a complete @var{mapfile}.
 
 @item -d
 @itemx --idirect
 Use direct disc access (@pxref{Direct disc access}) to read from
-@var{infile}, bypassing the kernel cache. (Opens the file with the
-O_DIRECT flag). Sector size must be correctly set for this to work. Not
+@var{infile}, bypassing the kernel cache. (Opens the file with the flag
+@samp{O_DIRECT}). Sector size must be correctly set for this to work. Not
 all systems support this.
 
 If your system does not support direct disc access, ddrescue will warn
@@ -530,7 +536,7 @@ will result and ddrescue will exit with status 1.
 @item -D
 @itemx --odirect
 Use direct disc access to write to @var{outfile}, bypassing the kernel
-cache. (Opens the file with the O_DIRECT flag). Sector size must be
+cache. (Opens the file with the flag @samp{O_DIRECT}). Sector size must be
 correctly set for this to work. Not all systems support this.
 
 If your system does not support direct disc access, ddrescue will warn
@@ -598,7 +604,7 @@ from standard input.
 @itemx --input-position=@var{bytes}
 Starting position of the rescue domain in @var{infile}, in bytes.
 Defaults to 0. This is not the point from which ddrescue starts copying.
-(For example, if you pass the @samp{--reverse} option to ddrescue, it
+(For example, if you pass the option @samp{--reverse} to ddrescue, it
 starts copying from the end of the rescue domain). In fill mode it
 refers to a position in the @var{infile} of the original rescue run. See
 the chapter Fill mode (@pxref{Fill mode}) for details.
@@ -706,12 +712,12 @@ reading data from the device.
 
 @item -p
 @itemx --preallocate
-Preallocate space on disc for @var{outfile}. Only space for regular
-files can be preallocated. If preallocation succeeds, rescue will not
-fail due to lack of free space on disc. If ddrescue can't determine the
-size to preallocate, you may need to specify it with some combination of
-the @samp{--input-position}, @samp{--output-position}, @samp{--size},
-and @samp{--domain-mapfile} options.
+Preallocate space on disc for @var{outfile}. Only space for regular files
+can be preallocated. If preallocation succeeds, rescue will not fail due to
+lack of free space on disc. If ddrescue can't determine the size to
+preallocate, you may need to specify it with some combination of the options
+@samp{--input-position}, @samp{--output-position}, @samp{--size}, and
+@samp{--domain-mapfile}.
 
 @item -P[@var{lines}]
 @itemx --data-preview[=@var{lines}]
@@ -1096,7 +1102,7 @@ If the problem can't be fixed, you may press @key{e} followed by
 @key{Return} to try an emergency save and exit. Ddrescue will try to
 write the mapfile to the file @file{ddrescue.map} in the current
 directory or, if this fails, to @file{$HOME/ddrescue.map}. If the
-mapfile is written succesfully, ddrescue will exit with status 1. Else
+mapfile is written successfully, ddrescue will exit with status 1. Else
 it will print the above message again.
 
 Or you may press @key{q} followed by @key{Return} to quit and exit with
@@ -1380,14 +1386,14 @@ accesses and grouping them. In this case you may want to use direct disc
 access for @var{infile}, or read from a raw device, to bypass the kernel
 cache and rescue more of your data.
 
-NOTE! Sector size must be correctly set with the @samp{--sector-size}
-option for direct disc access to work.
+NOTE! Sector size must be correctly set with the option @samp{--sector-size}
+for direct disc access to work.
 
 NOTE: Direct disc access can copy arbitrary domains by reading whole
 sectors and then writing only the requested part. This is the only case
 where ddrescue will try to read data outside of the rescue domain.
 
-Try the @samp{--idirect} option first. If direct disc access is not
+Try the option @samp{--idirect} first. If direct disc access is not
 available in your system, try raw devices. Read your system
 documentation to find how to bind a raw device to a regular block
 device. Some OSs provide raw access through especial device names, like
@@ -1448,7 +1454,7 @@ a failed command (for example because of wrong arguments), and
 errors.
 
 If end-of-file is detected on standard input, ddrescue discards any partial
-command being read and executes a @samp{f} command.
+command being read and executes the @samp{f} (finish) command.
 
 All ddrescue commands are single characters, though some require additonal
 parameters separated by spaces. Only one command is allowed per line.
@@ -1492,19 +1498,18 @@ make room for @var{mapfile}, before trying to update it again.
 @chapter Fill mode
 @cindex fill Mode
 
-When ddrescue is invoked with the @samp{--fill-mode} option it operates
-in "fill mode", which is different from the default "rescue mode". That
-is, if you use the @samp{--fill-mode} option, ddrescue does not rescue
-anything. It only fills with data read from @var{infile} the blocks of
-@var{outfile} whose status character from @var{mapfile} coincides with
-one of the type characters specified as argument to the
-@samp{--fill-mode} option.
+When ddrescue is invoked with the option @samp{--fill-mode} it operates in
+"fill mode", which is different from the default "rescue mode". That is, in
+"fill mode" ddrescue does not rescue anything. It only fills with data read
+from @var{infile} the blocks of @var{outfile} whose status character from
+@var{mapfile} coincides with one of the type characters specified in the
+argument to @samp{--fill-mode}.
 
-If the argument of the @samp{--fill-mode} option contains an @samp{l},
-ddrescue will write location data (position, sector number, and status)
-into each sector filled. With bad sectors filled in this way, it should
-be possible to retry the recovery of important files, as location of the
-error is known by looking into the unfinished copy of the file.
+If the argument to @samp{--fill-mode} contains an @samp{l}, ddrescue will
+write location data (position, sector number, and status) into each sector
+filled. With bad sectors filled in this way, it should be possible to retry
+the recovery of important files, as the location of the error is known by
+looking into the unfinished copy of the file.
 
 In fill mode @var{infile} does not need to be seekable and it may be of
 any size. If it is too small, the data will be duplicated as many times
@@ -1522,7 +1527,7 @@ you should not set @samp{--output-position}, whereas when filling the
 @var{outfile} of the original rescue run you should keep the original
 offset between @samp{--input-position} and @samp{--output-position}.
 
-The @samp{--fill-mode} option implies the @samp{--complete-only} option.
+The option @samp{--fill-mode} implies @samp{--complete-only}.
 
 In fill mode @var{mapfile} is updated to allow resumability when
 interrupted or in case of a crash, but as nothing is being rescued
@@ -1621,16 +1626,15 @@ cp -a /mnt/cdimage/my_thesis.txt /safe/place/my_thesis.txt
 @chapter Generate mode
 @cindex generate Mode
 
-When ddrescue is invoked with the @samp{--generate-mode} option it
-operates in "generate mode", which is different from the default "rescue
-mode". That is, if you use the @samp{--generate-mode} option, ddrescue
-does not rescue anything. It only tries to generate a @var{mapfile} for
-later use.
+When ddrescue is invoked with the option @samp{--generate-mode} it operates
+in "generate mode", which is different from the default "rescue mode". That
+is, in "generate mode" ddrescue does not rescue anything. It only tries to
+generate a @var{mapfile} for later use.
 
-So you didn't read the manual and started ddrescue without a
-@var{mapfile}. Now, two days later, your computer crashed and you can't
-know how much data ddrescue managed to save. And even worse, you can't
-resume the rescue; you have to restart it from the very beginning.
+So you didn't read the manual and started ddrescue without a @var{mapfile}.
+Now, two days later, your computer crashed and you can't know how much data
+ddrescue managed to save. And even worse, you can't resume the rescue; you
+have to restart it from the very beginning.
 
 Or maybe you started copying a drive with @w{@samp{dd conv=noerror,sync}}
 and are now in the same situation described above. In this case, note that
@@ -1638,17 +1642,16 @@ you can't use a copy made by dd unless it was invoked with the @samp{sync}
 conversion argument.
 
 Don't despair (yet). Ddrescue can in some cases generate an approximate
-@var{mapfile}, from @var{infile} and the (partial) copy in
-@var{outfile}, that is almost as good as an exact @var{mapfile}. It
-makes this by simply assuming that sectors containing all zeros were not
-rescued.
+@var{mapfile}, from @var{infile} and the (partial) copy in @var{outfile},
+that is almost as good as an exact @var{mapfile}. It makes this by simply
+assuming that sectors containing all zeros were not rescued.
 
-However, if the destination of the copy was a drive or a partition, (or
-an existing regular file and truncation was not requested), most
-probably you will need to restart ddrescue from the very beginning.
-(This time with a @var{mapfile}, of course). The reason is that old data
-may be present in the drive that have not been overwritten yet, and may
-be thus non-tried but non-zero.
+However, if the destination of the copy was a drive or a partition, (or an
+existing regular file and truncation was not requested), most probably you
+will need to restart ddrescue from the very beginning. (This time with a
+@var{mapfile}, of course). The reason is that old data may be present in the
+drive that have not been overwritten yet, and may be thus non-tried but
+non-zero.
 
 For example, if you first tried one of these commands:
 @example
@@ -1762,7 +1765,7 @@ This version number should be included in all bug reports.
 @itemx --change-types=@var{old_types},@var{new_types}
 Change the status of every block in the rescue domain from one type in
 @var{old_types} to the corresponding type in @var{new_types}, much like
-the @samp{tr} command does, and write the resulting mapfile to standard
+the command @samp{tr} does, and write the resulting mapfile to standard
 output. @var{old_types} and @var{new_types} are strings of block status
 characters as defined in the chapter Mapfile structure (@pxref{Mapfile
 structure}). Blocks whose status is not in @var{old_types} are left
@@ -1865,7 +1868,7 @@ equivalent to @samp{--change-types=?*/-+,++++-}
 @item -o @var{bytes}
 @itemx --output-position=@var{bytes}
 Starting position of the image of the rescue domain in the original
-@var{outfile}, in bytes. Is used by the @samp{--list-blocks} option.
+@var{outfile}, in bytes. Is used by the option @samp{--list-blocks}.
 Defaults to @samp{--input-position}.
 
 @item -p @var{file}

@@ -1,5 +1,5 @@
 /*  GNU ddrescue - Data recovery tool
-    Copyright (C) 2004-2019 Antonio Diaz Diaz.
+    Copyright (C) 2004-2020 Antonio Diaz Diaz.
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -19,7 +19,7 @@ int verbosity = 0;
 
 namespace {
 
-const char * const program_year = "2019";
+const char * const program_year = "2020";
 std::string command_line;
 
 
@@ -117,7 +117,7 @@ bool check_types( std::string & types, const char * const opt_name,
   if( types.empty() || error )
     {
     char buf[80];
-    snprintf( buf, sizeof buf, "Invalid type for '%s' option.", opt_name );
+    snprintf( buf, sizeof buf, "Invalid type for option '%s'.", opt_name );
     show_error( buf, 0, true );
     std::exit( 1 );
     }
