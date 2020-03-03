@@ -1,5 +1,5 @@
 /*  Rational - Rational number class with overflow detection
-    Copyright (C) 2005-2019 Antonio Diaz Diaz.
+    Copyright (C) 2005-2020 Antonio Diaz Diaz.
 
     This library is free software. Redistribution and use in source and
     binary forms, with or without modification, are permitted provided
@@ -23,7 +23,7 @@
 // Maximum resolution is 1 / INT_MAX.
 // In case of domain error or overflow, den is set to 0 and num is set
 // to >0, <0, or 0, meaning +INF, -INF, and NAN respectively. This error
-// condition can be tested with the 'error' function, and can only be
+// condition can be tested with the function 'error', and can only be
 // cleared assigning a new value to the Rational.
 // While in error state, arithmetic operators become no ops and
 // relational operators return false, except !=, which returns true.

@@ -1,21 +1,24 @@
 Changes in version 1.25:
 
+Default constructors have been added to classes Block and Sblock.
+(Reported by Rosen Penev).
+
+A failure in 'make check', happening when testing under a directory with
+spaces in the name, has been fixed. (Reported by David Morrison).
+
 In rescue mode, any non-finished subsector that is now found during the
 initial read of the mapfile will be joined to its corresponding sector (if
 it is also not finished), marking the whole sector with the less processed
 state, so as to make sure that sub-sector data will not be discarded from a
-succesful read during the rescue. (A subsector is a block smaller than
+successful read during the rescue. (A subsector is a block smaller than
 sector size). (Reported by David Burton).
 
 The time needed to write the mapfile is now excluded from the mapfile save
 and sync intervals. (It seems that some mapfiles take 7 seconds to write).
 (Reported by David Burton).
 
-Large numbers in messages (like device sizes) are now printed in groups of 3
-digits separated by underscore '_' characters to make them more readable.
-
 Ddrescue now extends the output file using 'ftruncate' if it works, because
 it is slightly more efficient.
 
-Default constructors have been added to classes Block and Sblock.
-(Reported by Rosen Penev).
+Large numbers in messages (like device sizes) are now printed in groups of 3
+digits separated by underscore '_' characters to make them more readable.

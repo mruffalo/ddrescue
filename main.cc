@@ -1,5 +1,5 @@
 /*  GNU ddrescue - Data recovery tool
-    Copyright (C) 2004-2019 Antonio Diaz Diaz.
+    Copyright (C) 2004-2020 Antonio Diaz Diaz.
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -70,9 +70,10 @@ void show_help( const int cluster, const int hardbs )
   std::printf( "GNU ddrescue is a data recovery tool. It copies data from one file or block\n"
                "device (hard disc, cdrom, etc) to another, trying to rescue the good parts\n"
                "first in case of read errors.\n"
-               "\nAlways use a mapfile unless you know you won't need it. Without a\n"
-               "mapfile, ddrescue can't resume a rescue, only reinitiate it.\n"
-               "NOTE: In versions of ddrescue prior to 1.20 the mapfile was called\n"
+               "\nAlways use a mapfile unless you know you won't need it. Without a mapfile,\n"
+               "ddrescue can't resume a rescue, only reinitiate it. Be careful to not\n"
+               "specify by mistake an old mapfile from an unrelated rescue.\n"
+               "\nNOTE: In versions of ddrescue prior to 1.20 the mapfile was called\n"
                "'logfile'. The format is the same; only the name has changed.\n"
                "\nIf you reboot, check the device names before restarting ddrescue.\n"
                "Don't use options '-F' or '-G' without reading the manual first.\n"
